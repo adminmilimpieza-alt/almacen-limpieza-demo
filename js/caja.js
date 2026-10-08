@@ -8,8 +8,9 @@ const Caja = (() => {
     db.productos
       .filter(p => (p.nombre+' '+p.categoria).toLowerCase().includes(filtro.toLowerCase()))
       .forEach(p=>{
+        const icono = p.icono || (typeof ICONOS!=='undefined' && (ICONOS[p.categoria]||ICONOS.General)) || '🧹';
         const d = document.createElement('div'); d.className='card';
-        d.innerHTML = `<b>${p.nombre}</b><span>${p.categoria} · stock ${p.stock}</span><br><span>$${p.precio}</span>`;
+        d.innerHTML = `<div class="img">${icono}</div><b>${p.nombre}</b><span>${p.categoria} · stock ${p.stock}</span><br><span>$${p.precio}</span>`;
         const b = document.createElement('button'); b.textContent = p.stock>0 ? 'Agregar' : 'Sin stock'; b.disabled = p.stock<=0;
         b.onclick = ()=>{ agregar(p); };
         d.appendChild(b); box.appendChild(d);

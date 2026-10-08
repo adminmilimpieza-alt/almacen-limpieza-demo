@@ -1,15 +1,22 @@
 // store.js — capa de datos modular (localStorage). Base para crecer a backend real.
+// Iconos genéricos por categoría (emoji, offline, sin imágenes externas).
+const ICONOS = {
+  'Piso': '🧽', 'Cocina': '🍽️', 'Baño': '🧻', 'Vidrios': '🪟',
+  'Accesorios': '🧤', 'Pileta': '🏊', 'Ropa': '👕', 'General': '🧹'
+};
 const Store = (() => {
-  const KEY = 'limpieza_demo_v1';
+  const KEY = 'limpieza_demo_v2';
   const seed = [
-    {id:'p1', nombre:'Lavandina x 5L', categoria:'Piso', precio:3500, stock:20},
-    {id:'p2', nombre:'Detergente x 5L', categoria:'Cocina', precio:4200, stock:15},
-    {id:'p3', nombre:'Desodorante piso x 5L', categoria:'Piso', precio:3800, stock:12},
-    {id:'p4', nombre:'Jabón líquido manos x 5L', categoria:'Baño', precio:5000, stock:8},
-    {id:'p5', nombre:'Limpiavidrios x 5L', categoria:'Vidrios', precio:4500, stock:6},
-    {id:'p6', nombre:'Bolsa residuo 80x110 x10u', categoria:'Accesorios', precio:2800, stock:30},
-    {id:'p7', nombre:'Trapo piso', categoria:'Accesorios', precio:1500, stock:25},
-    {id:'p8', nombre:'Cloro granulado x 5kg', categoria:'Pileta', precio:18000, stock:4},
+    {id:'p1', nombre:'Lavandina x 5L', categoria:'Piso', precio:3500, stock:20, icono:'🧴'},
+    {id:'p2', nombre:'Detergente x 5L', categoria:'Cocina', precio:4200, stock:15, icono:'🍽️'},
+    {id:'p3', nombre:'Desodorante piso x 5L', categoria:'Piso', precio:3800, stock:12, icono:'🧽'},
+    {id:'p4', nombre:'Jabón líquido manos x 5L', categoria:'Baño', precio:5000, stock:8, icono:'🧼'},
+    {id:'p5', nombre:'Limpiavidrios x 5L', categoria:'Vidrios', precio:4500, stock:6, icono:'🪟'},
+    {id:'p6', nombre:'Bolsa residuo 80x110 x10u', categoria:'Accesorios', precio:2800, stock:30, icono:'🗑️'},
+    {id:'p7', nombre:'Trapo piso', categoria:'Accesorios', precio:1500, stock:25, icono:'🧤'},
+    {id:'p8', nombre:'Cloro granulado x 5kg', categoria:'Pileta', precio:18000, stock:4, icono:'🏊'},
+    {id:'p9', nombre:'Suavizante ropa x 5L', categoria:'Ropa', precio:5200, stock:10, icono:'👕'},
+    {id:'p10', nombre:'Escoba + pala', categoria:'Accesorios', precio:6500, stock:7, icono:'🧹'},
   ];
   function load(){
     try{
