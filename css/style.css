@@ -1,0 +1,27 @@
+:root{font-family:system-ui,Arial,sans-serif;background:#111;color:#eee}
+*{box-sizing:border-box}
+body{margin:0}
+header{display:flex;align-items:center;gap:16px;padding:12px 16px;background:#1c1c1c;border-bottom:1px solid #333;position:sticky;top:0}
+h1{font-size:18px;margin:0}h1 small{color:#aaa;font-weight:normal}
+nav button{background:#222;color:#eee;border:1px solid #444;padding:8px 14px;border-radius:8px;cursor:pointer}
+nav button.active{background:#eee;color:#111}
+main{padding:16px;max-width:1100px;margin:auto}
+.tab{display:none}.tab.active{display:block}
+.grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+input,select{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #444;background:#1c1c1c;color:#eee}
+.catalogo{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+.card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:10px}
+.card b{display:block}.card span{color:#aaa;font-size:13px}
+.card button{margin-top:8px;width:100%}
+button{padding:10px 14px;border-radius:8px;border:1px solid #444;background:#222;color:#eee;cursor:pointer}
+button.primary{background:#eee;color:#111;font-weight:bold}
+.ticket{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:12px}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+.total{font-size:22px;margin:10px 0;font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border-bottom:1px solid #333;padding:8px;text-align:left}
+tr.bajo td{color:#ff7b7b;font-weight:bold}
+.hint{color:#999;font-size:13px}
+.venta{background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:8px;margin:8px 0}
+dialog{background:#1c1c1c;color:#eee;border:1px solid #444;border-radius:12px;padding:16px}
