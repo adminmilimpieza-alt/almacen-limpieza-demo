@@ -31,15 +31,20 @@
     <div class="grid2">
       <div>
         <div class="scanbar">
-          <input id="scan" placeholder="Escanear código o buscar producto…" autocomplete="off" autofocus>
+          <input id="scan" placeholder="1 · Escanear código aquí…" autocomplete="off" autofocus>
         </div>
         <div class="scan-actions">
-          <span class="hint">El escáner escribe acá + <kbd>Enter</kbd> suma directo al ticket.</span>
+          <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo al ticket.</span>
           <button id="cam-btn">Escanear con cámara</button>
-          <select id="f-cliente" title="Cliente"></select>
         </div>
         <div id="scan-flash"></div>
         <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
+        <div class="scanbar">
+          <input id="buscar2" placeholder="2 · Si no anda el escáner: buscar por código o nombre…" autocomplete="off">
+        </div>
+        <div class="row">
+          <select id="f-cliente" title="Cliente"></select>
+        </div>
         <div id="catalogo" class="catalogo"></div>
       </div>
       <div class="ticket">

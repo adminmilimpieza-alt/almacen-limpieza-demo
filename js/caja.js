@@ -77,27 +77,32 @@ const Caja = (() => {
   }
   function init(){
     renderCatalogo(); renderCarrito(); renderClientes(); renderMovimientos();
-    const scan = $('scan');
-    scan.addEventListener('input', e=>renderCatalogo(e.target.value));
-    scan.addEventListener('keydown', e=>{
-      if(e.key==='Enter'){
-        const v = scan.value;
-        if(scanAgregar(v)){ scan.value=''; renderCatalogo(''); }
-      }
-    });
+    const scan = $('scan'), manual = $('buscar2');
+    // Línea 2: búsqueda manual de respaldo (código o nombre), no suma sola.
+    manual.addEventListener('input', e=>renderCatalogo(e.target.value));
+    // Línea 1: escáner. Enter con código exacto suma directo; si no existe,
+    // avisa y deja el foco listo para reintentar o ir a la línea 2.
+    const intentar = v => {
+      const code = (v||'').trim(); if(!code) return;
+      if(scanAgregar(code)){ scan.value=''; }
+      else { flash(`Código no encontrado: ${code}. Buscalo en la línea 2.`); scan.select(); }
+    };
+    scan.addEventListener('keydown', e=>{ if(e.key==='Enter') intentar(scan.value); });
+    // Algunas pistolas configuran sufijo TAB en vez de Enter.
+    scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
     // El campo vive con foco: el escáner escribe donde haya foco.
     document.getElementById('tab-caja').addEventListener('click', e=>{
       if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
     });
     setTimeout(()=>scan.focus(), 300);
-    if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ if(scanAgregar(code)){ scan.value=''; renderCatalogo(''); } });
+    if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ scan.value=code; intentar(code); });
     $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
     $('cobrar').onclick = ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
       try{
         const total = Store.cobrar(carrito, $('pago').value, $('f-cliente').value);
         alert('Venta cobrada: $'+total);
-        carrito=[]; renderCarrito(); renderCatalogo($('scan').value);
+        carrito=[]; renderCarrito(); scan.focus();
         Stock.render(); renderMovimientos(); Reportes.render();
       }catch(e){ alert(e.message); }
     };
@@ -127,5 +132,5 @@ const Caja = (() => {
       btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
     };
   }
-  return {init, refresh:()=>{renderCatalogo($('scan').value); renderCarrito(); renderClientes(); renderMovimientos();}};
+  return {init, refresh:()=>{renderCatalogo($('buscar2').value); renderCarrito(); renderClientes(); renderMovimientos();}};
 })();
