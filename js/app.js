@@ -7,4 +7,4 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.getElementById('tab-'+b.dataset.tab).classList.add('active');
   };
 });
-Caja.init(); Stock.init(); Ventas.render();
+Caja.init(); Stock.init(); Entidades.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init();

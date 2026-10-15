@@ -12,16 +12,24 @@
   <nav>
     <button data-tab="caja" class="active">Caja</button>
     <button data-tab="stock">Stock</button>
-    <button data-tab="ventas">Ventas</button>
+    <button data-tab="precios">Precios</button>
+    <button data-tab="clientes">Clientes</button>
+    <button data-tab="proveedores">Proveedores</button>
+    <button data-tab="pedidos">Pedidos</button>
+    <button data-tab="reportes">Reportes</button>
+    <button data-tab="respaldo">Respaldo</button>
   </nav>
 </header>
 
 <main>
-  <!-- CAJA -->
+  <!-- 1. CAJA: ventas + ingresos/egresos + conciliación -->
   <section id="tab-caja" class="tab active">
     <div class="grid2">
       <div>
-        <input id="buscar" placeholder="Buscar producto… (ej: lavandina)" autocomplete="off">
+        <div class="row">
+          <input id="buscar" placeholder="Buscar por nombre o código…" autocomplete="off">
+          <select id="f-cliente" title="Cliente"></select>
+        </div>
         <div id="catalogo" class="catalogo"></div>
       </div>
       <div class="ticket">
@@ -30,35 +38,122 @@
         <div class="total">Total: $<span id="total">0</span></div>
         <div class="row">
           <select id="pago">
-            <option value="efectivo">Efectivo</option>
-            <option value="transferencia">Transferencia</option>
+            <option value="efectivo">Efectivo (in situ)</option>
+            <option value="mercadopago">Mercado Pago (online)</option>
+            <option value="banco">Banco / Transferencia</option>
             <option value="cuenta">Cuenta corriente</option>
           </select>
           <button id="cobrar" class="primary">Cobrar</button>
           <button id="vaciar">Vaciar</button>
         </div>
-        <p class="hint">Al cobrar se descuenta stock y se guarda la venta.</p>
+        <h3>Movimiento manual (ingreso/egreso)</h3>
+        <div class="row">
+          <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+          <select id="m-medio"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select>
+        </div>
+        <div class="row">
+          <input id="m-concepto" placeholder="Concepto (ej: pago luz)">
+          <input id="m-monto" type="number" min="0" placeholder="Monto">
+        </div>
+        <button id="m-agregar">Agregar movimiento</button>
+        <h3>Caja (ingresos/egresos) — tildar = conciliado MP/Bco</h3>
+        <div id="movimientos"></div>
       </div>
     </div>
   </section>
 
-  <!-- STOCK -->
+  <!-- 2. STOCK -->
   <section id="tab-stock" class="tab">
     <div class="row">
       <button id="nuevo" class="primary">+ Nuevo producto</button>
       <button id="reset">Restablecer demo</button>
     </div>
     <table>
-      <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+      <thead><tr><th>Cód</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
-    <p class="hint">Alerta: stock ≤ 5 se marca en rojo. Todo se guarda en el navegador (localStorage).</p>
+    <p class="hint">Stock ≤ 5 en rojo. Todo en el navegador (localStorage).</p>
   </section>
 
-  <!-- VENTAS -->
-  <section id="tab-ventas" class="tab">
-    <h2>Historial de ventas</h2>
+  <!-- 5. PRECIOS -->
+  <section id="tab-precios" class="tab">
+    <h2>Lista de precios</h2>
+    <p class="hint">Actualización masiva por <b>código o nombre</b> vía CSV (<code>codigo,nombre,precio</code>). El PDF del proveedor se convierte a CSV una vez (fase 2: lectura automática de PDF).</p>
+    <div class="row">
+      <input type="file" id="csv" accept=".csv">
+      <button id="csv-ver" class="primary">Previsualizar</button>
+      <button id="csv-aplicar">Aplicar precios</button>
+    </div>
+    <div id="csv-prev"></div>
+    <div class="row">
+      <select id="precio-rubro"><option value="">Todos los rubros</option></select>
+      <button id="precio-ver">Ver lista</button>
+      <button id="precio-print">Imprimir</button>
+    </div>
+    <div id="lista-precios"></div>
+  </section>
+
+  <!-- 3. CLIENTES -->
+  <section id="tab-clientes" class="tab">
+    <h2>Clientes</h2>
+    <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
+    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Dirección</th><th></th></tr></thead>
+    <tbody id="tabla-cli"></tbody></table>
+  </section>
+
+  <!-- 4. PROVEEDORES -->
+  <section id="tab-proveedores" class="tab">
+    <h2>Proveedores</h2>
+    <div class="row"><button id="prov-nuevo" class="primary">+ Nuevo proveedor</button></div>
+    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Notas</th><th></th></tr></thead>
+    <tbody id="tabla-prov"></tbody></table>
+  </section>
+
+  <!-- 8. PEDIDOS -->
+  <section id="tab-pedidos" class="tab">
+    <h2>Registro de pedidos a proveedores</h2>
+    <div class="row">
+      <select id="ped-prov"></select>
+      <input id="ped-detalle" placeholder="Detalle (ej: 10 lavandina 5L)">
+      <button id="ped-agregar" class="primary">Agregar pedido</button>
+    </div>
+    <div id="pedidos"></div>
+  </section>
+
+  <!-- 6. REPORTES -->
+  <section id="tab-reportes" class="tab">
+    <h2>Reportes</h2>
+    <div class="row">
+      <input id="rep-desde" type="date"><input id="rep-hasta" type="date">
+      <button id="rep-caja" class="primary">Caja por período</button>
+    </div>
+    <div id="rep-caja-out"></div>
+    <div class="row">
+      <select id="rep-cli"></select>
+      <button id="rep-hcli">Historial cliente</button>
+      <select id="rep-prov"></select>
+      <button id="rep-hprov">Historial proveedor</button>
+    </div>
+    <div id="rep-hist"></div>
+    <div class="row">
+      <select id="rep-rubro"><option value="">Stock: todos los rubros</option></select>
+      <button id="rep-stock">Ver stock</button>
+    </div>
+    <div id="rep-stock-out"></div>
+    <h3>Ventas (historial)</h3>
     <div id="ventas"></div>
+  </section>
+
+  <!-- 7. RESPALDO -->
+  <section id="tab-respaldo" class="tab">
+    <h2>Respaldo diario de base de datos</h2>
+    <p class="hint">Demo en navegador: exportá el JSON cada día y guardalo (Drive/pendrive). En fase 2 va respaldo automático en servidor.</p>
+    <div class="row">
+      <button id="bk-export" class="primary">Descargar respaldo (JSON)</button>
+      <input type="file" id="bk-file" accept=".json">
+      <button id="bk-import">Restaurar</button>
+    </div>
+    <div id="bk-info"></div>
   </section>
 </main>
 
@@ -66,6 +161,7 @@
 <dialog id="modal">
   <form method="dialog" id="form-prod">
     <h3 id="modal-titulo">Nuevo producto</h3>
+    <input id="f-codigo" placeholder="Código (ej: LAV-5L)">
     <input id="f-nombre" placeholder="Nombre (ej: Detergente x 5L)" required>
     <input id="f-cat" placeholder="Categoría (ej: Cocina / Baño / Piso)">
     <select id="f-icono">
@@ -90,9 +186,26 @@
   </form>
 </dialog>
 
+<!-- Modal genérico entidades -->
+<dialog id="modal-ent">
+  <form method="dialog">
+    <h3 id="ent-titulo">Nuevo</h3>
+    <input id="e-nombre" placeholder="Nombre" required>
+    <input id="e-tel" placeholder="Teléfono">
+    <input id="e-extra" placeholder="Dirección / Notas">
+    <div class="row">
+      <button value="cancel">Cancelar</button>
+      <button id="e-guardar" value="default" class="primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="js/store.js"></script>
 <script src="js/caja.js"></script>
 <script src="js/stock.js"></script>
+<script src="js/entidades.js"></script>
+<script src="js/operacion.js"></script>
+<script src="js/reportes.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

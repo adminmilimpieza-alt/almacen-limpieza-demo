@@ -34,6 +34,16 @@ git push -u origin main
 - `pasinduprabashwara2000/POS-System-HTML-CSS-JS` (estático pero desordenado/inglés)
 - Se optó por base propia limpia en español, modular y lista para Pages.
 
+## Qué cubre (8 puntos del cliente)
+1. **Caja I/E + conciliación:** ventas + movimientos manuales por medio (efectivo/MP/banco), tildado conciliado. Conciliación automática con MP/Banco = fase 2 (requiere backend + APIs).
+2. **Control de Stock:** alta/baja, alerta ≤5, código + rubro.
+3. **Clientes:** alta y asignación a cada venta.
+4. **Proveedores:** alta y pedidos asociados.
+5. **Lista de precios:** actualización masiva por **código o nombre vía CSV**. PDF directo = fase 2 (pedir 1 PDF de ejemplo para mapear columnas).
+6. **Reportes:** caja diaria/período por medio, historial por cliente y por proveedor, stock general/por rubro valorizado, lista de precios general/por rubro (imprimible).
+7. **Respaldo diario:** export/import JSON + contador. Automático en servidor = fase 2.
+8. **Pedidos:** registro por proveedor con estado pendiente/recibido.
+
 ## Siguiente (base para trabajar)
 - [ ] Ticket imprimible / factura
 - [ ] Cierre de caja diario
