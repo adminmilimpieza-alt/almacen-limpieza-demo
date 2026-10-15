@@ -2,7 +2,8 @@
 const Caja = (() => {
   let carrito = [];
   const $ = id => document.getElementById(id);
-  const icono = p => p.icono || (typeof ICONOS!=='undefined' && (ICONOS[p.categoria]||ICONOS.General)) || '🧹';
+  const colorRubro = cat => (typeof ICONOS!=='undefined' && (ICONOS[cat]||ICONOS.General)) || '#F7F6F3';
+  const monograma = p => ((p.codigo||p.nombre||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3)||'?').toUpperCase();
   function renderCatalogo(filtro=''){
     const db = Store.get();
     const box = $('catalogo'); box.innerHTML='';
@@ -10,7 +11,7 @@ const Caja = (() => {
       .filter(p => (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(filtro.toLowerCase()))
       .forEach(p=>{
         const d = document.createElement('div'); d.className='card';
-        d.innerHTML = `<div class="img">${icono(p)}</div><b>${p.nombre}</b><span>${p.codigo||''} · ${p.categoria} · stock ${p.stock}</span><br><span>$${p.precio}</span>`;
+        d.innerHTML = `<div class="mono" style="background:${colorRubro(p.categoria)}">${monograma(p)}</div><b>${p.nombre}</b><div class="meta">${p.codigo||''} · ${p.categoria} · stock ${p.stock}</div><div class="price">$${p.precio}</div>`;
         const b = document.createElement('button'); b.textContent = p.stock>0 ? 'Agregar' : 'Sin stock'; b.disabled = p.stock<=0;
         b.onclick = ()=>{ agregar(p); };
         d.appendChild(b); box.appendChild(d);
@@ -52,16 +53,51 @@ const Caja = (() => {
       box.appendChild(d);
     });
   }
+  function flash(msg){
+    const box = $('scan-flash'); if(!box) return;
+    box.innerHTML = `<div class="flash">${msg}</div>`;
+    clearTimeout(flash._t); flash._t = setTimeout(()=>{ box.innerHTML=''; }, 1800);
+  }
+  // Escáner USB = cuña de teclado: escribe el código rapidísimo + Enter.
+  // Enter con código exacto suma directo al ticket; si no, filtra el catálogo.
+  function scanAgregar(codigo){
+    const code = (codigo||'').trim(); if(!code) return false;
+    const db = Store.get();
+    const p = db.productos.find(x=>(x.codigo||'').toLowerCase()===code.toLowerCase());
+    if(p){
+      if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); return true; }
+      const it = carrito.find(x=>x.id===p.id);
+      const enCarro = it?it.cant:0;
+      if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); return true; }
+      if(it) it.cant++; else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1});
+      renderCarrito(); flash(`Agregado: ${p.nombre} (x${enCarro+1})`);
+      return true;
+    }
+    return false;
+  }
   function init(){
     renderCatalogo(); renderCarrito(); renderClientes(); renderMovimientos();
-    $('buscar').addEventListener('input', e=>renderCatalogo(e.target.value));
-    $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); };
+    const scan = $('scan');
+    scan.addEventListener('input', e=>renderCatalogo(e.target.value));
+    scan.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        const v = scan.value;
+        if(scanAgregar(v)){ scan.value=''; renderCatalogo(''); }
+      }
+    });
+    // El campo vive con foco: el escáner escribe donde haya foco.
+    document.getElementById('tab-caja').addEventListener('click', e=>{
+      if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
+    });
+    setTimeout(()=>scan.focus(), 300);
+    if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ if(scanAgregar(code)){ scan.value=''; renderCatalogo(''); } });
+    $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
     $('cobrar').onclick = ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
       try{
         const total = Store.cobrar(carrito, $('pago').value, $('f-cliente').value);
         alert('Venta cobrada: $'+total);
-        carrito=[]; renderCarrito(); renderCatalogo($('buscar').value);
+        carrito=[]; renderCarrito(); renderCatalogo($('scan').value);
         Stock.render(); renderMovimientos(); Reportes.render();
       }catch(e){ alert(e.message); }
     };
@@ -88,8 +124,8 @@ const Caja = (() => {
           `<span class="hint">ID: ${link.id} · Queda como movimiento NO conciliado hasta que MP avise el pago (webhook fase 2).</span><br>`+
           `<a href="${Pagos.whatsappShare(link.init_point, total)}" target="_blank"><button class="primary">Pasar al cliente por WhatsApp</button></a></div>`;
       }catch(e){ alert('No se pudo generar: '+e.message); }
-      btn.disabled = false; btn.textContent = '🔗 Generar link de pago (demo)';
+      btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
     };
   }
-  return {init, refresh:()=>{renderCatalogo($('buscar').value); renderCarrito(); renderClientes(); renderMovimientos();}};
+  return {init, refresh:()=>{renderCatalogo($('scan').value); renderCarrito(); renderClientes(); renderMovimientos();}};
 })();

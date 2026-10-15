@@ -8,7 +8,11 @@
 </head>
 <body>
 <header>
-  <h1>🧹 Caja + Stock <small>demo almacén limpieza</small></h1>
+  <div class="brand">
+    <div class="brand-mark">A</div>
+    <div><h1>Almacén · Caja y stock</h1><small>Base demo para el negocio de limpieza</small></div>
+    <span class="badge">Demo</span>
+  </div>
   <nav>
     <button data-tab="caja" class="active">Caja</button>
     <button data-tab="stock">Stock</button>
@@ -26,10 +30,16 @@
   <section id="tab-caja" class="tab active">
     <div class="grid2">
       <div>
-        <div class="row">
-          <input id="buscar" placeholder="Buscar por nombre o código…" autocomplete="off">
+        <div class="scanbar">
+          <input id="scan" placeholder="Escanear código o buscar producto…" autocomplete="off" autofocus>
+        </div>
+        <div class="scan-actions">
+          <span class="hint">El escáner escribe acá + <kbd>Enter</kbd> suma directo al ticket.</span>
+          <button id="cam-btn">Escanear con cámara</button>
           <select id="f-cliente" title="Cliente"></select>
         </div>
+        <div id="scan-flash"></div>
+        <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
         <div id="catalogo" class="catalogo"></div>
       </div>
       <div class="ticket">
@@ -43,11 +53,11 @@
             <option value="banco">Banco / Transferencia</option>
             <option value="cuenta">Cuenta corriente</option>
           </select>
-          <button id="cobrar" class="primary">Cobrar</button>
+          <button id="cobrar" class="primary big">Cobrar</button>
           <button id="vaciar">Vaciar</button>
         </div>
         <div class="row">
-          <button id="linkmp">🔗 Generar link de pago (demo)</button>
+          <button id="linkmp">Generar link de pago (demo)</button>
         </div>
         <div id="linkmp-out"></div>
         <h3>Movimiento manual (ingreso/egreso)</h3>
@@ -165,22 +175,9 @@
 <dialog id="modal">
   <form method="dialog" id="form-prod">
     <h3 id="modal-titulo">Nuevo producto</h3>
-    <input id="f-codigo" placeholder="Código (ej: LAV-5L)">
+    <input id="f-codigo" placeholder="Código de barras (ej: LAV-5L)" autofocus>
     <input id="f-nombre" placeholder="Nombre (ej: Detergente x 5L)" required>
     <input id="f-cat" placeholder="Categoría (ej: Cocina / Baño / Piso)">
-    <select id="f-icono">
-      <option value="🧹">🧹 General</option>
-      <option value="🧴">🧴 Bidón</option>
-      <option value="🧽">🧽 Esponja</option>
-      <option value="🧼">🧼 Jabón</option>
-      <option value="🍽️">🍽️ Cocina</option>
-      <option value="🧻">🧻 Baño</option>
-      <option value="🪟">🪟 Vidrios</option>
-      <option value="🗑️">🗑️ Bolsas</option>
-      <option value="🧤">🧤 Accesorio</option>
-      <option value="🏊">🏊 Pileta</option>
-      <option value="👕">👕 Ropa</option>
-    </select>
     <input id="f-precio" type="number" min="0" step="1" placeholder="Precio" required>
     <input id="f-stock" type="number" min="0" step="1" placeholder="Stock inicial" value="10">
     <div class="row">
@@ -206,6 +203,7 @@
 
 <script src="js/store.js"></script>
 <script src="js/pagos.js"></script>
+<script src="js/scan.js"></script>
 <script src="js/caja.js"></script>
 <script src="js/stock.js"></script>
 <script src="js/entidades.js"></script>

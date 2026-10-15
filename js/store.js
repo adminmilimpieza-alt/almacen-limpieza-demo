@@ -3,22 +3,22 @@
 // stock, clientes, proveedores, precios (CSV por código/nombre — PDF en fase 2),
 // reportes, respaldo JSON, pedidos.
 const ICONOS = {
-  'Piso': '🧽', 'Cocina': '🍽️', 'Baño': '🧻', 'Vidrios': '🪟',
-  'Accesorios': '🧤', 'Pileta': '🏊', 'Ropa': '👕', 'General': '🧹'
+  'Piso': '#EDF3EC', 'Cocina': '#E1F3FE', 'Baño': '#FBF3DB', 'Vidrios': '#E1F3FE',
+  'Accesorios': '#F7F6F3', 'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
   const KEY = 'limpieza_demo_v3';
   const seedProductos = [
-    {id:'p1', codigo:'LAV-5L', nombre:'Lavandina x 5L', categoria:'Piso', precio:3500, stock:20, icono:'🧴'},
-    {id:'p2', codigo:'DET-5L', nombre:'Detergente x 5L', categoria:'Cocina', precio:4200, stock:15, icono:'🍽️'},
-    {id:'p3', codigo:'DES-5L', nombre:'Desodorante piso x 5L', categoria:'Piso', precio:3800, stock:12, icono:'🧽'},
-    {id:'p4', codigo:'JAB-5L', nombre:'Jabón líquido manos x 5L', categoria:'Baño', precio:5000, stock:8, icono:'🧼'},
-    {id:'p5', codigo:'VID-5L', nombre:'Limpiavidrios x 5L', categoria:'Vidrios', precio:4500, stock:6, icono:'🪟'},
-    {id:'p6', codigo:'BOL-80110', nombre:'Bolsa residuo 80x110 x10u', categoria:'Accesorios', precio:2800, stock:30, icono:'🗑️'},
-    {id:'p7', codigo:'TRA-PISO', nombre:'Trapo piso', categoria:'Accesorios', precio:1500, stock:25, icono:'🧤'},
-    {id:'p8', codigo:'CLO-5KG', nombre:'Cloro granulado x 5kg', categoria:'Pileta', precio:18000, stock:4, icono:'🏊'},
-    {id:'p9', codigo:'SUA-5L', nombre:'Suavizante ropa x 5L', categoria:'Ropa', precio:5200, stock:10, icono:'👕'},
-    {id:'p10', codigo:'ESC-PALA', nombre:'Escoba + pala', categoria:'Accesorios', precio:6500, stock:7, icono:'🧹'},
+    {id:'p1', codigo:'LAV-5L', nombre:'Lavandina x 5L', categoria:'Piso', precio:3500, stock:20},
+    {id:'p2', codigo:'DET-5L', nombre:'Detergente x 5L', categoria:'Cocina', precio:4200, stock:15},
+    {id:'p3', codigo:'DES-5L', nombre:'Desodorante piso x 5L', categoria:'Piso', precio:3800, stock:12},
+    {id:'p4', codigo:'JAB-5L', nombre:'Jabón líquido manos x 5L', categoria:'Baño', precio:5000, stock:8},
+    {id:'p5', codigo:'VID-5L', nombre:'Limpiavidrios x 5L', categoria:'Vidrios', precio:4500, stock:6},
+    {id:'p6', codigo:'BOL-80110', nombre:'Bolsa residuo 80x110 x10u', categoria:'Accesorios', precio:2800, stock:30},
+    {id:'p7', codigo:'TRA-PISO', nombre:'Trapo piso', categoria:'Accesorios', precio:1500, stock:25},
+    {id:'p8', codigo:'CLO-5KG', nombre:'Cloro granulado x 5kg', categoria:'Pileta', precio:18000, stock:4},
+    {id:'p9', codigo:'SUA-5L', nombre:'Suavizante ropa x 5L', categoria:'Ropa', precio:5200, stock:10},
+    {id:'p10', codigo:'ESC-PALA', nombre:'Escoba + pala', categoria:'Accesorios', precio:6500, stock:7},
   ];
   const seed = () => ({productos:seedProductos, ventas:[],
     clientes:[{id:'c1', nombre:'Mostrador', tel:'', dir:''}],
