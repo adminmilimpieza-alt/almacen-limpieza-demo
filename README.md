@@ -44,6 +44,21 @@ git push -u origin main
 7. **Respaldo diario:** export/import JSON + contador. Automático en servidor = fase 2.
 8. **Pedidos:** registro por proveedor con estado pendiente/recibido.
 
+## Link de pago por venta (Mercado Pago)
+Demo: en Caja, botón **🔗 Generar link de pago** → crea link simulado + botón
+**Pasar al cliente por WhatsApp** + movimiento MP *no conciliado* (el stock se
+descuenta al Cobrar/entregar, no al generar el link).
+
+Cableado real (fase 2, backend mínimo requerido — Pages es estático y no puede
+guardar el `MP_ACCESS_TOKEN`):
+1. Cuenta MP del vendedor + credencial `MP_ACCESS_TOKEN` (https://www.mercadopago.com.ar/developers).
+2. Endpoint `POST /api/mp/crear-preferencia {items, total}` → SDK `mercadopago`:
+   `preference.create({items, back_urls, notification_url, external_reference})` → devuelve `init_point`.
+3. En `js/pagos.js`: `MP_CONFIG.modo='real'`, `backendURL` apuntando al endpoint.
+4. Webhook `POST /api/mp/webhook` recibe IPN (`payment` aprobado) → marca el
+   movimiento conciliado (y opcionalmente descuenta stock si se vende solo online).
+5. QR: MP devuelve también `qr_code` para mostrar en mostrador.
+
 ## Siguiente (base para trabajar)
 - [ ] Ticket imprimible / factura
 - [ ] Cierre de caja diario
