@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Caja + Stock — Almacén Limpieza (Demo)</title>
+<title>Almacén · Caja y stock (Demo)</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,91 +13,88 @@
     <div><h1>Almacén · Caja y stock</h1><small>Base demo para el negocio de limpieza</small></div>
     <span class="badge">Demo</span>
   </div>
-  <nav>
-    <button data-tab="caja" class="active">Caja</button>
-    <button data-tab="stock">Stock</button>
-    <button data-tab="precios">Precios</button>
-    <button data-tab="clientes">Clientes</button>
-    <button data-tab="proveedores">Proveedores</button>
-    <button data-tab="pedidos">Pedidos</button>
-    <button data-tab="reportes">Reportes</button>
-    <button data-tab="respaldo">Respaldo</button>
-  </nav>
 </header>
 
-<main>
-  <!-- 1. CAJA: ventas + ingresos/egresos + conciliación -->
-  <section id="tab-caja" class="tab active">
-    <div class="grid2">
-      <div>
-        <div class="scanbar">
-          <input id="scan" placeholder="1 · Escanear código aquí…" autocomplete="off" autofocus>
-        </div>
-        <div class="scan-actions">
-          <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo al ticket.</span>
-          <button id="cam-btn">Escanear con cámara</button>
-        </div>
-        <div id="scan-flash"></div>
-        <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
-        <div class="scanbar">
-          <input id="buscar2" placeholder="2 · Si no anda el escáner: buscar por código o nombre…" autocomplete="off">
-        </div>
-        <div class="row">
-          <select id="f-cliente" title="Cliente"></select>
-        </div>
-        <div id="catalogo" class="catalogo"></div>
-      </div>
-      <div class="ticket">
-        <h2>Ticket actual</h2>
-        <div id="carrito"></div>
-        <div class="total">Total: $<span id="total">0</span></div>
-        <div class="row">
-          <select id="pago">
-            <option value="efectivo">Efectivo (in situ)</option>
-            <option value="mercadopago">Mercado Pago (online)</option>
-            <option value="banco">Banco / Transferencia</option>
-            <option value="cuenta">Cuenta corriente</option>
-          </select>
-          <button id="cobrar" class="primary big">Cobrar</button>
-          <button id="vaciar">Vaciar</button>
-        </div>
-        <div class="row">
-          <button id="linkmp">Generar link de pago (demo)</button>
-        </div>
-        <div id="linkmp-out"></div>
-        <h3>Movimiento manual (ingreso/egreso)</h3>
-        <div class="row">
-          <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
-          <select id="m-medio"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select>
-        </div>
-        <div class="row">
-          <input id="m-concepto" placeholder="Concepto (ej: pago luz)">
-          <input id="m-monto" type="number" min="0" placeholder="Monto">
-        </div>
-        <button id="m-agregar">Agregar movimiento</button>
-        <h3>Caja (ingresos/egresos) — tildar = conciliado MP/Bco</h3>
-        <div id="movimientos"></div>
-      </div>
+<main class="pos">
+  <!-- IZQUIERDA: escaneo + líneas del ticket (pantalla de venta standard) -->
+  <section class="pos-left" id="pos-left">
+    <div class="scanbar">
+      <input id="scan" placeholder="1 · Escanear código aquí…" autocomplete="off" autofocus>
     </div>
+    <div class="scan-actions">
+      <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo.</span>
+      <button id="cam-btn">Cámara</button>
+    </div>
+    <div id="scan-flash"></div>
+    <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
+    <div class="scanbar">
+      <input id="buscar2" placeholder="2 · Si no anda el escáner: buscar por código o nombre…" autocomplete="off">
+    </div>
+    <div id="catalogo" class="catalogo"></div>
+    <h2>Ticket</h2>
+    <div id="carrito" class="lineas"></div>
+    <div class="total">Total: $<span id="total">0</span></div>
   </section>
 
-  <!-- 2. STOCK -->
-  <section id="tab-stock" class="tab">
+  <!-- DERECHA: panel interactivo (cobro + destinos + volver) -->
+  <aside class="pos-right">
+    <div id="panel-home">
+      <h2>Cobrar</h2>
+      <label class="lbl">Cliente
+        <select id="f-cliente" title="Cliente"></select>
+      </label>
+      <label class="lbl">Medio de pago
+        <select id="pago">
+          <option value="efectivo">Efectivo (mostrador)</option>
+          <option value="mercadopago">Mercado Pago (online)</option>
+          <option value="banco">Banco / Transferencia</option>
+          <option value="cuenta">Cuenta corriente</option>
+        </select>
+      </label>
+      <button id="cobrar" class="primary big">Cobrar</button>
+      <div class="row">
+        <button id="vaciar">Vaciar ticket</button>
+        <button id="linkmp">Link de pago</button>
+      </div>
+      <div id="linkmp-out"></div>
+      <h3>Ir a</h3>
+      <div class="dash-grid">
+        <button data-go="mod-stock">Stock<small>productos y cantidades</small></button>
+        <button data-go="mod-precios">Precios<small>lista y actualización</small></button>
+        <button data-go="mod-clientes">Clientes<small>altas</small></button>
+        <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
+        <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
+        <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
+        <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
+        <button data-go="mod-respaldo">Respaldo<small>copia diaria</small></button>
+      </div>
+    </div>
+    <div id="panel-view" hidden>
+      <div class="panel-bar">
+        <button id="panel-back">← Volver</button>
+        <b id="panel-title"></b>
+      </div>
+      <div id="panel-body"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- Módulos: viven acá y el panel los muestra a pedido -->
+<div id="modulos" hidden>
+  <section id="mod-stock">
     <div class="row">
       <button id="nuevo" class="primary">+ Nuevo producto</button>
       <button id="reset">Restablecer demo</button>
     </div>
     <table>
-      <thead><tr><th>Cód</th><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+      <thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
-    <p class="hint">Stock ≤ 5 en rojo. Todo en el navegador (localStorage).</p>
+    <p class="hint">Stock 5 o menos en rojo. Todo en el navegador.</p>
   </section>
 
-  <!-- 5. PRECIOS -->
-  <section id="tab-precios" class="tab">
-    <h2>Lista de precios</h2>
-    <p class="hint">Actualización masiva por <b>código o nombre</b> vía CSV (<code>codigo,nombre,precio</code>). El PDF del proveedor se convierte a CSV una vez (fase 2: lectura automática de PDF).</p>
+  <section id="mod-precios">
+    <p class="hint">Actualización masiva por <b>código o nombre</b> vía CSV (<code>codigo,nombre,precio</code>). El PDF del proveedor se convierte a CSV una vez (fase 2: lectura automática).</p>
     <div class="row">
       <input type="file" id="csv" accept=".csv">
       <button id="csv-ver" class="primary">Previsualizar</button>
@@ -112,36 +109,42 @@
     <div id="lista-precios"></div>
   </section>
 
-  <!-- 3. CLIENTES -->
-  <section id="tab-clientes" class="tab">
-    <h2>Clientes</h2>
+  <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
     <table><thead><tr><th>Nombre</th><th>Tel</th><th>Dirección</th><th></th></tr></thead>
     <tbody id="tabla-cli"></tbody></table>
   </section>
 
-  <!-- 4. PROVEEDORES -->
-  <section id="tab-proveedores" class="tab">
-    <h2>Proveedores</h2>
+  <section id="mod-proveedores">
     <div class="row"><button id="prov-nuevo" class="primary">+ Nuevo proveedor</button></div>
     <table><thead><tr><th>Nombre</th><th>Tel</th><th>Notas</th><th></th></tr></thead>
     <tbody id="tabla-prov"></tbody></table>
   </section>
 
-  <!-- 8. PEDIDOS -->
-  <section id="tab-pedidos" class="tab">
-    <h2>Registro de pedidos a proveedores</h2>
+  <section id="mod-pedidos">
     <div class="row">
       <select id="ped-prov"></select>
       <input id="ped-detalle" placeholder="Detalle (ej: 10 lavandina 5L)">
-      <button id="ped-agregar" class="primary">Agregar pedido</button>
+      <button id="ped-agregar" class="primary">Agregar</button>
     </div>
     <div id="pedidos"></div>
   </section>
 
-  <!-- 6. REPORTES -->
-  <section id="tab-reportes" class="tab">
-    <h2>Reportes</h2>
+  <section id="mod-mov">
+    <div class="row">
+      <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+      <select id="m-medio"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select>
+    </div>
+    <div class="row">
+      <input id="m-concepto" placeholder="Concepto (ej: pago luz)">
+      <input id="m-monto" type="number" min="0" placeholder="Monto">
+    </div>
+    <button id="m-agregar">Agregar movimiento</button>
+    <p class="hint">Tildar = conciliado con Mercado Pago / Banco.</p>
+    <div id="movimientos"></div>
+  </section>
+
+  <section id="mod-reportes">
     <div class="row">
       <input id="rep-desde" type="date"><input id="rep-hasta" type="date">
       <button id="rep-caja" class="primary">Caja por período</button>
@@ -163,18 +166,16 @@
     <div id="ventas"></div>
   </section>
 
-  <!-- 7. RESPALDO -->
-  <section id="tab-respaldo" class="tab">
-    <h2>Respaldo diario de base de datos</h2>
-    <p class="hint">Demo en navegador: exportá el JSON cada día y guardalo (Drive/pendrive). En fase 2 va respaldo automático en servidor.</p>
+  <section id="mod-respaldo">
+    <p class="hint">Exportá el JSON cada día y guardalo (Drive/pendrive). En fase 2 va respaldo automático en servidor.</p>
     <div class="row">
-      <button id="bk-export" class="primary">Descargar respaldo (JSON)</button>
+      <button id="bk-export" class="primary">Descargar respaldo</button>
       <input type="file" id="bk-file" accept=".json">
       <button id="bk-import">Restaurar</button>
     </div>
     <div id="bk-info"></div>
   </section>
-</main>
+</div>
 
 <!-- Modal producto -->
 <dialog id="modal">

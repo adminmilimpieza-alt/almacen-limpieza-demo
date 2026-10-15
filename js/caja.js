@@ -25,14 +25,20 @@ const Caja = (() => {
   }
   function renderCarrito(){
     const box = $('carrito'); box.innerHTML='';
+    if(!carrito.length){ box.innerHTML='<p class="hint">Sin líneas. Escaneá el primer producto.</p>'; }
     carrito.forEach((it,idx)=>{
-      const d = document.createElement('div');
-      d.innerHTML = `${it.nombre} x${it.cant} — $${it.precio*it.cant} `;
-      const menos = document.createElement('button'); menos.textContent='-';
+      const d = document.createElement('div'); d.className='linea';
+      const info = document.createElement('div');
+      info.innerHTML = `<b>${it.nombre}</b><div class="hint">$${it.precio} c/u</div>`;
+      const qty = document.createElement('div'); qty.className='qty';
+      const menos = document.createElement('button'); menos.textContent='−';
       menos.onclick=()=>{ it.cant--; if(it.cant<=0) carrito.splice(idx,1); renderCarrito(); };
+      const n = document.createElement('b'); n.textContent = 'x'+it.cant;
       const mas = document.createElement('button'); mas.textContent='+';
       mas.onclick=()=>{ const p = Store.get().productos.find(x=>x.id===it.id); if(it.cant+1>p.stock){alert('No hay más stock');return;} it.cant++; renderCarrito(); };
-      d.appendChild(menos); d.appendChild(mas); box.appendChild(d);
+      qty.appendChild(menos); qty.appendChild(n); qty.appendChild(mas);
+      const tot = document.createElement('div'); tot.className='price'; tot.textContent = '$'+(it.precio*it.cant);
+      d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
     });
     $('total').textContent = carrito.reduce((a,i)=>a+i.precio*i.cant,0);
   }
@@ -91,7 +97,7 @@ const Caja = (() => {
     // Algunas pistolas configuran sufijo TAB en vez de Enter.
     scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
     // El campo vive con foco: el escáner escribe donde haya foco.
-    document.getElementById('tab-caja').addEventListener('click', e=>{
+    document.getElementById('pos-left').addEventListener('click', e=>{
       if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
     });
     setTimeout(()=>scan.focus(), 300);
