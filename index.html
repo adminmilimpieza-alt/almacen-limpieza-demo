@@ -18,6 +18,7 @@
 <main class="pos">
   <!-- IZQUIERDA: escaneo + líneas del ticket (pantalla de venta standard) -->
   <section class="pos-left" id="pos-left">
+    <div id="turno-status"></div>
     <div class="scanbar">
       <input id="scan" placeholder="1 · Escanear código aquí…" autocomplete="off" autofocus>
     </div>
@@ -67,6 +68,7 @@
         <button data-go="mod-clientes">Clientes<small>altas</small></button>
         <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
         <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
+        <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
         <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
         <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
         <button data-go="mod-respaldo">Respaldo<small>copia diaria</small></button>
@@ -136,6 +138,11 @@
       <button id="ped-agregar" class="primary">Agregar</button>
     </div>
     <div id="pedidos"></div>
+  </section>
+
+  <section id="mod-turno">
+    <div id="turno-box"></div>
+    <div id="turnos-hist"></div>
   </section>
 
   <section id="mod-mov">
@@ -223,6 +230,7 @@
 <script src="js/stock.js"></script>
 <script src="js/entidades.js"></script>
 <script src="js/operacion.js"></script>
+<script src="js/turnos.js"></script>
 <script src="js/reportes.js"></script>
 <script src="js/app.js"></script>
 </body>

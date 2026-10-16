@@ -8,7 +8,7 @@ const ICONOS = {
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v4';
+  const KEY = 'limpieza_demo_v5';
   // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
   const SEED = [
     // Líquidos 5 Lts (COSTO 5 Lts)
@@ -98,7 +98,7 @@ const Store = (() => {
   ];
   const seed = () => ({productos: SEED.map((r,i)=>({id:'p'+(i+1), codigo:r[0], nombre:r[1], categoria:r[2], costo:r[3], precio:r[3], stock:10})),
     ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:''}],
-    proveedores:[], movimientos:[], pedidos:[]});
+    proveedores:[], movimientos:[], pedidos:[], turnos:[]});
   function load(){
     try{
       const raw = localStorage.getItem(KEY);
@@ -106,7 +106,7 @@ const Store = (() => {
       const db = JSON.parse(raw);
       db.productos=db.productos||[]; db.ventas=db.ventas||[];
       db.clientes=db.clientes||seed().clientes; db.proveedores=db.proveedores||[];
-      db.movimientos=db.movimientos||[]; db.pedidos=db.pedidos||[];
+      db.movimientos=db.movimientos||[]; db.pedidos=db.pedidos||[]; db.turnos=db.turnos||[];
       return db;
     }catch{ return seed(); }
   }
@@ -139,18 +139,54 @@ const Store = (() => {
       });
       save(db); return n;
     },
+    turnoAbierto(){ return load().turnos.find(t=>t.estado==='abierto')||null; },
+    ultimoCerrado(){ return load().turnos.find(t=>t.estado==='cerrado')||null; },
+    abrirTurno(saldo){
+      const db=load();
+      if(db.turnos.some(t=>t.estado==='abierto')) throw new Error('Ya hay una caja abierta');
+      if(!(saldo>=0)) throw new Error('Saldo inicial inválido');
+      db.turnos.unshift({id:'t'+Date.now(), apertura:new Date().toISOString(), saldo_inicial:saldo, estado:'abierto'});
+      save(db);
+    },
+    // Esperado por medio para un turno (ventas generan movimientos con turnoId).
+    resumenTurno(t){
+      const db=load();
+      const movs=db.movimientos.filter(m=>m.turnoId===t.id);
+      const porMedio={};
+      movs.forEach(m=>{ porMedio[m.medio]=porMedio[m.medio]||{ing:0,egr:0}; porMedio[m.medio][m.tipo==='ingreso'?'ing':'egr']+=m.monto; });
+      const ef=porMedio.efectivo||{ing:0,egr:0};
+      return {movs, porMedio, esperadoEfectivo:t.saldo_inicial+ef.ing-ef.egr};
+    },
+    cerrarTurno(conteo, notas){
+      const db=load();
+      const t=db.turnos.find(x=>x.estado==='abierto'); if(!t) throw new Error('No hay caja abierta');
+      const r=this.resumenTurno(t);
+      const dif={};
+      ['efectivo','mercadopago','banco'].forEach(m=>{
+        const pm=r.porMedio[m]||{ing:0,egr:0};
+        const esp = m==='efectivo' ? t.saldo_inicial+pm.ing-pm.egr : pm.ing-pm.egr;
+        dif[m]={esperado:esp, contado:conteo[m]||0, diferencia:(conteo[m]||0)-esp};
+      });
+      t.cierre=new Date().toISOString(); t.conteo=conteo; t.diferencia=dif; t.notas=notas||''; t.estado='cerrado';
+      save(db); return t;
+    },
     cobrar(items, pago, clienteId){
       const db=load();
+      const turno=db.turnos.find(t=>t.estado==='abierto');
+      if(!turno) throw new Error('Abrí la caja primero (panel Turno)');
       for(const it of items){ const p=db.productos.find(x=>x.id===it.id);
         if(!p||p.stock<it.cant) throw new Error('Sin stock: '+(it.nombre||it.id)); }
       for(const it of items){ db.productos.find(x=>x.id===it.id).stock-=it.cant; }
       const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
-      const v={fecha:new Date().toISOString(), items, pago, total, clienteId:clienteId||'c1'};
+      const v={fecha:new Date().toISOString(), items, pago, total, clienteId:clienteId||'c1', turnoId:turno.id};
       db.ventas.unshift(v);
-      db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false});
+      db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id});
       save(db); return total;
     },
-    addMovimiento(m){ const db=load(); m.id=m.id||'m'+Date.now(); m.fecha=m.fecha||new Date().toISOString(); m.conciliado=!!m.conciliado; db.movimientos.unshift(m); save(db); },
+    addMovimiento(m){ const db=load();
+      const turno=db.turnos.find(t=>t.estado==='abierto');
+      if(!turno) throw new Error('Abrí la caja primero (panel Turno)');
+      m.turnoId=turno.id; m.id=m.id||'m'+Date.now(); m.fecha=m.fecha||new Date().toISOString(); m.conciliado=!!m.conciliado; db.movimientos.unshift(m); save(db); },
     conciliar(id, v){ const db=load(); const m=db.movimientos.find(x=>x.id===id); if(m){m.conciliado=!!v; save(db);} },
     upsertEntidad(col, e){ const db=load(); const i=db[col].findIndex(x=>x.id===e.id);
       if(i>=0)db[col][i]=e; else db[col].push(e); save(db); },

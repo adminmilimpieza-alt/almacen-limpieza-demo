@@ -116,11 +116,13 @@ const Caja = (() => {
       }catch(e){ alert(e.message); }
     };
     $('m-agregar').onclick = ()=>{
-      const monto = Number($('m-monto').value);
-      if(!($('m-concepto').value.trim()) || !(monto>0)){ alert('Concepto y monto'); return; }
-      Store.addMovimiento({tipo:$('m-tipo').value, medio:$('m-medio').value, concepto:$('m-concepto').value.trim(), monto});
-      $('m-concepto').value=''; $('m-monto').value='';
-      renderMovimientos(); Reportes.render();
+      try{
+        const monto = Number($('m-monto').value);
+        if(!($('m-concepto').value.trim()) || !(monto>0)){ alert('Concepto y monto'); return; }
+        Store.addMovimiento({tipo:$('m-tipo').value, medio:$('m-medio').value, concepto:$('m-concepto').value.trim(), monto});
+        $('m-concepto').value=''; $('m-monto').value='';
+        renderMovimientos(); Reportes.render();
+      }catch(e){ alert(e.message); }
     };
     $('linkmp').onclick = async ()=>{
       if(!carrito.length){ alert('Armá el ticket primero'); return; }
@@ -141,5 +143,5 @@ const Caja = (() => {
       btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
     };
   }
-  return {init, refresh:()=>{renderCatalogo($('buscar2').value); renderCarrito(); renderClientes(); renderMovimientos();}};
+  return {init, refresh:()=>{renderCatalogo($('buscar2').value); renderCarrito(); renderClientes(); renderMovimientos(); if(typeof Turnos!=='undefined') Turnos.status();}};
 })();
