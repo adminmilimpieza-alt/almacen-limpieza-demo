@@ -2,10 +2,23 @@
 const Stock = (() => {
   const $ = id => document.getElementById(id);
   let editId = null;
+  function filtros(){
+    const db = Store.get();
+    const q = ($('stk-q').value||'').toLowerCase(), r = $('stk-rubro').value;
+    const rubros = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
+    $('stk-rubro').innerHTML = '<option value="">Todos los rubros</option>'+rubros.map(x=>`<option ${x===r?'selected':''}>${x}</option>`).join('');
+    $('stk-prov').innerHTML = '<option value="">Elegí proveedor…</option>'+
+      db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
+    return db.productos.filter(p =>
+      (!r || (p.categoria||'General')===r) &&
+      (!q || (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(q)));
+  }
   function render(){
     const db = Store.get();
     const tb = $('tabla-stock'); tb.innerHTML='';
-    db.productos.forEach(p=>{
+    const list = filtros();
+    $('stk-count').textContent = `${list.length} de ${db.productos.length} productos`;
+    list.forEach(p=>{
       const tr = document.createElement('tr');
       if(p.stock<=5) tr.className='bajo';
       const prov = (Store.get().proveedores.find(x=>x.id===p.provId)||{}).nombre||'—';
@@ -33,6 +46,20 @@ const Stock = (() => {
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-costo').value=''; $('f-precio').value=''; $('f-stock').value='10';
  $('modal').showModal(); };
     $('reset').onclick=()=>{ if(confirm('Volver a datos demo?')){ Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); } };
+    $('stk-q').addEventListener('input', render);
+    $('stk-rubro').addEventListener('change', render);
+    $('stk-assign').onclick=()=>{
+      const pid = $('stk-prov').value;
+      if(!pid){ alert('Elegí un proveedor'); return; }
+      const list = filtros();
+      if(!list.length){ alert('Nada filtrado'); return; }
+      const nom = (Store.get().proveedores.find(x=>x.id===pid)||{}).nombre||'';
+      if(!confirm(`Asignar ${nom} a ${list.length} productos?`)) return;
+      const db = Store.get();
+      list.forEach(p=>{ const real = db.productos.find(x=>x.id===p.id); if(real) real.provId = pid; });
+      Store.import(JSON.stringify(db));
+      render(); Caja.refresh(); Reportes.render();
+    };
     $('guardar-prod').onclick=()=>{
       const p = { id: editId || 'p'+Date.now(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),

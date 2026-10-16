@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 <header>
@@ -92,6 +92,15 @@
       <button id="nuevo" class="primary">+ Nuevo producto</button>
       <button id="reset">Restablecer demo</button>
     </div>
+    <div class="row">
+      <input id="stk-q" placeholder="Buscar por código o nombre…">
+      <select id="stk-rubro"><option value="">Todos los rubros</option></select>
+    </div>
+    <div class="row">
+      <select id="stk-prov" title="Proveedor a asignar"></select>
+      <button id="stk-assign">Asignar a los filtrados</button>
+    </div>
+    <p class="hint" id="stk-count"></p>
     <table>
       <thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>Stock</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
@@ -242,15 +251,15 @@
   </form>
 </dialog>
 
-<script src="js/store.js?v=10"></script>
-<script src="js/pagos.js?v=10"></script>
-<script src="js/scan.js?v=10"></script>
-<script src="js/caja.js?v=10"></script>
-<script src="js/stock.js?v=10"></script>
-<script src="js/entidades.js?v=10"></script>
-<script src="js/operacion.js?v=10"></script>
-<script src="js/turnos.js?v=10"></script>
-<script src="js/reportes.js?v=10"></script>
-<script src="js/app.js?v=10"></script>
+<script src="js/store.js?v=11"></script>
+<script src="js/pagos.js?v=11"></script>
+<script src="js/scan.js?v=11"></script>
+<script src="js/caja.js?v=11"></script>
+<script src="js/stock.js?v=11"></script>
+<script src="js/entidades.js?v=11"></script>
+<script src="js/operacion.js?v=11"></script>
+<script src="js/turnos.js?v=11"></script>
+<script src="js/reportes.js?v=11"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>
