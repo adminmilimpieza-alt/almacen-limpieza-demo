@@ -1,27 +1,103 @@
 // store.js — capa de datos modular (localStorage). Base para crecer a backend real.
-// Cubre los 8 puntos del cliente en versión demo: caja I/E + conciliación manual,
-// stock, clientes, proveedores, precios (CSV por código/nombre — PDF en fase 2),
-// reportes, respaldo JSON, pedidos.
+// Catálogo real parcial de Mi Limpieza (Fernando Miretti, Villa María):
+// rubros Líquidos 5L / Líquidos 1L / Accesorios, con códigos internos y EAN.
+// La lista del proveedor trae COSTO; el precio de venta sale de costo + margen.
 const ICONOS = {
+  'Líquidos 5L': '#E1F3FE', 'Líquidos 1L': '#E1F3FE', 'Accesorios': '#F7F6F3',
   'Piso': '#EDF3EC', 'Cocina': '#E1F3FE', 'Baño': '#FBF3DB', 'Vidrios': '#E1F3FE',
-  'Accesorios': '#F7F6F3', 'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
+  'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v3';
-  const seedProductos = [
-    {id:'p1', codigo:'LAV-5L', nombre:'Lavandina x 5L', categoria:'Piso', precio:3500, stock:20},
-    {id:'p2', codigo:'DET-5L', nombre:'Detergente x 5L', categoria:'Cocina', precio:4200, stock:15},
-    {id:'p3', codigo:'DES-5L', nombre:'Desodorante piso x 5L', categoria:'Piso', precio:3800, stock:12},
-    {id:'p4', codigo:'JAB-5L', nombre:'Jabón líquido manos x 5L', categoria:'Baño', precio:5000, stock:8},
-    {id:'p5', codigo:'VID-5L', nombre:'Limpiavidrios x 5L', categoria:'Vidrios', precio:4500, stock:6},
-    {id:'p6', codigo:'BOL-80110', nombre:'Bolsa residuo 80x110 x10u', categoria:'Accesorios', precio:2800, stock:30},
-    {id:'p7', codigo:'TRA-PISO', nombre:'Trapo piso', categoria:'Accesorios', precio:1500, stock:25},
-    {id:'p8', codigo:'CLO-5KG', nombre:'Cloro granulado x 5kg', categoria:'Pileta', precio:18000, stock:4},
-    {id:'p9', codigo:'SUA-5L', nombre:'Suavizante ropa x 5L', categoria:'Ropa', precio:5200, stock:10},
-    {id:'p10', codigo:'ESC-PALA', nombre:'Escoba + pala', categoria:'Accesorios', precio:6500, stock:7},
+  const KEY = 'limpieza_demo_v4';
+  // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
+  const SEED = [
+    // Líquidos 5 Lts (COSTO 5 Lts)
+    ['509','CLORO PURO','Líquidos 5L',7000],
+    ['482','LAVANDINA CONCENTRADA (50% Concent. Cloro)','Líquidos 5L',5000],
+    ['790','LAVANDINA ROPA BLANCA','Líquidos 5L',6700],
+    ['793','LAVANDINA ROPA COLOR','Líquidos 5L',6100],
+    ['6976','LAVANDINA GEL PERFUMADA (50% Concent. AntiHongo)','Líquidos 5L',7900],
+    ['788','BLANQUEADOR OPTICO','Líquidos 5L',5700],
+    ['795','QUITAMANCHAS','Líquidos 5L',7500],
+    ['798','QUITAMANCHAS OXI','Líquidos 5L',8300],
+    ['531','QUITASARRO LIQUIDO CONCENTRADO','Líquidos 5L',10100],
+    ['13172','DETERGENTE INDUSTRIAL (Alto poder desengrasante)','Líquidos 5L',10800],
+    ['483','DETERGENTE PREMIUM (Acción amoniacal)','Líquidos 5L',9200],
+    ['494','DETERGENTE LIMON','Líquidos 5L',6700],
+    ['462','JABON LIQUIDO TOCADOR Coco/Vainilla c/desinfectante','Líquidos 5L',10500],
+    ['463','JABON LIQUIDO TOCADOR Dove c/desinfectante','Líquidos 5L',10500],
+    ['724','DESENGRASANTE ROJO','Líquidos 5L',9100],
+    ['729','DESENGRASANTE INDUSTRIAL','Líquidos 5L',10000],
+    ['846','LIMPIADOR CREMOSO','Líquidos 5L',11000],
+    ['690','LIQUIDO P/ LAMPAZOS perf. y siliconado','Líquidos 5L',45750],
+    ['549','CERA AUTOBRILLO NEGRA','Líquidos 5L',12700],
+    ['552','CERA AUTOBRILLO ROJA','Líquidos 5L',12700],
+    ['489','CERA AUTOBRILLO NATURAL','Líquidos 5L',8500],
+    ['603','CERA PROFESIONAL NEGRA','Líquidos 5L',27500],
+    ['488','CERA PROFESIONAL NATURAL','Líquidos 5L',22500],
+    ['425','PORCELANATO LIQUIDO','Líquidos 5L',11300],
+    // Líquidos 1 Lt (COSTO 1 Lt)
+    ['509-1L','CLORO PURO 1 Lt','Líquidos 1L',1700],
+    ['482-1L','LAVANDINA CONCENTRADA 1 Lt','Líquidos 1L',1300],
+    ['790-1L','LAVANDINA ROPA BLANCA 1 Lt','Líquidos 1L',1700],
+    ['793-1L','LAVANDINA ROPA COLOR 1 Lt','Líquidos 1L',1500],
+    ['6976-1L','LAVANDINA GEL PERFUMADA 1 Lt','Líquidos 1L',1900],
+    ['788-1L','BLANQUEADOR OPTICO 1 Lt','Líquidos 1L',1400],
+    ['795-1L','QUITAMANCHAS 1 Lt','Líquidos 1L',1800],
+    ['798-1L','QUITAMANCHAS OXI 1 Lt','Líquidos 1L',2000],
+    ['531-1L','QUITASARRO LIQUIDO 1 Lt','Líquidos 1L',2300],
+    ['13172-1L','DETERGENTE INDUSTRIAL 1 Lt','Líquidos 1L',2500],
+    // Accesorios x Uni (COSTO x Uni, códigos EAN reales)
+    ['7791828000046','PAPEL HIGIENICO Felpita SH 4x30','Accesorios',1600],
+    ['7791828900520','PAPEL HIGIENICO Felpita DH 12x30','Accesorios',8600],
+    ['7730973550013','PAPEL HIGIENICO Celeste SH 16x30','Accesorios',6000],
+    ['730973550747','PAPEL HIGIENICO Job DH 4x30','Accesorios',2200],
+    ['730973550693','PAPEL HIGIENICO Job DH 12x30','Accesorios',7400],
+    ['7791828000626','ROLLO COCINA CartaBella x3','Accesorios',1600],
+    ['7791828900537','ROLLO COCINA Felpita + Conveniente x3','Accesorios',1900],
+    ['3069','ROLLO DE COCINA Miraflor 250 Paños','Accesorios',1600],
+    ['7791828900377','ROLLO COCINA Felipita Maxi 200 paños','Accesorios',2400],
+    ['736684229139','NEW PEL SERV TISSUE 1000U 32x27','Accesorios',11100],
+    ['105280','SERVILLETAS 30x30','Accesorios',10500],
+    ['1036','BOBINA INDUSTRIAL S/C x200m 20cm','Accesorios',6300],
+    ['3080','BOBINA INDUSTRIAL SH x200m x24cm','Accesorios',8000],
+    ['7798183150126','REJILLA MULTIPROPOSITO EXTRA 35x45','Accesorios',1000],
+    ['7798159880170','YOU REJILLA ESPONJA','Accesorios',1100],
+    ['7798159881733','YOU REJILLA AMERICANA LIVIANA','Accesorios',800],
+    ['7798136920998','FIBRAN PAÑO P/PISO ESTRELLITA GRIS 48x60','Accesorios',900],
+    ['7791297013028','PAÑO PISO NIDO DE ABEJA ECO 48x56','Accesorios',1900],
+    ['7791297003005','FRANELA NARANJA','Accesorios',1200],
+    ['7798024459234','MR TRAPO ESPONJA ACERO 10GR','Accesorios',500],
+    ['7798024459258','MR TRAPO ESPONJA ACERO 30GR','Accesorios',1000],
+    ['7794440002238','VIRULANA ESPONJA ACERO BRONCE','Accesorios',1600],
+    ['7793253038526','MORTIMER ESPONJA DOBLE CARA','Accesorios',2400],
+    ['7798159881047','YOU LANA ACERO x10','Accesorios',1000],
+    ['7798159881887','YOU ESPONJA ECONOMICA','Accesorios',500],
+    ['7798126372851','MR TRAPO ESPONJA LISA','Accesorios',600],
+    ['7793253038106','MORTIMER ESPONJA CUADRICULADA','Accesorios',1900],
+    ['7790520028709','CERAMICOL LUSTRAMUEBLES ORIG 360CC','Accesorios',6200],
+    ['7790520028747','BLEM LUSTRAMUEBLES ORIG 360ML','Accesorios',6800],
+    ['7791290795778','CIF DESINFECTANTE AERO ORIG 360CC','Accesorios',4300],
+    ['7791290795792','CIF DESINFECTANTE AERO CITRICA 360CC','Accesorios',4300],
+    ['7791290795785','CIF DESINFECTANTE AERO LAVANDA 360CC','Accesorios',4300],
+    ['791290796805','CIF DESINFECTANTE AERO SANDALO 360CC','Accesorios',4300],
+    ['7790520995285','LYSOFORM ORIGINAL 360CC','Accesorios',5300],
+    ['7793253004248','POETT AMBIENTE FLORES PRIMAVERA 360CC','Accesorios',4500],
+    ['7793253004231','POETT AMBIENTE LAVANDA 360CC','Accesorios',4500],
+    ['793253005061','AYUDIN DESINF. AERO FRESCURA MATINAL 360CC','Accesorios',4800],
+    ['793253005078','AYUDIN DESINF. AERO BEBE 360CC','Accesorios',4800],
+    ['7793253005153','SELTON ACCION INST ROJO','Accesorios',5100],
+    ['7791290794221','CIF LIMP CREMA ORIG 750ML','Accesorios',4700],
+    ['7791290794238','CIF LIMP CREMA ORIG 375GR','Accesorios',2700],
+    ['7797390495396','SANCHEZ ESCOBILLON AZTECA','Accesorios',2400],
+    ['7797160000027','ARGENTUM ESCOBILLON VENUS 4 HILERAS','Accesorios',4500],
+    ['7798413499322','GANGA ESCOBILLON MONARCA','Accesorios',4100],
+    ['798065720102','HACENDOSA PALA C/CABO ECO','Accesorios',2500],
+    ['7798310620508','COLORES SECADOR DG','Accesorios',1800],
+    ['7798065720140','HACENDOSA SECADOR DG 40cm','Accesorios',2300],
   ];
-  const seed = () => ({productos:seedProductos, ventas:[],
-    clientes:[{id:'c1', nombre:'Mostrador', tel:'', dir:''}],
+  const seed = () => ({productos: SEED.map((r,i)=>({id:'p'+(i+1), codigo:r[0], nombre:r[1], categoria:r[2], costo:r[3], precio:r[3], stock:10})),
+    ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:''}],
     proveedores:[], movimientos:[], pedidos:[]});
   function load(){
     try{
@@ -43,16 +119,25 @@ const Store = (() => {
     upsertProducto(p){ const db=load(); const i=db.productos.findIndex(x=>x.id===p.id);
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     eliminar(id){ const db=load(); db.productos=db.productos.filter(x=>x.id!==id); save(db); },
-    // Actualización masiva de precios por código o nombre (base del punto 5; CSV hoy, PDF fase 2)
-    actualizarPrecios(lista){ // [{codigo?,nombre?,precio}]
+    // La lista del proveedor trae COSTO: se actualiza por código o nombre.
+    actualizarPrecios(lista){ // [{codigo?,nombre?,precio=costo}]
       const db=load(); let tocados=0, faltan=[];
       lista.forEach(r=>{
-        const precio=Number(r.precio); if(!(precio>=0)) return;
+        const costo=Number(r.precio); if(!(costo>=0)) return;
         let p = r.codigo ? db.productos.find(x=>(x.codigo||'').toLowerCase()===String(r.codigo).toLowerCase())
                          : db.productos.find(x=>x.nombre.toLowerCase()===String(r.nombre||'').toLowerCase());
-        if(p){ p.precio=precio; tocados++; } else faltan.push(r.codigo||r.nombre||'?');
+        if(p){ p.costo=costo; tocados++; } else faltan.push(r.codigo||r.nombre||'?');
       });
       save(db); return {tocados, faltan};
+    },
+    // Precio de venta = costo + margen%. Redondea a $100.
+    aplicarMargen(pct, soloRubro){
+      const db=load(); let n=0;
+      db.productos.forEach(p=>{
+        if(soloRubro && p.categoria!==soloRubro) return;
+        p.precio = Math.round((p.costo*(1+pct/100))/100)*100; n++;
+      });
+      save(db); return n;
     },
     cobrar(items, pago, clienteId){
       const db=load();
@@ -65,14 +150,11 @@ const Store = (() => {
       db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false});
       save(db); return total;
     },
-    // Punto 1: movimientos manuales de caja (ingresos/egresos in situ u online)
     addMovimiento(m){ const db=load(); m.id=m.id||'m'+Date.now(); m.fecha=m.fecha||new Date().toISOString(); m.conciliado=!!m.conciliado; db.movimientos.unshift(m); save(db); },
     conciliar(id, v){ const db=load(); const m=db.movimientos.find(x=>x.id===id); if(m){m.conciliado=!!v; save(db);} },
-    // Puntos 3 y 4
     upsertEntidad(col, e){ const db=load(); const i=db[col].findIndex(x=>x.id===e.id);
       if(i>=0)db[col][i]=e; else db[col].push(e); save(db); },
     delEntidad(col, id){ const db=load(); db[col]=db[col].filter(x=>x.id!==id); save(db); },
-    // Punto 8: pedidos a proveedores
     upsertPedido(p){ const db=load(); const i=db.pedidos.findIndex(x=>x.id===p.id);
       if(i>=0)db.pedidos[i]=p; else db.pedidos.unshift(p); save(db); },
     delPedido(id){ const db=load(); db.pedidos=db.pedidos.filter(x=>x.id!==id); save(db); },

@@ -9,8 +9,8 @@
 <body>
 <header>
   <div class="brand">
-    <div class="brand-mark">A</div>
-    <div><h1>Almacén · Caja y stock</h1><small>Base demo para el negocio de limpieza</small></div>
+    <div class="brand-mark">M</div>
+    <div><h1>Mi Limpieza · Caja y stock</h1><small>Fernando Miretti · Villa María, Córdoba</small></div>
     <span class="badge">Demo</span>
   </div>
 </header>
@@ -87,20 +87,25 @@
       <button id="reset">Restablecer demo</button>
     </div>
     <table>
-      <thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+      <thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Costo</th><th>Venta</th><th>Stock</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
     <p class="hint">Stock 5 o menos en rojo. Todo en el navegador.</p>
   </section>
 
   <section id="mod-precios">
-    <p class="hint">Actualización masiva por <b>código o nombre</b> vía CSV (<code>codigo,nombre,precio</code>). El PDF del proveedor se convierte a CSV una vez (fase 2: lectura automática).</p>
+    <p class="hint">La lista del proveedor trae <b>COSTO</b>: se actualiza por <b>código o nombre</b> vía CSV (<code>codigo,nombre,costo</code>). El precio de venta sale de costo + margen.</p>
     <div class="row">
       <input type="file" id="csv" accept=".csv">
       <button id="csv-ver" class="primary">Previsualizar</button>
-      <button id="csv-aplicar">Aplicar precios</button>
+      <button id="csv-aplicar">Aplicar costos</button>
     </div>
     <div id="csv-prev"></div>
+    <div class="row">
+      <input id="margen" type="number" min="0" value="50" title="Margen %">
+      <select id="margen-rubro"><option value="">Margen a todo</option></select>
+      <button id="margen-aplicar" class="primary">Aplicar margen</button>
+    </div>
     <div class="row">
       <select id="precio-rubro"><option value="">Todos los rubros</option></select>
       <button id="precio-ver">Ver lista</button>
@@ -181,10 +186,11 @@
 <dialog id="modal">
   <form method="dialog" id="form-prod">
     <h3 id="modal-titulo">Nuevo producto</h3>
-    <input id="f-codigo" placeholder="Código de barras (ej: LAV-5L)" autofocus>
-    <input id="f-nombre" placeholder="Nombre (ej: Detergente x 5L)" required>
-    <input id="f-cat" placeholder="Categoría (ej: Cocina / Baño / Piso)">
-    <input id="f-precio" type="number" min="0" step="1" placeholder="Precio" required>
+    <input id="f-codigo" placeholder="Código de barras (ej: 7791828000046)" autofocus>
+    <input id="f-nombre" placeholder="Nombre (ej: PAPEL HIGIENICO Felpita)" required>
+    <input id="f-cat" placeholder="Rubro (ej: Accesorios)">
+    <input id="f-costo" type="number" min="0" step="1" placeholder="Costo" required>
+    <input id="f-precio" type="number" min="0" step="1" placeholder="Precio de venta" required>
     <input id="f-stock" type="number" min="0" step="1" placeholder="Stock inicial" value="10">
     <div class="row">
       <button value="cancel">Cancelar</button>

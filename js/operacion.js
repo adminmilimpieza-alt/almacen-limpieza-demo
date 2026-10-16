@@ -20,8 +20,8 @@ const Precios = (() => {
     const db = Store.get();
     const f = $('precio-rubro').value;
     const list = db.productos.filter(p=>!f||p.categoria===f);
-    $('lista-precios').innerHTML = '<table><thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Precio</th></tr></thead><tbody>'+
-      list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
+    $('lista-precios').innerHTML = '<table><thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Costo</th><th>Venta</th></tr></thead><tbody>'+
+      list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
   }
   function init(){
     renderRubro(); verLista();
@@ -35,8 +35,19 @@ const Precios = (() => {
     $('csv-aplicar').onclick=()=>{
       if(!pendiente.length){alert('Primero previsualizá');return;}
       const r = Store.actualizarPrecios(pendiente);
-      alert(`Precios actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.join(', '):'ninguno'}`);
+      alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.join(', '):'ninguno'}`);
       pendiente=[]; $('csv-prev').innerHTML=''; verLista(); Stock.render(); Caja.refresh();
+    };
+    const rubrosM = ()=>{ const db=Store.get();
+      const r=[...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
+      $('margen-rubro').innerHTML='<option value="">Margen a todo</option>'+r.map(x=>`<option>${x}</option>`).join(''); };
+    rubrosM();
+    $('margen-aplicar').onclick=()=>{
+      const m = Number($('margen').value);
+      if(!(m>=0)){ alert('Margen inválido'); return; }
+      const n = Store.aplicarMargen(m, $('margen-rubro').value||null);
+      alert(`Venta recalculada en ${n} productos (+${m}%)`);
+      verLista(); Stock.render(); Caja.refresh();
     };
     $('precio-ver').onclick=verLista;
     $('precio-print').onclick=()=>window.print();

@@ -45,8 +45,8 @@ const Reportes = (() => {
   function verStock(){
     const db = Store.get(); const f = $('rep-rubro').value;
     const list = db.productos.filter(p=>!f||(p.categoria||'General')===f);
-    const val = list.reduce((a,p)=>a+p.precio*p.stock,0);
-    $('rep-stock-out').innerHTML = `<div class="venta"><b>Stock ${f||'general'}</b>: ${list.length} productos · valorizado <b>$${val}</b></div>`+
+    const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
+    $('rep-stock-out').innerHTML = `<div class="venta"><b>Stock ${f||'general'}</b>: ${list.length} productos · valorizado a costo <b>$${val}</b></div>`+
       '<table><tbody>'+list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
   }
   function renderVentas(){
