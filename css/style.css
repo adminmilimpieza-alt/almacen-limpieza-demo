@@ -115,7 +115,11 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
 @media(max-width:900px){.pos-right{position:static;max-height:none}}
 .lbl{display:block;font-size:13px;color:var(--muted);margin-top:8px}
 .lbl select{margin-top:4px}
-/* Líneas del ticket */
+/* Ticket siempre visible arriba; el catálogo scrollea debajo (standard POS) */
+.ticket-card{position:sticky;top:118px;z-index:5;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin:12px 0 20px}
+.ticket-card .lineas{max-height:30vh;overflow:auto}
+@media(max-width:900px){.ticket-card{top:170px}}
 .lineas{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .linea{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
   border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface-2)}

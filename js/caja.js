@@ -41,6 +41,9 @@ const Caja = (() => {
       d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
     });
     $('total').textContent = carrito.reduce((a,i)=>a+i.precio*i.cant,0);
+    const n = carrito.reduce((a,i)=>a+i.cant,0);
+    $('nitems').textContent = n + (n===1?' ítem':' ítems');
+    box.scrollTop = box.scrollHeight;
   }
   function renderClientes(){
     const db = Store.get();
