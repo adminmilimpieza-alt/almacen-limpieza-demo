@@ -8,7 +8,7 @@ const ICONOS = {
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v5';
+  const KEY = 'limpieza_demo_v6';
   // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
   const SEED = [
     // Líquidos 5 Lts (COSTO 5 Lts)
@@ -151,7 +151,7 @@ const Store = (() => {
     // Esperado por medio para un turno (ventas generan movimientos con turnoId).
     resumenTurno(t){
       const db=load();
-      const movs=db.movimientos.filter(m=>m.turnoId===t.id);
+      const movs=db.movimientos.filter(m=>m.turnoId===t.id && !m.anulado);
       const porMedio={};
       movs.forEach(m=>{ porMedio[m.medio]=porMedio[m.medio]||{ing:0,egr:0}; porMedio[m.medio][m.tipo==='ingreso'?'ing':'egr']+=m.monto; });
       const ef=porMedio.efectivo||{ing:0,egr:0};
@@ -178,10 +178,21 @@ const Store = (() => {
         if(!p||p.stock<it.cant) throw new Error('Sin stock: '+(it.nombre||it.id)); }
       for(const it of items){ db.productos.find(x=>x.id===it.id).stock-=it.cant; }
       const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
-      const v={fecha:new Date().toISOString(), items, pago, total, clienteId:clienteId||'c1', turnoId:turno.id};
+      const vid='v'+Date.now();
+      const v={id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:clienteId||'c1', turnoId:turno.id};
       db.ventas.unshift(v);
-      db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id});
+      db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id, ventaId:vid});
       save(db); return total;
+    },
+    anularVenta(id){
+      const db=load();
+      const v=db.ventas.find(x=>x.id===id);
+      if(!v) throw new Error('Venta no encontrada');
+      if(v.anulada) throw new Error('Ya estaba anulada');
+      for(const it of v.items){ const pr=db.productos.find(x=>x.id===it.id); if(pr) pr.stock+=it.cant; }
+      v.anulada=true; v.fechaAnulacion=new Date().toISOString();
+      const m=db.movimientos.find(x=>x.ventaId===id); if(m) m.anulado=true;
+      save(db);
     },
     addMovimiento(m){ const db=load();
       const turno=db.turnos.find(t=>t.estado==='abierto');

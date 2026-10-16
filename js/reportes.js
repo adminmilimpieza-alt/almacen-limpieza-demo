@@ -11,7 +11,7 @@ const Reportes = (() => {
   function caja(){
     const db = Store.get();
     const d = $('rep-desde').value, h = $('rep-hasta').value;
-    const movs = db.movimientos.filter(m=>enRango(m.fecha,d,h));
+    const movs = db.movimientos.filter(m=>enRango(m.fecha,d,h) && !m.anulado);
     const ing = movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+m.monto,0);
     const egr = movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+m.monto,0);
     const porMedio = {};
@@ -28,7 +28,8 @@ const Reportes = (() => {
   function hcli(){
     const db = Store.get(); const id = $('rep-cli').value;
     const v = db.ventas.filter(x=>x.clienteId===id);
-    $('rep-hist').innerHTML = `<h3>Compras del cliente (${v.length})</h3>` + (v.map(x=>
+    const va = v.filter(x=>!x.anulada);
+    $('rep-hist').innerHTML = `<h3>Compras del cliente (${va.length})</h3>` + (va.map(x=>
       `<div class="venta">${dia(x.fecha)} · $${x.total} · ${x.items.map(i=>i.nombre+' x'+i.cant).join(', ')}</div>`).join('')||'<p class="hint">Sin compras.</p>');
   }
   function hprov(){
@@ -56,8 +57,16 @@ const Reportes = (() => {
     const cli = id => (db.clientes.find(c=>c.id===id)||{}).nombre||'';
     db.ventas.slice(0,50).forEach(v=>{
       const d = document.createElement('div'); d.className='venta';
-      d.innerHTML = `<b>${new Date(v.fecha).toLocaleString('es-AR')}</b> · ${v.pago} · ${cli(v.clienteId)} · <b>$${v.total}</b><br>`+
-        v.items.map(i=>`${i.nombre} x${i.cant}`).join(', ');
+      d.innerHTML = `<b>${new Date(v.fecha).toLocaleString('es-AR')}</b> · ${v.pago} · ${cli(v.clienteId)} · <b>$${v.total}</b>` +
+        (v.anulada ? ` · <span class="tag warn">anulada</span>` : '') + '<br>' +
+        v.items.map(i=>`${i.nombre} x${i.cant}`).join(', ') + ' ';
+      if(!v.anulada && v.id){
+        const b = document.createElement('button'); b.textContent='Anular';
+        b.onclick=()=>{ if(confirm(`Anular venta de $${v.total}? Vuelve el stock.`)){
+          try{ Store.anularVenta(v.id); Stock.render(); Caja.refresh(); render(); }
+          catch(e){ alert(e.message); } } };
+        d.appendChild(b);
+      }
       box.appendChild(d);
     });
   }
