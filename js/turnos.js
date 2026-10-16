@@ -36,13 +36,14 @@ const Turnos = (() => {
           <td><input id="t-c-${m}" type="number" min="0" value="${esp(m)}"></td><td id="t-d-${m}">0</td></tr>`).join('')}
         </tbody></table>
         <input id="t-notas" placeholder="Notas del cierre (opcional)">
-        <div class="row"><button id="t-cerrar" class="primary">Cerrar caja</button></div>`;
+        <div class="row"><button id="t-cerrar" class="primary">Cerrar caja</button><button id="t-printc">Imprimir</button></div>`;
       const viva = ()=>{ ['efectivo','mercadopago','banco'].forEach(m=>{
         const c = Number($('t-c-'+m).value)||0, d = c - esp(m);
         const el = $('t-d-'+m); el.textContent = (d>0?'+':'')+d;
         el.style.color = d===0 ? 'inherit' : (d<0 ? '#9F2F2D' : '#346538');
       }); };
       ['efectivo','mercadopago','banco'].forEach(m=>{ $('t-c-'+m).addEventListener('input', viva); });
+      $('t-printc').onclick = ()=>{ document.body.classList.add('print-cierre'); window.print(); };
       $('t-cerrar').onclick = ()=>{
         try{
           const conteo = {efectivo:Number($('t-c-efectivo').value)||0, mercadopago:Number($('t-c-mercadopago').value)||0, banco:Number($('t-c-banco').value)||0};

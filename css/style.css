@@ -105,6 +105,13 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
   body{background:#fff}
   .pos{display:block}
   .pos-right{position:static;max-height:none}
+  /* Ticket: solo ticket + total */
+  body.print-ticket .pos-right, body.print-ticket .scanbar, body.print-ticket .scan-actions,
+  body.print-ticket #cam-wrap, body.print-ticket #catalogo, body.print-ticket #cat-titulo,
+  body.print-ticket button, body.print-ticket #scan-flash, body.print-ticket .hint{display:none !important}
+  body.print-ticket .ticket-card{position:static}
+  /* Cierre: solo panel */
+  body.print-cierre .pos-left, body.print-cierre #panel-home, body.print-cierre button{display:none !important}
 }
 /* POS de doble mitad: izquierda venta, derecha panel */
 .pos{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}

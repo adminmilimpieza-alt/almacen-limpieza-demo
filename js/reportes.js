@@ -27,9 +27,11 @@ const Reportes = (() => {
   }
   function hcli(){
     const db = Store.get(); const id = $('rep-cli').value;
+    const cli = db.clientes.find(c=>c.id===id);
     const v = db.ventas.filter(x=>x.clienteId===id);
     const va = v.filter(x=>!x.anulada);
-    $('rep-hist').innerHTML = `<h3>Compras del cliente (${va.length})</h3>` + (va.map(x=>
+    const enCuenta = va.filter(x=>x.pago==='cuenta').reduce((a,x)=>a+x.total,0);
+    $('rep-hist').innerHTML = `<h3>Compras del cliente (${va.length}) · en cuenta $${enCuenta} · deuda actual $${(cli&&cli.deuda)||0}</h3>` + (va.map(x=>
       `<div class="venta">${dia(x.fecha)} · $${x.total} · ${x.items.map(i=>i.nombre+' x'+i.cant).join(', ')}</div>`).join('')||'<p class="hint">Sin compras.</p>');
   }
   function hprov(){

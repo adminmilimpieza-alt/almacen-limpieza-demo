@@ -43,3 +43,20 @@ const ScanCam = (() => {
     btn.onclick = ()=>toggle(scanId, cb); }
   return {init, parar};
 })();
+
+// Beep de confirmación (standard POS): ok agudo corto, error grave.
+const Beep = (() => {
+  let ctx = null;
+  function tono(freq, ms){
+    try{
+      ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.12, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + ms/1000);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + ms/1000);
+    }catch{}
+  }
+  return { ok(){ tono(880, 90); }, err(){ tono(220, 180); } };
+})();

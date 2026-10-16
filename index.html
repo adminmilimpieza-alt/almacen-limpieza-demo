@@ -35,8 +35,9 @@
       <h2>Ticket <span id="nitems" class="tag info">0 ítems</span></h2>
       <div id="carrito" class="lineas"></div>
       <div class="total">Total: $<span id="total">0</span></div>
+      <div class="row"><button id="t-print">Imprimir ticket</button></div>
     </div>
-    <h2>Catálogo</h2>
+    <h2 id="cat-titulo">Catálogo</h2>
     <div id="catalogo" class="catalogo"></div>
   </section>
 
@@ -127,7 +128,7 @@
 
   <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
-    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Dirección</th><th></th></tr></thead>
+    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Dirección</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
     <tbody id="tabla-cli"></tbody></table>
   </section>
 
@@ -140,9 +141,14 @@
   <section id="mod-pedidos">
     <div class="row">
       <select id="ped-prov"></select>
-      <input id="ped-detalle" placeholder="Detalle (ej: 10 lavandina 5L)">
-      <button id="ped-agregar" class="primary">Agregar</button>
     </div>
+    <div class="row">
+      <select id="ped-prod"></select>
+      <input id="ped-cant" type="number" min="1" value="1">
+      <button id="ped-addlin">Agregar línea</button>
+    </div>
+    <div id="ped-lineas"></div>
+    <div class="row"><button id="ped-agregar" class="primary">Guardar pedido</button></div>
     <div id="pedidos"></div>
   </section>
 

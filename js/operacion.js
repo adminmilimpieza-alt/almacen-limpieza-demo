@@ -57,29 +57,56 @@ const Precios = (() => {
 
 const Pedidos = (() => {
   const $ = id => document.getElementById(id);
+  let lineas = []; // [{id,cant}] para el pedido en armado
+  const nom = id => (Store.get().productos.find(p=>p.id===id)||{}).nombre||'?';
   function render(){
     const db = Store.get();
     $('ped-prov').innerHTML = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(alta un proveedor)</option>';
+    $('ped-prod').innerHTML = db.productos.map(p=>`<option value="${p.id}">${p.codigo||''} · ${p.nombre} (stock ${p.stock})</option>`).join('');
+    $('ped-lineas').innerHTML = lineas.length
+      ? lineas.map((l,i)=>`<div>${nom(l.id)} x${l.cant} <button data-i="${i}">quitar</button></div>`).join('')
+      : '<p class="hint">Agregá líneas al pedido.</p>';
+    $('ped-lineas').querySelectorAll('button').forEach(b=>{ b.onclick=()=>{ lineas.splice(Number(b.dataset.i),1); render(); }; });
     const box = $('pedidos'); box.innerHTML='';
     if(!db.pedidos.length){ box.innerHTML='<p class="hint">Sin pedidos.</p>'; return; }
     db.pedidos.forEach(p=>{
       const prov = db.proveedores.find(x=>x.id===p.provId);
       const d = document.createElement('div'); d.className='venta';
-      d.innerHTML = `<b>${prov?prov.nombre:'Proveedor'}</b> · ${p.estado} · <span class="hint">${new Date(p.fecha).toLocaleString('es-AR')}</span><br>${p.detalle} `;
-      const b = document.createElement('button'); b.textContent = p.estado==='pendiente'?'Marcar recibido':'Reabrir';
-      b.onclick=()=>{ p.estado = p.estado==='pendiente'?'recibido':'pendiente'; Store.upsertPedido(p); render(); };
+      const det = (p.items&&p.items.length) ? p.items.map(i=>`${nom(i.id)} x${i.cant}`).join(', ') : (p.detalle||'');
+      d.innerHTML = `<b>${prov?prov.nombre:'Proveedor'}</b> · ${p.estado}` +
+        (p.montoPagado?` · pagado $${p.montoPagado} (${p.medioPago})`:'') +
+        ` · <span class="hint">${new Date(p.fecha).toLocaleString('es-AR')}</span><br>${det} `;
+      if(p.estado==='pendiente'){
+        const wrap = document.createElement('span');
+        wrap.innerHTML = ` <input type="number" min="0" placeholder="$ pagado" style="max-width:110px"> ` +
+          `<select><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select> `;
+        const b = document.createElement('button'); b.textContent='Marcar recibido'; b.className='primary';
+        b.onclick=()=>{
+          try{
+            Store.recibirPedido(p.id, wrap.querySelector('input').value, wrap.querySelector('select').value);
+            render(); Stock.render(); Caja.refresh(); Reportes.render();
+          }catch(e){ alert(e.message); }
+        };
+        d.appendChild(wrap); d.appendChild(b);
+      }
       const del = document.createElement('button'); del.textContent='Borrar';
       del.onclick=()=>{ if(confirm('Borrar pedido?')){ Store.delPedido(p.id); render(); } };
-      d.appendChild(b); d.appendChild(del); box.appendChild(d);
+      d.appendChild(del); box.appendChild(d);
     });
   }
   function init(){
     render();
+    $('ped-addlin').onclick=()=>{
+      const id = $('ped-prod').value, cant = Number($('ped-cant').value)||0;
+      if(!id || !(cant>0)){ alert('Producto y cantidad'); return; }
+      const ex = lineas.find(l=>l.id===id);
+      if(ex) ex.cant += cant; else lineas.push({id, cant});
+      render();
+    };
     $('ped-agregar').onclick=()=>{
-      const det = $('ped-detalle').value.trim();
-      if(!$('ped-prov').value || !det){ alert('Proveedor y detalle'); return; }
-      Store.upsertPedido({id:'ped'+Date.now(), provId:$('ped-prov').value, detalle:det, estado:'pendiente', fecha:new Date().toISOString()});
-      $('ped-detalle').value=''; render();
+      if(!$('ped-prov').value || !lineas.length){ alert('Proveedor y al menos una línea'); return; }
+      Store.upsertPedido({id:'ped'+Date.now(), provId:$('ped-prov').value, items:lineas, estado:'pendiente', fecha:new Date().toISOString()});
+      lineas=[]; render();
     };
   }
   return {init, render};

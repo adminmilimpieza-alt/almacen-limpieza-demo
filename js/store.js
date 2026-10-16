@@ -8,7 +8,7 @@ const ICONOS = {
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v8';
+  const KEY = 'limpieza_demo_v9';
   // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
   const SEED = [
     ['509','CLORO PURO','Líquidos 5L',7000],
@@ -192,7 +192,7 @@ const Store = (() => {
     ['7798178171105','URBAN FRESH BLOQUE MOCHILA 50gr B','Accesorios',3000],
   ];
   const seed = () => ({productos: SEED.map((r,i)=>({id:'p'+(i+1), codigo:r[0], nombre:r[1], categoria:r[2], costo:r[3], precio:r[3], stock:10})),
-    ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:''}],
+    ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
     proveedores:[], movimientos:[], pedidos:[], turnos:[]});
   function load(){
     try{
@@ -276,9 +276,15 @@ const Store = (() => {
       for(const it of items){ db.productos.find(x=>x.id===it.id).stock-=it.cant; }
       const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
       const vid='v'+Date.now();
-      const v={id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:clienteId||'c1', turnoId:turno.id};
+      const cid=clienteId||'c1';
+      const v={id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:cid, turnoId:turno.id};
       db.ventas.unshift(v);
-      db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id, ventaId:vid});
+      if(pago==='cuenta'){
+        // Cuenta corriente: no entra plata, queda como deuda del cliente.
+        const c=db.clientes.find(x=>x.id===cid); if(c) c.deuda=(c.deuda||0)+total;
+      } else {
+        db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id, ventaId:vid});
+      }
       save(db); return total;
     },
     anularVenta(id){
@@ -288,7 +294,23 @@ const Store = (() => {
       if(v.anulada) throw new Error('Ya estaba anulada');
       for(const it of v.items){ const pr=db.productos.find(x=>x.id===it.id); if(pr) pr.stock+=it.cant; }
       v.anulada=true; v.fechaAnulacion=new Date().toISOString();
-      const m=db.movimientos.find(x=>x.ventaId===id); if(m) m.anulado=true;
+      if(v.pago==='cuenta'){
+        const c=db.clientes.find(x=>x.id===v.clienteId); if(c) c.deuda=Math.max(0,(c.deuda||0)-v.total);
+      } else {
+        const m=db.movimientos.find(x=>x.ventaId===id); if(m) m.anulado=true;
+      }
+      save(db);
+    },
+    // Cobrar deuda de cuenta corriente: recién ahí entra el ingreso a caja.
+    cobrarDeuda(clienteId, monto, medio){
+      const db=load();
+      const turno=db.turnos.find(t=>t.estado==='abierto');
+      if(!turno) throw new Error('Abrí la caja primero (panel Turno)');
+      const c=db.clientes.find(x=>x.id===clienteId); if(!c) throw new Error('Cliente no encontrado');
+      monto=Number(monto); if(!(monto>0)) throw new Error('Monto inválido');
+      if(monto>(c.deuda||0)) throw new Error('El monto supera la deuda ($'+c.deuda+')');
+      c.deuda-=monto;
+      db.movimientos.unshift({id:'m'+Date.now(), fecha:new Date().toISOString(), tipo:'ingreso', medio, concepto:'Cobro cuenta · '+c.nombre, monto, conciliado:false, turnoId:turno.id});
       save(db);
     },
     addMovimiento(m){ const db=load();
@@ -301,6 +323,23 @@ const Store = (() => {
     delEntidad(col, id){ const db=load(); db[col]=db[col].filter(x=>x.id!==id); save(db); },
     upsertPedido(p){ const db=load(); const i=db.pedidos.findIndex(x=>x.id===p.id);
       if(i>=0)db.pedidos[i]=p; else db.pedidos.unshift(p); save(db); },
+    // Recibir pedido: entra el stock y, si se pagó, sale el egreso.
+    recibirPedido(id, montoPagado, medio){
+      const db=load();
+      const turno=db.turnos.find(t=>t.estado==='abierto');
+      const p=db.pedidos.find(x=>x.id===id); if(!p) throw new Error('Pedido no encontrado');
+      if(p.estado!=='pendiente') throw new Error('El pedido ya estaba recibido');
+      (p.items||[]).forEach(it=>{ const pr=db.productos.find(x=>x.id===it.id); if(pr) pr.stock+=Number(it.cant)||0; });
+      p.estado='recibido'; p.fechaRecibido=new Date().toISOString();
+      montoPagado=Number(montoPagado)||0;
+      if(montoPagado>0){
+        if(!turno) throw new Error('Para registrar el pago abrí la caja primero');
+        const prov=(db.proveedores.find(x=>x.id===p.provId)||{}).nombre||'Proveedor';
+        db.movimientos.unshift({id:'m'+Date.now(), fecha:new Date().toISOString(), tipo:'egreso', medio:medio||'efectivo', concepto:'Compra '+prov, monto:montoPagado, conciliado:false, turnoId:turno.id});
+        p.montoPagado=montoPagado; p.medioPago=medio||'efectivo';
+      }
+      save(db);
+    },
     delPedido(id){ const db=load(); db.pedidos=db.pedidos.filter(x=>x.id!==id); save(db); },
   };
 })();

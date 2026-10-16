@@ -141,14 +141,15 @@ const Caja = (() => {
     if(!vars.length) return false;
     const p = vars.find(v=>v.categoria==='Líquidos 1L') || vars[0];
     const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
-    if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); return true; }
-    if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); return true; }
+    if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
+    if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
     const it = carrito.find(x=>x.id===p.id);
     if(it) it.cant++;
     else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1, pres:pres(p), codigo:p.codigo});
     optimizar(false);
     renderCarrito();
     flash(`Agregado: ${p.nombre} (${pres(p)})`);
+    if(typeof Beep!=='undefined')Beep.ok();
     return true;
   }
   function init(){
@@ -158,7 +159,7 @@ const Caja = (() => {
     const intentar = v => {
       const code = (v||'').trim(); if(!code) return;
       if(scanAgregar(code)){ scan.value=''; }
-      else { flash(`Código no encontrado: ${code}. Buscalo en la línea 2.`); scan.select(); }
+      else { flash(`Código no encontrado: ${code}. Buscalo en la línea 2.`); if(typeof Beep!=='undefined')Beep.err(); scan.select(); }
     };
     scan.addEventListener('keydown', e=>{ if(e.key==='Enter') intentar(scan.value); });
     scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
@@ -168,6 +169,7 @@ const Caja = (() => {
     setTimeout(()=>scan.focus(), 300);
     if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ scan.value=code; intentar(code); });
     $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
+    $('t-print').onclick = ()=>{ document.body.classList.add('print-ticket'); window.print(); };
     $('cobrar').onclick = ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
       try{
