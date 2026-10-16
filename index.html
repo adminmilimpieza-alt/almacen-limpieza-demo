@@ -102,6 +102,12 @@
     <p class="hint">La lista del proveedor trae <b>COSTO</b>: se actualiza por <b>código o nombre</b> vía CSV (<code>codigo,nombre,costo</code>). El precio de venta sale de costo + margen.</p>
     <div class="row">
       <input type="file" id="csv" accept=".csv">
+      <select id="csv-rubro" title="Lista de origen">
+        <option value="">Sin lista (primera coincidencia)</option>
+        <option value="Líquidos 5L">Lista 5 Lts</option>
+        <option value="Líquidos 1L">Lista 1 Lt</option>
+        <option value="Accesorios">Accesorios x Uni</option>
+      </select>
       <button id="csv-ver" class="primary">Previsualizar</button>
       <button id="csv-aplicar">Aplicar costos</button>
     </div>

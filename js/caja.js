@@ -1,27 +1,78 @@
 // caja.js — módulo Caja (punto 1: ventas + ingresos/egresos + conciliación)
+// Venta fraccionada: el código interno es el mismo por producto; la presentación
+// (1L / 5L) se elige en la tarjeta o en la línea. Si el ticket suma 5 litros
+// sueltos, se optimiza solo al bidón de 5L cuando conviene.
 const Caja = (() => {
-  let carrito = [];
+  let carrito = []; // {id,nombre,precio,cant,pres}
   const $ = id => document.getElementById(id);
   const colorRubro = cat => (typeof ICONOS!=='undefined' && (ICONOS[cat]||ICONOS.General)) || '#F7F6F3';
-  const monograma = p => ((p.codigo||p.nombre||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3)||'?').toUpperCase();
+  const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
+  const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code);
+  function nombreBase(p){ return p.nombre.replace(/\s*1\s*Lt\.?\s*$/i,''); }
+  function prod(id){ return Store.get().productos.find(x=>x.id===id); }
   function renderCatalogo(filtro=''){
     const db = Store.get();
     const box = $('catalogo'); box.innerHTML='';
+    const f = filtro.toLowerCase();
+    const seen = new Set();
     db.productos
-      .filter(p => (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(filtro.toLowerCase()))
+      .filter(p => (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(f))
       .forEach(p=>{
+        if(seen.has(p.codigo)) return; seen.add(p.codigo);
+        const vars = variantes(p.codigo).sort((a,b)=>pres(a).localeCompare(pres(b)));
         const d = document.createElement('div'); d.className='card';
-        d.innerHTML = `<div class="mono" style="background:${colorRubro(p.categoria)}">${monograma(p)}</div><b>${p.nombre}</b><div class="meta">${p.codigo||''} · ${p.categoria} · stock ${p.stock}</div><div class="price">$${p.precio}</div>`;
-        const b = document.createElement('button'); b.textContent = p.stock>0 ? 'Agregar' : 'Sin stock'; b.disabled = p.stock<=0;
-        b.onclick = ()=>{ agregar(p); };
-        d.appendChild(b); box.appendChild(d);
+        d.innerHTML = `<div class="mono" style="background:${colorRubro(vars[0].categoria)}">${(p.codigo||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,4).toUpperCase()}</div>`+
+          `<b>${nombreBase(vars[0])}</b><div class="meta">${p.codigo||''} · stock ${vars.map(v=>pres(v)+':'+v.stock).join(' / ')}</div>`;
+        vars.forEach(v=>{
+          const b = document.createElement('button');
+          b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+v.precio : 'Sin stock');
+          b.disabled = v.stock<=0;
+          b.onclick = ()=>{ agregar(v); };
+          d.appendChild(b);
+        });
+        box.appendChild(d);
       });
   }
   function agregar(p){
+    const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
+    if(enCarro+1 > p.stock){ alert('No hay más stock'); return; }
     const it = carrito.find(x=>x.id===p.id);
-    if(it){ if(it.cant+1 > p.stock){ alert('No hay más stock'); return; } it.cant++; }
-    else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1});
+    if(it) it.cant++;
+    else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1, pres:pres(p), codigo:p.codigo});
+    optimizar(false);
     renderCarrito();
+  }
+  // Si se juntan 5 litros sueltos del mismo código y hay bidón con stock,
+  // se convierte solo y avisa el ahorro. Standard de venta fraccionada.
+  function optimizar(silencioso){
+    const db = Store.get();
+    let ahorro = 0; const avisos = [];
+    const bases = [...new Set(carrito.map(i=>i.codigo).filter(Boolean))];
+    bases.forEach(code=>{
+      const v1 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 1L');
+      const v5 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 5L');
+      if(!v1 || !v5) return;
+      const lin1 = carrito.filter(i=>i.id===v1.id);
+      const tot1 = lin1.reduce((a,i)=>a+i.cant,0);
+      if(tot1 < 5) return;
+      const bid = Math.floor(tot1/5), resto = tot1%5;
+      if(v5.stock < bid) return;
+      const antes = tot1*v1.precio, ahora = bid*v5.precio + resto*v1.precio;
+      if(ahora >= antes) return;
+      carrito = carrito.filter(i=>i.id!==v1.id);
+      if(resto>0) carrito.push({id:v1.id, nombre:v1.nombre, precio:v1.precio, cant:resto, pres:'1L', codigo:code});
+      const l5 = carrito.find(i=>i.id===v5.id);
+      if(l5) l5.cant += bid;
+      else carrito.push({id:v5.id, nombre:v5.nombre, precio:v5.precio, cant:bid, pres:'5L', codigo:code});
+      ahorro += antes-ahora;
+      avisos.push(`${nombreBase(v1)}: ${tot1}x1L → ${bid}x5L${resto?` + ${resto}x1L`:''}`);
+    });
+    if(ahorro>0 && !silencioso) flash(`Se pasó a bidón 5L y ahorrás $${ahorro}. ${avisos.join(' · ')}`);
+    return ahorro;
+  }
+  function otraPres(it){
+    const vars = variantes(it.codigo).filter(v=>v.id!==it.id);
+    return vars[0]||null;
   }
   function renderCarrito(){
     const box = $('carrito'); box.innerHTML='';
@@ -29,14 +80,29 @@ const Caja = (() => {
     carrito.forEach((it,idx)=>{
       const d = document.createElement('div'); d.className='linea';
       const info = document.createElement('div');
-      info.innerHTML = `<b>${it.nombre}</b><div class="hint">$${it.precio} c/u</div>`;
+      info.innerHTML = `<b>${it.nombre}</b> <span class="tag info">${it.pres||''}</span><div class="hint">$${it.precio} c/u</div>`;
       const qty = document.createElement('div'); qty.className='qty';
       const menos = document.createElement('button'); menos.textContent='−';
       menos.onclick=()=>{ it.cant--; if(it.cant<=0) carrito.splice(idx,1); renderCarrito(); };
       const n = document.createElement('b'); n.textContent = 'x'+it.cant;
       const mas = document.createElement('button'); mas.textContent='+';
-      mas.onclick=()=>{ const p = Store.get().productos.find(x=>x.id===it.id); if(it.cant+1>p.stock){alert('No hay más stock');return;} it.cant++; renderCarrito(); };
+      mas.onclick=()=>{ const p = prod(it.id); if(!p) return;
+        const enCarro = carrito.filter(x=>x.id===it.id).reduce((a,i)=>a+i.cant,0);
+        if(enCarro+1>p.stock){alert('No hay más stock');return;} it.cant++; optimizar(false); renderCarrito(); };
       qty.appendChild(menos); qty.appendChild(n); qty.appendChild(mas);
+      const alt = otraPres(it);
+      if(alt){
+        const sw = document.createElement('button'); sw.textContent='⇄ '+pres(alt); sw.title='Cambiar a presentación '+pres(alt);
+        sw.onclick=()=>{
+          const enCarro = carrito.filter(x=>x.id===alt.id).reduce((a,i)=>a+i.cant,0);
+          if(enCarro+it.cant > alt.stock){ alert('Sin stock en '+pres(alt)); return; }
+          const ex = carrito.find(x=>x.id===alt.id);
+          if(ex){ ex.cant += it.cant; carrito.splice(idx,1); }
+          else { it.id=alt.id; it.nombre=alt.nombre; it.precio=alt.precio; it.pres=pres(alt); }
+          optimizar(false); renderCarrito();
+        };
+        qty.appendChild(sw);
+      }
       const tot = document.createElement('div'); tot.className='price'; tot.textContent = '$'+(it.precio*it.cant);
       d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
     });
@@ -65,41 +131,37 @@ const Caja = (() => {
   function flash(msg){
     const box = $('scan-flash'); if(!box) return;
     box.innerHTML = `<div class="flash">${msg}</div>`;
-    clearTimeout(flash._t); flash._t = setTimeout(()=>{ box.innerHTML=''; }, 1800);
+    clearTimeout(flash._t); flash._t = setTimeout(()=>{ box.innerHTML=''; }, 2600);
   }
-  // Escáner USB = cuña de teclado: escribe el código rapidísimo + Enter.
-  // Enter con código exacto suma directo al ticket; si no, filtra el catálogo.
+  // El código interno es el mismo en 1L y 5L: el escáner suma la presentación
+  // de 1L por defecto (venta suelta) y en el ticket se puede cambiar a 5L.
   function scanAgregar(codigo){
     const code = (codigo||'').trim(); if(!code) return false;
-    const db = Store.get();
-    const p = db.productos.find(x=>(x.codigo||'').toLowerCase()===code.toLowerCase());
-    if(p){
-      if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); return true; }
-      const it = carrito.find(x=>x.id===p.id);
-      const enCarro = it?it.cant:0;
-      if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); return true; }
-      if(it) it.cant++; else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1});
-      renderCarrito(); flash(`Agregado: ${p.nombre} (x${enCarro+1})`);
-      return true;
-    }
-    return false;
+    const vars = variantes(code);
+    if(!vars.length) return false;
+    const p = vars.find(v=>v.categoria==='Líquidos 1L') || vars[0];
+    const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
+    if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); return true; }
+    if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); return true; }
+    const it = carrito.find(x=>x.id===p.id);
+    if(it) it.cant++;
+    else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1, pres:pres(p), codigo:p.codigo});
+    optimizar(false);
+    renderCarrito();
+    flash(`Agregado: ${p.nombre} (${pres(p)})`);
+    return true;
   }
   function init(){
     renderCatalogo(); renderCarrito(); renderClientes(); renderMovimientos();
     const scan = $('scan'), manual = $('buscar2');
-    // Línea 2: búsqueda manual de respaldo (código o nombre), no suma sola.
     manual.addEventListener('input', e=>renderCatalogo(e.target.value));
-    // Línea 1: escáner. Enter con código exacto suma directo; si no existe,
-    // avisa y deja el foco listo para reintentar o ir a la línea 2.
     const intentar = v => {
       const code = (v||'').trim(); if(!code) return;
       if(scanAgregar(code)){ scan.value=''; }
       else { flash(`Código no encontrado: ${code}. Buscalo en la línea 2.`); scan.select(); }
     };
     scan.addEventListener('keydown', e=>{ if(e.key==='Enter') intentar(scan.value); });
-    // Algunas pistolas configuran sufijo TAB en vez de Enter.
     scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
-    // El campo vive con foco: el escáner escribe donde haya foco.
     document.getElementById('pos-left').addEventListener('click', e=>{
       if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
     });

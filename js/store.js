@@ -8,7 +8,7 @@ const ICONOS = {
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v7';
+  const KEY = 'limpieza_demo_v8';
   // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
   const SEED = [
     ['509','CLORO PURO','Líquidos 5L',7000],
@@ -51,32 +51,32 @@ const Store = (() => {
     ['7559','ALCOHOL PURO 70º','Líquidos 5L',26700],
     ['731','DESTAPA CAÑERIAS SODA CAUSTICA 25%','Líquidos 5L',13800],
     ['711','DERRIBANTE DE INSECTOS','Líquidos 5L',4500],
-    ['509-1L','CLORO PURO 1Lt','Líquidos 1L',1700],
-    ['482-1L','LAVANDINA CONCENTRADA 1Lt','Líquidos 1L',1300],
-    ['790-1L','LAVANDINA ROPA BLANCA 1Lt','Líquidos 1L',1700],
-    ['793-1L','LAVANDINA ROPA COLOR 1Lt','Líquidos 1L',1500],
-    ['6976-1L','LAVANDINA GEL PERFUMADA 1Lt','Líquidos 1L',1900],
-    ['788-1L','BLANQUEADOR OPTICO 1Lt','Líquidos 1L',1400],
-    ['795-1L','QUITAMANCHAS 1Lt','Líquidos 1L',1800],
-    ['798-1L','QUITAMANCHAS OXI 1Lt','Líquidos 1L',2000],
-    ['531-1L','QUITASARRO LIQUIDO 1Lt','Líquidos 1L',2300],
-    ['13172-1L','DETERGENTE INDUSTRIAL 1Lt','Líquidos 1L',2500],
-    ['672-1L','BRILLO PARA BALDE PERFUMADO 1Lt','Líquidos 1L',2400],
-    ['3820-1L','JABON P/ROPA CON SUAVIZANTE 1Lt','Líquidos 1L',2000],
-    ['418-1L','JABON P/ROPA 12% 1Lt','Líquidos 1L',2200],
-    ['13286-1L','JABON ULTRA PERFUMADO 1Lt','Líquidos 1L',2800],
-    ['13240-1L','JABON ULTRA ROSE 1Lt','Líquidos 1L',2800],
-    ['421-1L','JABON OXI 1Lt','Líquidos 1L',3000],
-    ['80-1L','LAVA MATIC 1Lt','Líquidos 1L',3600],
-    ['13277-1L','SUAVIZANTE ECOPLUS 1Lt','Líquidos 1L',1600],
-    ['13287-1L','SUAVIZANTE ULTRA 1Lt','Líquidos 1L',2600],
-    ['535-1L','SUAVIZANTE PLUS BLANCO 1Lt','Líquidos 1L',1900],
-    ['655-1L','PERFUME ROPA ALCOHOL 1Lt','Líquidos 1L',7800],
-    ['523-1L','LIMPIA VIDRIOS 1Lt','Líquidos 1L',1500],
-    ['938-1L','DESODORANTE P/PISO 1Lt','Líquidos 1L',1300],
-    ['7559-1L','ALCOHOL PURO 70º 1Lt','Líquidos 1L',5600],
-    ['731-1L','DESTAPA CAÑERIAS 1Lt','Líquidos 1L',3000],
-    ['711-1L','DERRIBANTE INSECTOS 1Lt','Líquidos 1L',1200],
+    ['509','CLORO PURO 1Lt','Líquidos 1L',1700],
+    ['482','LAVANDINA CONCENTRADA 1Lt','Líquidos 1L',1300],
+    ['790','LAVANDINA ROPA BLANCA 1Lt','Líquidos 1L',1700],
+    ['793','LAVANDINA ROPA COLOR 1Lt','Líquidos 1L',1500],
+    ['6976','LAVANDINA GEL PERFUMADA 1Lt','Líquidos 1L',1900],
+    ['788','BLANQUEADOR OPTICO 1Lt','Líquidos 1L',1400],
+    ['795','QUITAMANCHAS 1Lt','Líquidos 1L',1800],
+    ['798','QUITAMANCHAS OXI 1Lt','Líquidos 1L',2000],
+    ['531','QUITASARRO LIQUIDO 1Lt','Líquidos 1L',2300],
+    ['13172','DETERGENTE INDUSTRIAL 1Lt','Líquidos 1L',2500],
+    ['672','BRILLO PARA BALDE PERFUMADO 1Lt','Líquidos 1L',2400],
+    ['3820','JABON P/ROPA CON SUAVIZANTE 1Lt','Líquidos 1L',2000],
+    ['418','JABON P/ROPA 12% 1Lt','Líquidos 1L',2200],
+    ['13286','JABON ULTRA PERFUMADO 1Lt','Líquidos 1L',2800],
+    ['13240','JABON ULTRA ROSE 1Lt','Líquidos 1L',2800],
+    ['421','JABON OXI 1Lt','Líquidos 1L',3000],
+    ['80','LAVA MATIC 1Lt','Líquidos 1L',3600],
+    ['13277','SUAVIZANTE ECOPLUS 1Lt','Líquidos 1L',1600],
+    ['13287','SUAVIZANTE ULTRA 1Lt','Líquidos 1L',2600],
+    ['535','SUAVIZANTE PLUS BLANCO 1Lt','Líquidos 1L',1900],
+    ['655','PERFUME ROPA ALCOHOL 1Lt','Líquidos 1L',7800],
+    ['523','LIMPIA VIDRIOS 1Lt','Líquidos 1L',1500],
+    ['938','DESODORANTE P/PISO 1Lt','Líquidos 1L',1300],
+    ['7559','ALCOHOL PURO 70º 1Lt','Líquidos 1L',5600],
+    ['731','DESTAPA CAÑERIAS 1Lt','Líquidos 1L',3000],
+    ['711','DERRIBANTE INSECTOS 1Lt','Líquidos 1L',1200],
     ['13270-500','PERCARBONATO DE SODIO 500gr','Líquidos 1L',7300],
     ['13270-1KG','PERCARBONATO DE SODIO 1Kg','Líquidos 1L',14500],
     ['7791828000046','PAPEL HIGIENICO Felpita SH 4x30','Accesorios',1600],
@@ -215,12 +215,14 @@ const Store = (() => {
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     eliminar(id){ const db=load(); db.productos=db.productos.filter(x=>x.id!==id); save(db); },
     // La lista del proveedor trae COSTO: se actualiza por código o nombre.
-    actualizarPrecios(lista){ // [{codigo?,nombre?,precio=costo}]
+    // El código interno se repite entre 1L y 5L: la lista (categoría) decide.
+    actualizarPrecios(lista, categoria){ // [{codigo?,nombre?,precio=costo}]
       const db=load(); let tocados=0, faltan=[];
       lista.forEach(r=>{
         const costo=Number(r.precio); if(!(costo>=0)) return;
-        let p = r.codigo ? db.productos.find(x=>(x.codigo||'').toLowerCase()===String(r.codigo).toLowerCase())
-                         : db.productos.find(x=>x.nombre.toLowerCase()===String(r.nombre||'').toLowerCase());
+        const pool = categoria ? db.productos.filter(x=>x.categoria===categoria) : db.productos;
+        let p = r.codigo ? pool.find(x=>(x.codigo||'').toLowerCase()===String(r.codigo).toLowerCase())
+                         : pool.find(x=>x.nombre.toLowerCase()===String(r.nombre||'').toLowerCase());
         if(p){ p.costo=costo; tocados++; } else faltan.push(r.codigo||r.nombre||'?');
       });
       save(db); return {tocados, faltan};

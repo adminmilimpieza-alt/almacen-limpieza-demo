@@ -34,7 +34,7 @@ const Precios = (() => {
     };
     $('csv-aplicar').onclick=()=>{
       if(!pendiente.length){alert('Primero previsualizá');return;}
-      const r = Store.actualizarPrecios(pendiente);
+      const r = Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
       alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.join(', '):'ninguno'}`);
       pendiente=[]; $('csv-prev').innerHTML=''; verLista(); Stock.render(); Caja.refresh();
     };
