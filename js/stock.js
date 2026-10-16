@@ -8,17 +8,24 @@ const Stock = (() => {
     db.productos.forEach(p=>{
       const tr = document.createElement('tr');
       if(p.stock<=5) tr.className='bajo';
-      tr.innerHTML = `<td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.stock}</td>`;
+      const prov = (Store.get().proveedores.find(x=>x.id===p.provId)||{}).nombre||'—';
+      tr.innerHTML = `<td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.stock}</td>`;
       const td = document.createElement('td');
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id; $('modal-titulo').textContent='Editar producto';
         $('f-codigo').value=p.codigo||''; $('f-nombre').value=p.nombre; $('f-cat').value=p.categoria||'';
         $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio; $('f-stock').value=p.stock;
-        $('modal').showModal(); };
+        fillProv($('f-prov'), p.provId); $('modal').showModal(); };
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+p.nombre+'?')){ Store.eliminar(p.id); render(); Caja.refresh(); } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
     });
+  }
+  function fillProv(sel, cur){
+    const db = Store.get();
+    sel.innerHTML = '<option value="">— Sin proveedor —</option>' +
+      db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
+    sel.value = cur||'';
   }
   function init(){
     render();

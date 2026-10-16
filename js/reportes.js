@@ -23,7 +23,9 @@ const Reportes = (() => {
   function hist(){
     const db = Store.get();
     $('rep-cli').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-    $('rep-prov').innerHTML = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(sin proveedores)</option>';
+    const ph = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(sin proveedores)</option>';
+    $('rep-prov').innerHTML = ph;
+    $('rep-pp').innerHTML = '<option value="">Todos</option><option value="__none__">Sin proveedor</option>' + db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
   }
   function hcli(){
     const db = Store.get(); const id = $('rep-cli').value;
@@ -72,6 +74,15 @@ const Reportes = (() => {
       box.appendChild(d);
     });
   }
+  function porProveedor(){
+    const db = Store.get(); const f = $('rep-pp').value;
+    const list = db.productos.filter(p=>!f || (f==='__none__' ? !p.provId : p.provId===f));
+    const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
+    const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
+    $('rep-pp-out').innerHTML = `<div class="venta"><b>Productos${f&&f!=='__none__'?' de '+nom(f):f==='__none__'?' sin proveedor':''}</b>: ${list.length} · valorizado a costo <b>$${val}</b></div>`+
+      '<table><thead><tr><th>Cód</th><th>Producto</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>Stock</th></tr></thead><tbody>'+
+      list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${nom(p.provId)}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.stock}</td></tr>`).join('')+'</tbody></table>';
+  }
   function render(){ hist(); stock(); renderVentas(); }
   function init(){
     render();
@@ -80,6 +91,8 @@ const Reportes = (() => {
     $('rep-caja').onclick=caja;
     $('rep-hcli').onclick=hcli; $('rep-hprov').onclick=hprov;
     $('rep-stock').onclick=verStock;
+    $('rep-verpp').onclick=porProveedor;
+    $('rep-printpp').onclick=()=>{ document.body.classList.add('print-cierre'); window.print(); };
     caja();
   }
   return {init, render, renderVentas};

@@ -3,9 +3,11 @@ const Precios = (() => {
   const $ = id => document.getElementById(id);
   let pendiente = [];
   function parseCSV(t){
+    const provs = Store.get().proveedores;
     return t.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
-      const [codigo,nombre,precio] = l.split(',').map(s=>(s||'').trim());
-      return {codigo:codigo||'', nombre:nombre||'', precio};
+      const [codigo,nombre,precio,prov] = l.split(',').map(s=>(s||'').trim());
+      const pe = prov ? provs.find(x=>x.nombre.toLowerCase()===prov.toLowerCase()) : null;
+      return {codigo:codigo||'', nombre:nombre||'', precio, provId:pe?pe.id:null};
     }).filter(r=>r.precio!=='' && (r.codigo||r.nombre));
   }
   function rubros(){

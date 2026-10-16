@@ -8,7 +8,7 @@ const ICONOS = {
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
 const Store = (() => {
-  const KEY = 'limpieza_demo_v9';
+  const KEY = 'limpieza_demo_v10';
   // [codigo, nombre, categoria, costo] — venta inicial = costo; se aplica margen en Precios.
   const SEED = [
     ['509','CLORO PURO','Líquidos 5L',7000],
@@ -191,7 +191,7 @@ const Store = (() => {
     ['7798178171112','URBAN FRESH BLOQUE MOCHILA 50gr A','Accesorios',1900],
     ['7798178171105','URBAN FRESH BLOQUE MOCHILA 50gr B','Accesorios',3000],
   ];
-  const seed = () => ({productos: SEED.map((r,i)=>({id:'p'+(i+1), codigo:r[0], nombre:r[1], categoria:r[2], costo:r[3], precio:r[3], stock:10})),
+  const seed = () => ({productos: SEED.map((r,i)=>({id:'p'+(i+1), codigo:r[0], nombre:r[1], categoria:r[2], costo:r[3], precio:r[3], stock:10, provId:null})),
     ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
     proveedores:[], movimientos:[], pedidos:[], turnos:[]});
   function load(){
@@ -223,7 +223,7 @@ const Store = (() => {
         const pool = categoria ? db.productos.filter(x=>x.categoria===categoria) : db.productos;
         let p = r.codigo ? pool.find(x=>(x.codigo||'').toLowerCase()===String(r.codigo).toLowerCase())
                          : pool.find(x=>x.nombre.toLowerCase()===String(r.nombre||'').toLowerCase());
-        if(p){ p.costo=costo; tocados++; } else faltan.push(r.codigo||r.nombre||'?');
+        if(p){ p.costo=costo; if(r.provId) p.provId=r.provId; tocados++; } else faltan.push(r.codigo||r.nombre||'?');
       });
       save(db); return {tocados, faltan};
     },
