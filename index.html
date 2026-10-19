@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 <header>
@@ -17,7 +17,6 @@
 </header>
 
 <!-- Menú lateral izquierdo: todos los módulos de gestión -->
-<div id="drawer-scrim" class="scrim" hidden></div>
 <aside id="drawer" class="drawer" hidden aria-label="Módulos">
   <div class="drawer-head">
     <div class="brand-mark">M</div>
@@ -42,7 +41,10 @@
   <section class="pos-left" id="pos-left">
     <div id="turno-status"></div>
     <div class="scanbar">
-      <input id="scan" placeholder="Escanear código aquí…" autocomplete="off" autofocus>
+      <div class="scan-wrap">
+        <input id="scan" placeholder="Escanear o buscar por código / nombre…" autocomplete="off" autofocus>
+        <div id="sugerencias" class="sugerencias" hidden></div>
+      </div>
     </div>
     <div class="scan-actions">
       <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo.</span>
@@ -50,9 +52,6 @@
     </div>
     <div id="scan-flash"></div>
     <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
-    <div class="scanbar">
-      <input id="buscar2" placeholder="Buscar por código o nombre (respaldo)…" autocomplete="off">
-    </div>
     <div class="ticket-card">
       <h2>Ticket <span id="nitems" class="tag info">0 ítems</span></h2>
       <div class="ticket-scroll">
@@ -83,8 +82,6 @@
       </div>
       <div id="linkmp-out"></div>
     </div>
-    <h2 id="cat-titulo">Catálogo</h2>
-    <div id="catalogo" class="catalogo"></div>
   </section>
 </main>
 
@@ -263,15 +260,15 @@
   </form>
 </dialog>
 
-<script src="js/store.js?v=12"></script>
-<script src="js/pagos.js?v=12"></script>
-<script src="js/scan.js?v=12"></script>
-<script src="js/caja.js?v=12"></script>
-<script src="js/stock.js?v=12"></script>
-<script src="js/entidades.js?v=12"></script>
-<script src="js/operacion.js?v=12"></script>
-<script src="js/turnos.js?v=12"></script>
-<script src="js/reportes.js?v=12"></script>
-<script src="js/app.js?v=12"></script>
+<script src="js/store.js?v=13"></script>
+<script src="js/pagos.js?v=13"></script>
+<script src="js/scan.js?v=13"></script>
+<script src="js/caja.js?v=13"></script>
+<script src="js/stock.js?v=13"></script>
+<script src="js/entidades.js?v=13"></script>
+<script src="js/operacion.js?v=13"></script>
+<script src="js/turnos.js?v=13"></script>
+<script src="js/reportes.js?v=13"></script>
+<script src="js/app.js?v=13"></script>
 </body>
 </html>

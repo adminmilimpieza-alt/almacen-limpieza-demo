@@ -5,34 +5,42 @@
 const Caja = (() => {
   let carrito = []; // {id,nombre,precio,cant,pres}
   const $ = id => document.getElementById(id);
-  const colorRubro = cat => (typeof ICONOS!=='undefined' && (ICONOS[cat]||ICONOS.General)) || '#F7F6F3';
   const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
   const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code);
   function nombreBase(p){ return p.nombre.replace(/\s*1\s*Lt\.?\s*$/i,''); }
   function prod(id){ return Store.get().productos.find(x=>x.id===id); }
-  function renderCatalogo(filtro=''){
+  function sugerencias(q){
+    const box = $('sugerencias'); if(!box) return;
+    const f = (q||'').trim().toLowerCase();
+    if(!f){ cerrarSugerencias(); return; }
     const db = Store.get();
-    const box = $('catalogo'); box.innerHTML='';
-    const f = filtro.toLowerCase();
-    const seen = new Set();
+    const seen = new Set(); const out = [];
     db.productos
       .filter(p => (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(f))
-      .forEach(p=>{
-        if(seen.has(p.codigo)) return; seen.add(p.codigo);
-        const vars = variantes(p.codigo).sort((a,b)=>pres(a).localeCompare(pres(b)));
-        const d = document.createElement('div'); d.className='card';
-        d.innerHTML = `<div class="mono" style="background:${colorRubro(vars[0].categoria)}">${(p.codigo||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,4).toUpperCase()}</div>`+
-          `<b>${nombreBase(vars[0])}</b><div class="meta">${p.codigo||''} · stock ${vars.map(v=>pres(v)+':'+v.stock).join(' / ')}</div>`;
-        vars.forEach(v=>{
-          const b = document.createElement('button');
-          b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+v.precio : 'Sin stock');
-          b.disabled = v.stock<=0;
-          b.onclick = ()=>{ agregar(v); };
-          d.appendChild(b);
-        });
-        box.appendChild(d);
+      .forEach(p=>{ if(seen.has(p.codigo) || out.length>=8) return; seen.add(p.codigo); out.push(p); });
+    box.innerHTML='';
+    if(!out.length){ cerrarSugerencias(); return; }
+    out.forEach(p=>{
+      const vars = variantes(p.codigo).sort((a,b)=>pres(a).localeCompare(pres(b)));
+      const row = document.createElement('div'); row.className='sug';
+      const info = document.createElement('div'); info.className='sug-info';
+      info.innerHTML = `<b>${nombreBase(vars[0])}</b><small>${p.codigo||''} · ${vars.map(v=>pres(v)+':'+v.stock).join(' / ')}</small>`;
+      row.appendChild(info);
+      vars.forEach(v=>{
+        const b = document.createElement('button'); b.className='sug-btn';
+        b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+v.precio : 'Sin stock');
+        b.disabled = v.stock<=0;
+        b.onmousedown = e=>e.preventDefault();
+        b.onclick = ()=>{ agregar(v); cerrarSugerencias(); const s=$('scan'); if(s){ s.value=''; s.focus(); } };
+        row.appendChild(b);
       });
+      box.appendChild(row);
+    });
+    box._items = [...box.querySelectorAll('button:not([disabled])')];
+    box.hidden = false;
   }
+  function cerrarSugerencias(){ const box=$('sugerencias'); if(!box) return; box.hidden=true; box._items=[]; }
+  function primerSugerencia(){ const box=$('sugerencias'); const it = box && box._items && box._items[0]; if(it){ it.click(); return true; } return false; }
   function agregar(p){
     const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
     if(enCarro+1 > p.stock){ alert('No hay más stock'); return; }
@@ -154,16 +162,21 @@ const Caja = (() => {
     return true;
   }
   function init(){
-    renderCatalogo(); renderCarrito(); renderClientes(); renderMovimientos();
-    const scan = $('scan'), manual = $('buscar2');
-    manual.addEventListener('input', e=>renderCatalogo(e.target.value));
+    renderCarrito(); renderClientes(); renderMovimientos();
+    const scan = $('scan');
     const intentar = v => {
       const code = (v||'').trim(); if(!code) return;
-      if(scanAgregar(code)){ scan.value=''; }
-      else { flash(`Código no encontrado: ${code}. Buscalo en la línea 2.`); if(typeof Beep!=='undefined')Beep.err(); scan.select(); }
+      if(scanAgregar(code)){ cerrarSugerencias(); scan.value=''; scan.focus(); return; }
+      if(primerSugerencia()) return;
+      flash(`Código no encontrado: ${code}`); if(typeof Beep!=='undefined')Beep.err(); scan.select();
     };
-    scan.addEventListener('keydown', e=>{ if(e.key==='Enter') intentar(scan.value); });
+    scan.addEventListener('input', ()=>sugerencias(scan.value));
+    scan.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); intentar(scan.value); }
+      else if(e.key==='Escape'){ cerrarSugerencias(); scan.value=''; }
+    });
     scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
+    document.addEventListener('click', e=>{ if(!e.target.closest('.scan-wrap')) cerrarSugerencias(); });
     document.getElementById('pos-left').addEventListener('click', e=>{
       if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
     });
@@ -208,5 +221,5 @@ const Caja = (() => {
       btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
     };
   }
-  return {init, refresh:()=>{renderCatalogo($('buscar2').value); renderCarrito(); renderClientes(); renderMovimientos(); if(typeof Turnos!=='undefined') Turnos.status();}};
+  return {init, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); if(typeof Turnos!=='undefined') Turnos.status();}};
 })();

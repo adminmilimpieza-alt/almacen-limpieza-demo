@@ -8,11 +8,11 @@ const Panel = (() => {
   };
   const $ = id => document.getElementById(id);
   function abrirDrawer(){
-    $('drawer').hidden = false; $('drawer-scrim').hidden = false;
+    $('drawer').hidden = false; document.body.classList.add('drawer-open');
     $('menu-btn').setAttribute('aria-expanded','true');
   }
   function cerrarDrawer(){
-    $('drawer').hidden = true; $('drawer-scrim').hidden = true;
+    $('drawer').hidden = true; document.body.classList.remove('drawer-open');
     $('menu-btn').setAttribute('aria-expanded','false');
   }
   function go(id){
@@ -34,7 +34,6 @@ const Panel = (() => {
     $('panel-back').onclick = back;
     $('menu-btn').onclick = ()=>{ $('drawer').hidden ? abrirDrawer() : cerrarDrawer(); };
     $('drawer-close').onclick = cerrarDrawer;
-    $('drawer-scrim').onclick = cerrarDrawer;
     document.addEventListener('keydown', e=>{
       if(e.key!=='Escape') return;
       if(!$('panel-overlay').hidden) back(); else cerrarDrawer();
