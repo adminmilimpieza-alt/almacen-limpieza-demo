@@ -4,23 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <header>
   <div class="brand">
+    <button id="menu-btn" class="icon-btn" aria-label="Módulos" aria-expanded="false"><span></span><span></span><span></span></button>
     <div class="brand-mark">M</div>
-    <div><h1>Mi Limpieza · Caja y stock</h1><small>Fernando Miretti · Villa María, Córdoba</small></div>
+    <div><h1>Mi Limpieza · Caja</h1><small>Fernando Miretti · Villa María, Córdoba</small></div>
     <span class="badge">Demo</span>
   </div>
 </header>
 
+<!-- Menú lateral izquierdo: todos los módulos de gestión -->
+<div id="drawer-scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" hidden aria-label="Módulos">
+  <div class="drawer-head">
+    <div class="brand-mark">M</div>
+    <b>Módulos</b>
+    <button id="drawer-close" class="icon-btn" aria-label="Cerrar">×</button>
+  </div>
+  <nav class="drawer-nav">
+    <button data-go="mod-stock">Stock<small>productos y cantidades</small></button>
+    <button data-go="mod-precios">Precios<small>lista y actualización</small></button>
+    <button data-go="mod-clientes">Clientes<small>altas</small></button>
+    <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
+    <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
+    <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
+    <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
+    <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
+    <button data-go="mod-respaldo">Respaldo<small>copia diaria</small></button>
+  </nav>
+</aside>
+
 <main class="pos">
-  <!-- IZQUIERDA: escaneo + líneas del ticket (pantalla de venta standard) -->
+  <!-- CAJA: escáner + líneas del ticket con columnas, total y cobro -->
   <section class="pos-left" id="pos-left">
     <div id="turno-status"></div>
     <div class="scanbar">
-      <input id="scan" placeholder="1 · Escanear código aquí…" autocomplete="off" autofocus>
+      <input id="scan" placeholder="Escanear código aquí…" autocomplete="off" autofocus>
     </div>
     <div class="scan-actions">
       <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo.</span>
@@ -29,26 +51,21 @@
     <div id="scan-flash"></div>
     <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
     <div class="scanbar">
-      <input id="buscar2" placeholder="2 · Si no anda el escáner: buscar por código o nombre…" autocomplete="off">
+      <input id="buscar2" placeholder="Buscar por código o nombre (respaldo)…" autocomplete="off">
     </div>
     <div class="ticket-card">
       <h2>Ticket <span id="nitems" class="tag info">0 ítems</span></h2>
-      <div id="carrito" class="lineas"></div>
+      <div class="ticket-scroll">
+        <table class="ticket-tabla">
+          <thead><tr><th>Código</th><th>Descripción</th><th class="col-cant">Cantidad</th><th class="col-precio">Precio</th></tr></thead>
+          <tbody id="carrito"></tbody>
+        </table>
+      </div>
       <div class="total">Total: $<span id="total">0</span></div>
-      <div class="row"><button id="t-print">Imprimir ticket</button></div>
-    </div>
-    <h2 id="cat-titulo">Catálogo</h2>
-    <div id="catalogo" class="catalogo"></div>
-  </section>
-
-  <!-- DERECHA: panel interactivo (cobro + destinos + volver) -->
-  <aside class="pos-right">
-    <div id="panel-home">
-      <h2>Cobrar</h2>
       <label class="lbl">Cliente
         <select id="f-cliente" title="Cliente"></select>
       </label>
-      <label class="lbl">Medio de pago
+      <label class="lbl">Forma de pago
         <select id="pago">
           <option value="efectivo">Efectivo (mostrador)</option>
           <option value="mercadopago">Mercado Pago (online)</option>
@@ -56,36 +73,31 @@
           <option value="cuenta">Cuenta corriente</option>
         </select>
       </label>
-      <button id="cobrar" class="primary big">Cobrar</button>
+      <div class="cobro-bar">
+        <button id="cobrar" class="primary big">Cobrar</button>
+        <button id="vaciar">Vaciar</button>
+      </div>
       <div class="row">
-        <button id="vaciar">Vaciar ticket</button>
         <button id="linkmp">Link de pago</button>
+        <button id="t-print">Imprimir ticket</button>
       </div>
       <div id="linkmp-out"></div>
-      <h3>Ir a</h3>
-      <div class="dash-grid">
-        <button data-go="mod-stock">Stock<small>productos y cantidades</small></button>
-        <button data-go="mod-precios">Precios<small>lista y actualización</small></button>
-        <button data-go="mod-clientes">Clientes<small>altas</small></button>
-        <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
-        <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
-        <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
-        <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
-        <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
-        <button data-go="mod-respaldo">Respaldo<small>copia diaria</small></button>
-      </div>
     </div>
-    <div id="panel-view" hidden>
-      <div class="panel-bar">
-        <button id="panel-back">← Volver</button>
-        <b id="panel-title"></b>
-      </div>
-      <div id="panel-body"></div>
-    </div>
-  </aside>
+    <h2 id="cat-titulo">Catálogo</h2>
+    <div id="catalogo" class="catalogo"></div>
+  </section>
 </main>
 
-<!-- Módulos: viven acá y el panel los muestra a pedido -->
+<!-- Módulos a pantalla completa (Stock, Precios, Reportes…) -->
+<div id="panel-overlay" class="panel-overlay" hidden>
+  <div class="panel-bar">
+    <button id="panel-back">← Volver</button>
+    <b id="panel-title"></b>
+  </div>
+  <div id="panel-body" class="panel-body"></div>
+</div>
+
+<!-- Módulos: viven acá y el overlay los muestra a pedido -->
 <div id="modulos" hidden>
   <section id="mod-stock">
     <div class="row">
@@ -251,15 +263,15 @@
   </form>
 </dialog>
 
-<script src="js/store.js?v=11"></script>
-<script src="js/pagos.js?v=11"></script>
-<script src="js/scan.js?v=11"></script>
-<script src="js/caja.js?v=11"></script>
-<script src="js/stock.js?v=11"></script>
-<script src="js/entidades.js?v=11"></script>
-<script src="js/operacion.js?v=11"></script>
-<script src="js/turnos.js?v=11"></script>
-<script src="js/reportes.js?v=11"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/store.js?v=12"></script>
+<script src="js/pagos.js?v=12"></script>
+<script src="js/scan.js?v=12"></script>
+<script src="js/caja.js?v=12"></script>
+<script src="js/stock.js?v=12"></script>
+<script src="js/entidades.js?v=12"></script>
+<script src="js/operacion.js?v=12"></script>
+<script src="js/turnos.js?v=12"></script>
+<script src="js/reportes.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
 </body>
 </html>

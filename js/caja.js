@@ -76,12 +76,13 @@ const Caja = (() => {
   }
   function renderCarrito(){
     const box = $('carrito'); box.innerHTML='';
-    if(!carrito.length){ box.innerHTML='<p class="hint">Sin líneas. Escaneá el primer producto.</p>'; }
+    if(!carrito.length){ box.innerHTML='<tr class="vacio"><td colspan="4" class="hint">Sin líneas. Escaneá el primer producto.</td></tr>'; }
     carrito.forEach((it,idx)=>{
-      const d = document.createElement('div'); d.className='linea';
-      const info = document.createElement('div');
+      const d = document.createElement('tr');
+      const cod = document.createElement('td'); cod.className='c-cod'; cod.textContent = it.codigo||'';
+      const info = document.createElement('td'); info.className='c-desc';
       info.innerHTML = `<b>${it.nombre}</b> <span class="tag info">${it.pres||''}</span><div class="hint">$${it.precio} c/u</div>`;
-      const qty = document.createElement('div'); qty.className='qty';
+      const qty = document.createElement('td'); qty.className='c-cant';
       const menos = document.createElement('button'); menos.textContent='−';
       menos.onclick=()=>{ it.cant--; if(it.cant<=0) carrito.splice(idx,1); renderCarrito(); };
       const n = document.createElement('b'); n.textContent = 'x'+it.cant;
@@ -103,13 +104,13 @@ const Caja = (() => {
         };
         qty.appendChild(sw);
       }
-      const tot = document.createElement('div'); tot.className='price'; tot.textContent = '$'+(it.precio*it.cant);
-      d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
+      const tot = document.createElement('td'); tot.className='c-total'; tot.textContent = '$'+(it.precio*it.cant);
+      d.appendChild(cod); d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
     });
     $('total').textContent = carrito.reduce((a,i)=>a+i.precio*i.cant,0);
     const n = carrito.reduce((a,i)=>a+i.cant,0);
     $('nitems').textContent = n + (n===1?' ítem':' ítems');
-    box.scrollTop = box.scrollHeight;
+    const sc = box.closest('.ticket-scroll'); if(sc) sc.scrollTop = sc.scrollHeight;
   }
   function renderClientes(){
     const db = Store.get();
