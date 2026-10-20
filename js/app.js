@@ -44,3 +44,13 @@ const Panel = (() => {
   return {init, go, back, abrirDrawer, cerrarDrawer};
 })();
 Caja.init(); Stock.init(); Entidades.init(); Cumple.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init(); Turnos.init(); Panel.init();
+
+// Catalogo compartido: al abrir se baja el publicado (fuente unica para todos los
+// equipos). Si no hay conexion, se sigue con el respaldo embebido sin romper nada.
+(async ()=>{
+  try{
+    const r = await Store.cargarRemoto();
+    if(r.ok){ Precios.render(); Stock.render(); Caja.refresh(); }
+    if(typeof Reportes!=='undefined') Reportes.render();
+  }catch(e){ /* sin red: se sigue con lo local */ }
+})();

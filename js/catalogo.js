@@ -6,6 +6,9 @@
 //   margen  = % de ganancia del proveedor sobre ese producto
 //   alerta  = correccion aplicada sobre una fila rota del Excel (revisar)
 // A partir de aca el catalogo se administra desde el panel: no se vuelve a leer el Excel.
+// Respaldo EMBEBIDO. La version que manda es data/catalogo.json (publicada),
+// que la app baja al abrir. Este archivo se usa si no hay internet o si se
+// abre el index.html directo con file://.
 const CATALOGO = {
  "productos": [
   {

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=20">
+<link rel="stylesheet" href="css/style.css?v=22">
 </head>
 <body>
 <header>
@@ -136,9 +136,19 @@
   </section>
 
   <section id="mod-precios">
-    <p class="hint">El catálogo ya está cargado desde la lista del proveedor. Acá se administra:
-      cambiá <b>costo, precio o margen</b> desde <b>Stock → Editar</b>, o <b>ocultá</b> lo que no se vende.
-      Para recargar desde un CSV nuevo: <code>codigo,nombre,presentacion,costo,margen</code>.</p>
+    <p class="hint">El catálogo se carga desde el <b>archivo publicado</b> (<code>data/catalogo.json</code>), que es la
+      fuente única para todos los equipos. Acá se administra: cambiá <b>costo, precio o margen</b> desde
+      <b>Stock → Editar</b>, o <b>ocultá</b> lo que no se vende. Para recargar desde un CSV nuevo:
+      <code>codigo,nombre,presentacion,costo,margen</code>.</p>
+    <div class="row">
+      <span id="precio-estado" class="hint" style="flex:1">Cargando estado del catálogo…</span>
+      <button id="precio-actualizar">Actualizar del servidor</button>
+      <button id="precio-publicar" class="primary">Publicar cambios</button>
+    </div>
+    <div class="row">
+      <input id="precio-url" placeholder="URL del catálogo publicado (opcional)">
+      <button id="precio-url-guardar">Guardar URL</button>
+    </div>
     <div class="row">
       <input type="file" id="csv" accept=".csv">
       <select id="csv-rubro" title="Lista de origen">
@@ -316,17 +326,17 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=20"></script>
-<script src="js/store.js?v=20"></script>
-<script src="js/pagos.js?v=20"></script>
-<script src="js/scan.js?v=20"></script>
-<script src="js/caja.js?v=20"></script>
-<script src="js/stock.js?v=20"></script>
-<script src="js/entidades.js?v=20"></script>
-<script src="js/cumple.js?v=20"></script>
-<script src="js/operacion.js?v=20"></script>
-<script src="js/turnos.js?v=20"></script>
-<script src="js/reportes.js?v=20"></script>
-<script src="js/app.js?v=20"></script>
+<script src="js/catalogo.js?v=22"></script>
+<script src="js/store.js?v=22"></script>
+<script src="js/pagos.js?v=22"></script>
+<script src="js/scan.js?v=22"></script>
+<script src="js/caja.js?v=22"></script>
+<script src="js/stock.js?v=22"></script>
+<script src="js/entidades.js?v=22"></script>
+<script src="js/cumple.js?v=22"></script>
+<script src="js/operacion.js?v=22"></script>
+<script src="js/turnos.js?v=22"></script>
+<script src="js/reportes.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
 </body>
 </html>

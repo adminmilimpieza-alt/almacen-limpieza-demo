@@ -28,7 +28,11 @@ const Store = (() => {
     })),
     ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
     proveedores: CATALOGO_SEED.proveedores.map(p=>({id:p.id, nombre:p.nombre, tel:'', notas:p.notas||''})),
-    movimientos:[], pedidos:[], turnos:[]
+    movimientos:[], pedidos:[], turnos:[],
+    // catalogo: estado del catalogo publicado (fuente unica de verdad compartida)
+    catalogo:{version:'', origen:'', url:'', aplicado:'', stockBase:{}},
+    // cfg: ajustes de la app
+    cfg:{urlCatalogo:''}
   });
   function load(){
     try{
@@ -39,6 +43,9 @@ const Store = (() => {
       db.clientes=db.clientes||seed().clientes; db.proveedores=db.proveedores||[];
       db.movimientos=db.movimientos||[]; db.pedidos=db.pedidos||[]; db.turnos=db.turnos||[];
       db.productos.forEach(p=>{ if(p.activo==null) p.activo=true; if(p.stock==null) p.stock=0; });
+      db.catalogo = db.catalogo || {version:'', origen:'', url:'', aplicado:'', stockBase:{}};
+      db.catalogo.stockBase = db.catalogo.stockBase || {};
+      db.cfg = db.cfg || {urlCatalogo:''};
       return db;
     }catch{ return seed(); }
   }
@@ -66,10 +73,142 @@ const Store = (() => {
     ['ventas','clientes','proveedores','movimientos','pedidos','turnos'].forEach(k=>{
       if(Array.isArray(viejo[k]) && viejo[k].length) nuevo[k] = viejo[k];
     });
+    if(viejo.catalogo) nuevo.catalogo = Object.assign(nuevo.catalogo, viejo.catalogo);
+    if(viejo.cfg) nuevo.cfg = Object.assign(nuevo.cfg, viejo.cfg);
     save(nuevo);
     return nuevo;
   }
   function save(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+  // ===== CATALOGO COMPARTIDO =====
+  // Fuente unica de verdad = data/catalogo.json publicado en el repo.
+  // La app lo baja al abrir; si no puede, sigue con el respaldo embebido
+  // (js/catalogo.js) y avisa que esta working offline.
+  // Cada dispositivo conserva SUS ventas y SU stock: el remoto manda en los datos
+  // del catalogo (costo, precio, margen, nombre, rubro, proveedor).
+  const RUTA_CATALOGO = 'data/catalogo.json';
+  const clave = p => (p.codigo||'')+'|'+(p.categoria||'')+'|'+(p.presentacion||'');
+
+  function urlCatalogo(){
+    let u='';
+    try{ const db=load(); u=(db.cfg&&db.cfg.urlCatalogo)||''; }catch(e){}
+    if(u) return u;
+    if(typeof location==='undefined' || location.protocol==='file:') return '';
+    return RUTA_CATALOGO;
+  }
+  function setUrlCatalogo(u){
+    const db=load(); db.cfg = db.cfg||{}; db.cfg.urlCatalogo=(u||'').trim(); save(db);
+  }
+  // De donde viene el catalogo que se esta usando ahora.
+  function estadoCatalogo(){
+    const db=load(); const c=db.catalogo||{};
+    return {
+      version:c.version||'', origen:c.origen||'', url:c.url||urlCatalogo(),
+      aplicado:c.aplicado||'', fuente: c.version?'remoto':'embebido',
+      stockBase: c.stockBase||{}
+    };
+  }
+  // Aplica el catalogo publicado encima del local.
+  // - costo/precio/margen/nombre/rubro/proveedor: los del remoto (verdad compartida)
+  // - visible/oculto: se respeta la decision LOCAL (cada equipo puede tapar algo)
+  // - stock: manda el remoto SOLO donde este equipo no movio nada; si movio, queda
+  //   el local y se marca la diferencia para que el deposito la concilie.
+  function aplicarRemoto(j){
+    const db=load();
+    const previos={};
+    db.productos.forEach(p=>{
+      if(p.proveedorNombre==null && p.provId) p.proveedorNombre=(db.proveedores.find(x=>x.id===p.provId)||{}).nombre||'';
+      previos[clave(p)]=p;
+    });
+    const stockBase={}; const drift=[]; const locales=[];
+    const out=[];
+    const base0=(db.catalogo&&db.catalogo.stockBase)||{};
+    j.productos.forEach((r,i)=>{
+      const k=(r.codigo||'')+'|'+(r.categoria||'')+'|'+(r.presentacion||'');
+      const prev=previos[k];
+      const p={
+        id: prev?prev.id:'p'+(Date.now()+i),
+        codigo:r.codigo||'', nombre:r.nombre||'', detalle:r.detalle||'',
+        categoria:r.categoria||'Accesorios', presentacion:r.presentacion||'',
+        provId:r.provId||'', proveedorNombre:r.prov||(prev?prev.proveedorNombre:''),
+        costo:Number(r.costo)||0, precio:Number(r.precio)||0,
+        margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'',
+        stock:Number(r.stock)||0,
+        activo: prev? (prev.activo!==false) : (r.activo!==false),
+        foto: prev? (prev.foto||'') : ''
+      };
+      const basePrev = prev ? base0[k] : undefined;
+      if(prev && basePrev!=null && basePrev!==prev.stock){
+        p.stock = prev.stock;
+        drift.push({codigo:p.codigo, nombre:p.nombre, local:p.stock, publicado:basePrev});
+      }
+      stockBase[k]=p.stock;
+      out.push(p);
+    });
+    // productos que solo existen en este equipo (agregados a mano): se conservan
+    const remotas=new Set(j.productos.map(r=>(r.codigo||'')+'|'+(r.categoria||'')+'|'+(r.presentacion||'')));
+    db.productos.forEach(p=>{
+      const k=clave(p);
+      if(previos[k] && !remotas.has(k)){ out.push(p); locales.push(p); }
+    });
+    db.productos=out;
+    if(j.proveedores && j.proveedores.length){
+      db.proveedores=j.proveedores.map(p=>({id:p.id, nombre:p.nombre, tel:p.tel||'', notas:p.notas||''}));
+    }
+    db.catalogo = db.catalogo||{};
+    db.catalogo.version=j.version||'';
+    db.catalogo.origen=j.origen||'';
+    db.catalogo.url=urlCatalogo();
+    db.catalogo.aplicado=new Date().toISOString();
+    db.catalogo.stockBase=stockBase;
+    save(db);
+    return {productos:out.length, drift:drift, locales:locales};
+  }
+  // Descarga el catalogo publicado. {ok, msg, drift}
+  async function cargarRemoto(){
+    const url=urlCatalogo();
+    if(!url) return {ok:false, msg:'Sin URL de catalogo (abierto con file://). Se usa el respaldo local.'};
+    try{
+      const sep=url.includes('?')?'&':'?';
+      const r=await fetch(url+sep+'t='+Date.now(), {cache:'no-store'});
+      if(!r.ok) return {ok:false, msg:'No se pudo leer el catalogo (HTTP '+r.status+')'};
+      const j=await r.json();
+      if(!j || !Array.isArray(j.productos) || !j.productos.length) return {ok:false, msg:'Catalogo vacio o con formato inesperado'};
+      const res=aplicarRemoto(j);
+      let msg='Catalogo actualizado: '+res.productos+' productos';
+      if(res.drift.length) msg+=' · '+res.drift.length+' con diferencia de stock';
+      return {ok:true, msg:msg, drift:res.drift};
+    }catch(e){
+      return {ok:false, msg:'Sin conexion o no se pudo leer el catalogo: '+(e&&e.message||e)};
+    }
+  }
+  // El catalogo tal como esta en este dispositivo, listo para publicar.
+  function catalogoParaPublicar(){
+    const db=load();
+    const provNombre=id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'';
+    return {
+      version:new Date().toISOString().replace(/\.\d+Z$/,'Z'),
+      generado:'panel de precios',
+      origen:(db.catalogo&&db.catalogo.origen)||'',
+      proveedores:db.proveedores.map(p=>({id:p.id, nombre:p.nombre, tel:p.tel||'', notas:p.notas||''})),
+      productos:db.productos.map(p=>({
+        codigo:p.codigo, nombre:p.nombre, detalle:p.detalle||'',
+        presentacion:p.presentacion||'', categoria:p.categoria,
+        prov:provNombre(p.provId), provId:p.provId,
+        costo:p.costo, precio:p.precio, margen:p.margen, alerta:p.alerta||'',
+        stock:p.stock, activo:p.activo!==false
+      }))
+    };
+  }
+  // Productos donde el stock local se aparto del publicado.
+  function driftStock(){
+    const db=load(); const base=(db.catalogo&&db.catalogo.stockBase)||{};
+    const out=[];
+    db.productos.forEach(p=>{
+      const k=clave(p);
+      if(base[k]!=null && base[k]!==p.stock) out.push({p:p, publicado:base[k], local:p.stock, dif:p.stock-base[k]});
+    });
+    return out;
+  }
   return {
     get(){ return load(); },
     reset(){ const d=seed(); save(d); },
@@ -235,5 +374,9 @@ const Store = (() => {
       save(db);
     },
     delPedido(id){ const db=load(); db.pedidos=db.pedidos.filter(x=>x.id!==id); save(db); },
+
+    // --- catalogo compartido ---
+    urlCatalogo, setUrlCatalogo, estadoCatalogo, aplicarRemoto,
+    cargarRemoto, catalogoParaPublicar, driftStock,
   };
 })();

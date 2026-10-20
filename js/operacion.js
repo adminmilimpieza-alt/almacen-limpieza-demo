@@ -64,9 +64,41 @@ const Precios = (() => {
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
       b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
     });
+    estadoUI();
+  }
+  // Estado del catalogo compartido: de donde salio la lista que se ve ahora.
+  function estadoUI(){
+    const box = $('precio-estado'); if(!box) return;
+    const e = Store.estadoCatalogo();
+    const drift = Store.driftStock();
+    const ts = e.aplicado ? new Date(e.aplicado).toLocaleString('es-AR') : '';
+    let txt;
+    if(e.fuente==='remoto'){
+      txt = 'Catálogo: <b>publicado</b> · versión '+e.version+(ts?' · aplicado '+ts:'');
+    } else {
+      txt = 'Catálogo: <b>respaldo local</b> (no se pudo leer el publicado) — se está trabajando sin conexión.';
+    }
+    if(drift.length) txt += ' · <b>'+drift.length+'</b> con stock modificado localmente (falta publicar)';
+    const url = $('precio-url');
+    if(url && document.activeElement!==url) url.value = e.url||'';
+    box.innerHTML = txt;
+  }
+  // Descarga el catalogo de este equipo para publicarlo.
+  function publicar(){
+    const cat = Store.catalogoParaPublicar();
+    const blob = new Blob([JSON.stringify(cat,null,1)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'catalogo.json';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    alert('Se descargó catalogo.json ('+cat.productos.length+' productos).\n\n'+
+      'Para que lo vean los demás equipos, publicá el archivo en el repo:\n\n'+
+      '  python tools/publicar-catalogo.py "catalogo.json"\n\n'+
+      '(o copialo a data/catalogo.json y commitealo)');
   }
   function init(){
-    renderRubro(); verLista();
+    renderRubro(); verLista(); estadoUI();
     $('csv-ver').onclick=()=>{
       const f = $('csv').files[0]; if(!f){alert('Elegí un CSV');return;}
       const r = new FileReader();
@@ -96,7 +128,19 @@ const Precios = (() => {
       $('margen').placeholder = $('margen-tipo').value==='propio' ? 'no aplica' : '% uniforme';
     });
     $('margen').disabled = $('margen-tipo').value==='propio';
-    $('precio-ver').onclick=verLista;
+    $('precio-actualizar').onclick=async ()=>{
+      $('precio-estado').textContent='Actualizando…';
+      const r = await Store.cargarRemoto();
+      estadoUI(); verLista(); Stock.render(); Caja.refresh();
+      alert(r.ok ? r.msg : r.msg);
+    };
+    $('precio-publicar').onclick=publicar;
+    $('precio-url-guardar').onclick=()=>{
+      Store.setUrlCatalogo($('precio-url').value);
+      $('precio-url').value = Store.urlCatalogo();
+      alert('URL guardada. Tocá "Actualizar del servidor" para probarla.');
+    };
+    $('precio-ver').onclick=()=>{ verLista(); estadoUI(); };
     $('precio-rubro').addEventListener('change', verLista);
     $('precio-prov').addEventListener('change', verLista);
     $('precio-ver-ocultos').addEventListener('change', verLista);

@@ -13,8 +13,8 @@ Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática �
 ## Catálogo: importado una vez, se administra desde el panel
 
 La lista de precios del proveedor (`MILIMPIEZA-Lista Precios-MATIAS.xlsx`) se importó **una sola vez**
-y quedó en `js/catalogo.js`. Desde ese momento **no se vuelve a leer el Excel**: el catálogo se
-administra 100% desde el panel.
+y quedó en `js/catalogo.js` (respaldo embebido) y en `data/catalogo.json` (**fuente única de verdad**).
+Desde ese momento **no se vuelve a leer el Excel**: el catálogo se administra 100% desde el panel.
 
 **Origen del import** — `tools/importar-precios.py` (Python + openpyxl):
 
@@ -22,8 +22,37 @@ administra 100% desde el panel.
 python tools/importar-precios.py "\\servidor\Compartida\...\MILIMPIEZA-Lista Precios-MATIAS.xlsx"
 ```
 
-Lee el Excel, normaliza y regenera `js/catalogo.js`. Es reproducible: si el proveedor manda una
-lista nueva, se corre el script y se commitea el catálogo generado.
+Lee el Excel, normaliza y regenera `js/catalogo.js` + `data/catalogo.json`. Es reproducible: si el
+proveedor manda una lista nueva, se corre el script y se commitea el catálogo generado.
+
+### Cómo se comparte entre equipos (sin backend)
+
+`data/catalogo.json` es un archivo **público en el repo**. La app lo baja al abrir, así que todos los
+equipos ven la misma lista de precios. `js/catalogo.js` queda como respaldo si no hay conexión o si se
+abre el `index.html` directo con `file://`.
+
+- **El remoto manda en los datos del catálogo**: costo, precio, margen, nombre, rubro y proveedor.
+- **Cada equipo conserva sus ventas y su stock** (son datos reales del local).
+- **Ocultar/mostrar es local**: si tapás un producto en tu equipo, el refresco no lo destapa.
+- **El stock se publica también**, pero solo pisa lo que este equipo no movió. Si moviste stock, queda
+  el tuyo y se marca con la etiqueta *local* hasta que publiques.
+
+### Publicar cambios
+
+1. En **Precios → Publicar cambios** se descarga `catalogo.json` con la lista de este equipo.
+2. Se publica en el repo:
+
+```bash
+python tools/publicar-catalogo.py "C:\Users\...\Downloads\catalogo.json"
+```
+
+El script valida el archivo, **te muestra qué precios/costos/stock cambian**, lo copia a
+`data/catalogo.json` y hace commit + push. Con `--no-push` deja el commit local.
+
+3. Los demás equipos lo toman con **Precios → Actualizar del servidor** (o al abrir la app).
+
+Si preferís otra fuente, en **Precios** se puede cambiar la URL del catálogo publicado
+(por ejemplo un `raw.githubusercontent.com` o una URL propia).
 
 ### Qué trae cada producto
 
@@ -64,6 +93,7 @@ panel de Precios con la etiqueta **revisar**:
 - **Agregar / borrar:** Stock → *+ Nuevo producto* / *Borrar*.
 - **Precios:** *Ver lista* filtra por rubro y proveedor; *Ocultar/Mostrar* desde la misma tabla; *Imprimir* saca la lista en papel.
 - **Margen:** *Margen propio de cada producto* recalcula la venta con el margen del proveedor (reproduce el precio del Excel). *Margen uniforme* aplica un % a todo.
+- **Catálogo compartido:** *Actualizar del servidor* baja el publicado; *Publicar cambios* descarga el de este equipo para subirlo.
 - **Recargar precios:** se sigue pudiendo subir un CSV (`codigo,nombre,presentacion,costo,margen`) por si llega una lista nueva.
 
 ## Migración

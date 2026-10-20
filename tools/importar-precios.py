@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import unicodedata
+from datetime import datetime, timezone
 
 try:
     import openpyxl
@@ -27,6 +28,7 @@ except ImportError:
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SALIDA = os.path.join(RAIZ, "js", "catalogo.js")
+SALIDA_PUBLICADO = os.path.join(RAIZ, "data", "catalogo.json")
 
 # Secciones del Excel -> (proveedor, rubro/categoria)
 SECCIONES = {
@@ -229,14 +231,32 @@ def main():
         "//   margen  = % de ganancia del proveedor sobre ese producto\n"
         "//   alerta  = correccion aplicada sobre una fila rota del Excel (revisar)\n"
         "// A partir de aca el catalogo se administra desde el panel: no se vuelve a leer el Excel.\n"
+        "// Respaldo EMBEBIDO. La version que manda es data/catalogo.json (publicada),\n"
+        "// que la app baja al abrir. Este archivo se usa si no hay internet o si se\n"
+        "// abre el index.html directo con file://.\n"
         "const CATALOGO = "
     )
     with open(SALIDA, "w", encoding="utf-8") as f:
         f.write(cabecera + cuerpo + ";\n")
 
+    # --- artefacto publicado: data/catalogo.json ---
+    # Es la fuente unica de verdad: la app lo baja al abrir (ver js/store.js).
+    # Trae version y fecha para que los dispositivos detecten que hay algo nuevo.
+    publicado = {
+        "version": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generado": "tools/importar-precios.py",
+        "origen": os.path.basename(ruta),
+        "proveedores": cat["proveedores"],
+        "productos": cat["productos"],
+    }
+    os.makedirs(os.path.dirname(SALIDA_PUBLICADO), exist_ok=True)
+    with open(SALIDA_PUBLICADO, "w", encoding="utf-8") as f:
+        json.dump(publicado, f, ensure_ascii=False, indent=1)
+
     n_alerta = sum(1 for p in cat["productos"] if p["alerta"])
     print(f"OK  {len(cat['productos'])} productos  ·  {len(proveedores)} proveedores  ·  {n_alerta} con alerta")
     print(f"    -> {SALIDA}")
+    print(f"    -> {SALIDA_PUBLICADO}  (publicado, version {publicado['version']})")
     for p in cat["proveedores"]:
         n = sum(1 for x in cat["productos"] if x["provId"] == p["id"])
         print(f"       {p['nombre']:<14} {n} productos")
