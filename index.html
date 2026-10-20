@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 <header>
@@ -27,6 +27,7 @@
     <button data-go="mod-stock">Stock<small>productos y cantidades</small></button>
     <button data-go="mod-precios">Precios<small>lista y actualización</small></button>
     <button data-go="mod-clientes">Clientes<small>altas</small></button>
+    <button data-go="mod-cumple">Cumpleaños<small>calendario y saludos</small></button>
     <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
     <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
     <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
@@ -111,7 +112,7 @@
     </div>
     <p class="hint" id="stk-count"></p>
     <table>
-      <thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>Stock</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Cód</th><th>Producto</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>Stock</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
     <p class="hint">Stock 5 o menos en rojo. Todo en el navegador.</p>
@@ -146,8 +147,22 @@
 
   <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
-    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Dirección</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
+    <table><thead><tr><th>Nombre completo</th><th>Cumpleaños</th><th>Tel</th><th>Referencia</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
     <tbody id="tabla-cli"></tbody></table>
+  </section>
+
+  <section id="mod-cumple">
+    <div class="cumple-head">
+      <button id="cal-prev" aria-label="Mes anterior">←</button>
+      <b id="cal-mes"></b>
+      <button id="cal-next" aria-label="Mes siguiente">→</button>
+      <button id="cal-hoy">Hoy</button>
+    </div>
+    <div id="cal-grid" class="cal-grid"></div>
+    <label class="lbl">Mensaje de saludo
+      <input id="cumple-msg" value="¡Feliz cumpleaños, {nombre}! De parte de Mi Limpieza. Pasá a retirar tu regalo.">
+    </label>
+    <div id="cumple-lista"></div>
   </section>
 
   <section id="mod-proveedores">
@@ -239,6 +254,14 @@
     <input id="f-costo" type="number" min="0" step="1" placeholder="Costo" required>
     <input id="f-precio" type="number" min="0" step="1" placeholder="Precio de venta" required>
     <input id="f-stock" type="number" min="0" step="1" placeholder="Stock inicial" value="10">
+    <div class="foto-row">
+      <div id="foto-prev" class="foto-prev vacia"><span>Sin foto</span></div>
+      <div class="foto-actions">
+        <button type="button" id="foto-pick">Cargar foto</button>
+        <button type="button" id="foto-del" disabled>Quitar foto</button>
+      </div>
+      <input type="file" id="f-foto" accept="image/*" capture="environment" hidden>
+    </div>
     <div class="row">
       <button value="cancel">Cancelar</button>
       <button id="guardar-prod" value="default" class="primary">Guardar</button>
@@ -250,9 +273,12 @@
 <dialog id="modal-ent">
   <form method="dialog">
     <h3 id="ent-titulo">Nuevo</h3>
-    <input id="e-nombre" placeholder="Nombre" required>
-    <input id="e-tel" placeholder="Teléfono">
-    <input id="e-extra" placeholder="Dirección / Notas">
+    <input id="e-nombre" placeholder="Apellido y nombre completo" required>
+    <input id="e-tel" placeholder="Teléfono (WhatsApp)">
+    <input id="e-extra" placeholder="Referencia (para distinguir clientes)">
+    <label class="lbl" id="nac-wrap">Fecha de nacimiento
+      <input id="e-nac" type="date">
+    </label>
     <div class="row">
       <button value="cancel">Cancelar</button>
       <button id="e-guardar" value="default" class="primary">Guardar</button>
@@ -260,15 +286,16 @@
   </form>
 </dialog>
 
-<script src="js/store.js?v=13"></script>
-<script src="js/pagos.js?v=13"></script>
-<script src="js/scan.js?v=13"></script>
-<script src="js/caja.js?v=13"></script>
-<script src="js/stock.js?v=13"></script>
-<script src="js/entidades.js?v=13"></script>
-<script src="js/operacion.js?v=13"></script>
-<script src="js/turnos.js?v=13"></script>
-<script src="js/reportes.js?v=13"></script>
-<script src="js/app.js?v=13"></script>
+<script src="js/store.js?v=15"></script>
+<script src="js/pagos.js?v=15"></script>
+<script src="js/scan.js?v=15"></script>
+<script src="js/caja.js?v=15"></script>
+<script src="js/stock.js?v=15"></script>
+<script src="js/entidades.js?v=15"></script>
+<script src="js/cumple.js?v=15"></script>
+<script src="js/operacion.js?v=15"></script>
+<script src="js/turnos.js?v=15"></script>
+<script src="js/reportes.js?v=15"></script>
+<script src="js/app.js?v=15"></script>
 </body>
 </html>

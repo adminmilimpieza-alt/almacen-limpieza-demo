@@ -3,7 +3,7 @@
 const Panel = (() => {
   const TITULOS = {
     'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
-    'mod-proveedores':'Proveedores', 'mod-pedidos':'Pedidos',
+    'mod-cumple':'Cumpleaños', 'mod-proveedores':'Proveedores', 'mod-pedidos':'Pedidos',
     'mod-mov':'Movimientos de caja', 'mod-turno':'Turno de caja', 'mod-reportes':'Reportes', 'mod-respaldo':'Respaldo'
   };
   const $ = id => document.getElementById(id);
@@ -41,4 +41,4 @@ const Panel = (() => {
   }
   return {init, go, back, abrirDrawer, cerrarDrawer};
 })();
-Caja.init(); Stock.init(); Entidades.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init(); Turnos.init(); Panel.init();
+Caja.init(); Stock.init(); Entidades.init(); Cumple.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init(); Turnos.init(); Panel.init();

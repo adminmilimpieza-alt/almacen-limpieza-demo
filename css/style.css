@@ -195,3 +195,48 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
   background:var(--canvas);z-index:2}
 .panel-bar b{color:var(--ink);font-family:var(--font-serif);font-size:19px}
 #panel-body table{font-size:13px}
+/* Foto de producto */
+td.td-foto{width:1%;padding:6px 8px}
+td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display:block;border:1px solid var(--line)}
+.foto-row{display:flex;gap:14px;align-items:flex-start;margin-top:8px}
+.foto-prev{width:76px;height:76px;flex:none;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface-2);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.foto-prev img{width:100%;height:100%;object-fit:cover;display:block}
+.foto-prev.vacia{border-style:dashed;color:var(--muted);font-size:11px;line-height:1.3;
+  text-align:center;padding:6px}
+.foto-prev.vacia img{display:none}
+.foto-actions{display:flex;flex-direction:column;gap:6px}
+.foto-actions button{min-height:36px;padding:6px 12px;font-size:13px}
+/* Cumpleaños */
+.cumple-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cumple-head #cal-mes{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--ink);
+  min-width:150px}
+.cumple-head button{min-height:40px;padding:6px 12px}
+.cumple-head #cal-hoy{margin-left:auto}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:560px}
+.cal-dow{text-align:center;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);padding:4px 0}
+.cal-day{position:relative;min-height:44px;padding:5px 7px;border:1px solid transparent;
+  border-radius:8px;background:var(--surface-2);color:var(--ink-2);cursor:pointer;text-align:left;
+  font-family:var(--font-mono);font-size:13px;line-height:1}
+.cal-day:hover{background:var(--brand-soft)}
+.cal-day.otro{color:var(--muted);background:transparent}
+.cal-day.hoy{border-color:var(--brand)}
+.cal-day.tiene{background:var(--pastel-yellow-bg);color:var(--pastel-yellow-tx);font-weight:600}
+.cal-day.sel{outline:2px solid var(--brand);outline-offset:-2px}
+.cal-num{display:block}
+.cal-q{position:absolute;right:5px;bottom:3px;font-size:10px;font-weight:700;color:var(--pastel-yellow-tx)}
+.cumple-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cumple-row:last-child{border-bottom:none}
+.cumple-day{font-family:var(--font-mono);font-size:13px;color:var(--muted);flex:none;min-width:26px}
+.cumple-info{flex:1;min-width:0}
+.cumple-info b{display:block;color:var(--ink);font-size:14px}
+.cumple-info .hint{font-size:12px}
+.cumple-row button{min-height:40px;padding:6px 14px;font-size:13px;white-space:nowrap}
+.cumple-vacio{color:var(--muted);font-size:14px;padding:14px 0}
+@media(max-width:640px){
+  .cal-grid{max-width:none}
+  .cal-day{min-height:38px;padding:4px;font-size:12px}
+  .cumple-head #cal-mes{min-width:0;font-size:18px}
+  .cumple-head #cal-hoy{margin-left:0}
+}

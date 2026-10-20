@@ -2,6 +2,12 @@
 const Entidades = (() => {
   const $ = id => document.getElementById(id);
   let col = 'clientes', editId = null;
+  function fmtNac(nac){
+    if(!nac) return '—';
+    const m = String(nac).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : nac;
+  }
+  function mostrarNac(show){ const w = $('nac-wrap'); if(w) w.hidden = !show; }
   function render(){
     const db = Store.get();
     // Clientes
@@ -9,7 +15,7 @@ const Entidades = (() => {
     db.clientes.forEach(e=>{
       const tr = document.createElement('tr');
       const deuda = e.deuda||0;
-      tr.innerHTML = `<td>${e.nombre}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`+
+      tr.innerHTML = `<td>${e.nombre}</td><td>${fmtNac(e.nac)}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`+
         `<td>${deuda>0?`<b>$${deuda}</b>`:'$0'}</td>`;
       const td = document.createElement('td');
       if(deuda>0){
@@ -27,6 +33,7 @@ const Entidades = (() => {
       bE.onclick=()=>{ col='clientes'; editId=e.id;
         $('ent-titulo').textContent='Cliente';
         $('e-nombre').value=e.nombre; $('e-tel').value=e.tel||''; $('e-extra').value=e.extra||'';
+        $('e-nac').value=e.nac||''; mostrarNac(true);
         $('modal-ent').showModal(); };
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('clientes', e.id); render(); } };
@@ -42,25 +49,35 @@ const Entidades = (() => {
       bE.onclick=()=>{ col='proveedores'; editId=e.id;
         $('ent-titulo').textContent='Proveedor';
         $('e-nombre').value=e.nombre; $('e-tel').value=e.tel||''; $('e-extra').value=e.extra||'';
+        mostrarNac(false);
         $('modal-ent').showModal(); };
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('proveedores', e.id); render(); } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tp.appendChild(tr);
     });
     Caja.refresh();
+    if(typeof Cumple!=='undefined' && Cumple.render) Cumple.render();
   }
   function init(){
     render();
     $('cli-nuevo').onclick=()=>{ col='clientes'; editId=null; $('ent-titulo').textContent='Nuevo cliente';
-      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('modal-ent').showModal(); };
+      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('e-nac').value='';
+      mostrarNac(true); $('modal-ent').showModal(); };
     $('prov-nuevo').onclick=()=>{ col='proveedores'; editId=null; $('ent-titulo').textContent='Nuevo proveedor';
-      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('modal-ent').showModal(); };
+      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('e-nac').value='';
+      mostrarNac(false); $('modal-ent').showModal(); };
     $('e-guardar').onclick=()=>{
       const db = Store.get();
       const cur = editId && db[col].find(x=>x.id===editId);
-      const e = {id: editId || col[0]+Date.now(), nombre:$('e-nombre').value.trim(),
-        tel:$('e-tel').value.trim(), extra:$('e-extra').value.trim(),
-        deuda: cur ? (cur.deuda||0) : 0};
+      const nac = col==='clientes' ? ($('e-nac').value||'') : ((cur&&cur.nac)||'');
+      const e = Object.assign({}, cur||{}, {
+        id: editId || col[0]+Date.now(),
+        nombre:$('e-nombre').value.trim(),
+        tel:$('e-tel').value.trim(),
+        extra:$('e-extra').value.trim(),
+        nac
+      });
+      if(!('deuda' in e)) e.deuda = 0;
       if(!e.nombre){ alert('Falta nombre'); return; }
       Store.upsertEntidad(col, e); render();
     };

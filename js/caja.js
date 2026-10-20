@@ -78,9 +78,19 @@ const Caja = (() => {
     if(ahorro>0 && !silencioso) flash(`Se pasó a bidón 5L y ahorrás $${ahorro}. ${avisos.join(' · ')}`);
     return ahorro;
   }
+  function catDe(it){
+    const p = prod(it.id);
+    if(p && p.categoria) return p.categoria;
+    return it.pres==='1L' ? 'Líquidos 1L' : (it.pres==='5L' ? 'Líquidos 5L' : '');
+  }
+  function categoriaAlterna(cat){
+    return cat==='Líquidos 1L' ? 'Líquidos 5L' : (cat==='Líquidos 5L' ? 'Líquidos 1L' : '');
+  }
   function otraPres(it){
+    const destino = categoriaAlterna(catDe(it));
+    if(!destino) return null;
     const vars = variantes(it.codigo).filter(v=>v.id!==it.id);
-    return vars[0]||null;
+    return vars.find(v=>v.categoria===destino) || vars[0] || null;
   }
   function renderCarrito(){
     const box = $('carrito'); box.innerHTML='';
@@ -101,7 +111,7 @@ const Caja = (() => {
       qty.appendChild(menos); qty.appendChild(n); qty.appendChild(mas);
       const alt = otraPres(it);
       if(alt){
-        const sw = document.createElement('button'); sw.textContent='⇄ '+pres(alt); sw.title='Cambiar a presentación '+pres(alt);
+        const sw = document.createElement('button'); sw.textContent='→ '+pres(alt); sw.title='Cambiar a '+pres(alt); sw.setAttribute('aria-label','Cambiar a presentación '+pres(alt));
         sw.onclick=()=>{
           const enCarro = carrito.filter(x=>x.id===alt.id).reduce((a,i)=>a+i.cant,0);
           if(enCarro+it.cant > alt.stock){ alert('Sin stock en '+pres(alt)); return; }
@@ -122,7 +132,7 @@ const Caja = (() => {
   }
   function renderClientes(){
     const db = Store.get();
-    $('f-cliente').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    $('f-cliente').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}${c.extra?' · '+c.extra:''}</option>`).join('');
   }
   function renderMovimientos(){
     const db = Store.get();
