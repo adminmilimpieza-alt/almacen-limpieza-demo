@@ -9,14 +9,68 @@ const Caja = (() => {
   const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code);
   function nombreBase(p){ return p.nombre.replace(/\s*1\s*Lt\.?\s*$/i,''); }
   function prod(id){ return Store.get().productos.find(x=>x.id===id); }
+  const norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  // Icono por tipo de producto para la foto demo (si el producto no tiene URL de imagen).
+  const EMOJIS = [
+    [/cloro|lavandina|blanqueador|alcohol|desinfect|desodorante|aerosol|lysoform|poett|ayudin|cif/i,'🧪'],
+    [/papel|rollo|servilleta|bobina|tissue/i,'🧻'],
+    [/esponja|virulana|acero|rejilla|paño|trapo|franela|mopa|microfibra/i,'🧽'],
+    [/escob|cepillo|secador|pala|lampazo|plumero|sopapa|barre|pasar|mata mosca|cabo/i,'🧹'],
+    [/balde|cesto|canasta|fuenton|palangana|bolsa/i,'🪣'],
+    [/guante/i,'🧤'],
+    [/jabon|jabón/i,'🧼'],
+    [/suavizante|perfume|brillo|cera/i,'✨'],
+    [/vidrio|ventana|cortina|barral/i,'🪟'],
+    [/detergente|desengrasante|quitamancha|quitasarro|limpiador|limpia/i,'🧴'],
+    [/insect|derribante|mosca/i,'🪳'],
+    [/destapa|cañer|soda/i,'🚿'],
+    [/percarbonato|oxi/i,'🫧']
+  ];
+  function placeholder(p){
+    const emoji = (EMOJIS.find(([re])=>re.test(p.nombre||''))||[null,'🫧'])[1];
+    const bg = (typeof ICONOS!=='undefined' && ICONOS[p.categoria]) || '#F7F6F3';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect width="240" height="240" fill="${bg}"/><text x="120" y="140" font-size="108" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
+    return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  }
+  function renderCatalogo(q){
+    const box = $('catalogo'); if(!box) return;
+    const f = norm(q);
+    const db = Store.get();
+    const list = db.productos.filter(p => !f || norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).includes(f));
+    const count = $('catalogo-count');
+    if(count) count.textContent = f ? `${list.length} resultado${list.length===1?'':'s'}` : `${list.length} productos`;
+    box.innerHTML='';
+    if(!list.length){ box.innerHTML='<p class="hint catalogo-empty">Nada coincide con la búsqueda.</p>'; return; }
+    list.forEach(p=>{
+      const card = document.createElement('button'); card.type='button'; card.className='prod-card';
+      if(p.stock<=0) card.classList.add('sin-stock');
+      else if(p.stock<=5) card.classList.add('bajo-stock');
+      card.disabled = p.stock<=0;
+      const img = document.createElement('img'); img.loading='lazy'; img.alt = p.nombre;
+      img.src = p.foto || p.img || placeholder(p);
+      img.onerror = ()=>{ img.onerror=null; img.src = placeholder(p); };
+      const body = document.createElement('div'); body.className='pc-body';
+      const nm = document.createElement('span'); nm.className='pc-name'; nm.textContent = p.nombre;
+      const meta = document.createElement('span'); meta.className='pc-meta';
+      const cod = document.createElement('span'); cod.textContent = p.codigo||'—';
+      const price = document.createElement('span'); price.className='pc-price'; price.textContent = '$'+p.precio;
+      meta.appendChild(cod); meta.appendChild(price);
+      const st = document.createElement('span'); st.className='pc-stock';
+      st.textContent = p.stock>0 ? 'Stock: '+p.stock : 'Sin stock';
+      body.appendChild(nm); body.appendChild(meta); body.appendChild(st);
+      card.appendChild(img); card.appendChild(body);
+      card.onclick = ()=>{ agregar(p); flash('Agregado: '+p.nombre+' ('+pres(p)+')'); };
+      box.appendChild(card);
+    });
+  }
   function sugerencias(q){
     const box = $('sugerencias'); if(!box) return;
-    const f = (q||'').trim().toLowerCase();
+    const f = norm(q).trim();
     if(!f){ cerrarSugerencias(); return; }
     const db = Store.get();
     const seen = new Set(); const out = [];
     db.productos
-      .filter(p => (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(f))
+      .filter(p => norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).includes(f))
       .forEach(p=>{ if(seen.has(p.codigo) || out.length>=8) return; seen.add(p.codigo); out.push(p); });
     box.innerHTML='';
     if(!out.length){ cerrarSugerencias(); return; }
@@ -31,7 +85,7 @@ const Caja = (() => {
         b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+v.precio : 'Sin stock');
         b.disabled = v.stock<=0;
         b.onmousedown = e=>e.preventDefault();
-        b.onclick = ()=>{ agregar(v); cerrarSugerencias(); const s=$('scan'); if(s){ s.value=''; s.focus(); } };
+        b.onclick = ()=>{ agregar(v); cerrarSugerencias(); const s=$('scan'); if(s){ s.value=''; s.focus(); } renderCatalogo(''); };
         row.appendChild(b);
       });
       box.appendChild(row);
@@ -130,9 +184,18 @@ const Caja = (() => {
     $('nitems').textContent = n + (n===1?' ítem':' ítems');
     const sc = box.closest('.ticket-scroll'); if(sc) sc.scrollTop = sc.scrollHeight;
   }
+  function esCumpleHoy(nac){
+    if(!nac) return false;
+    const p = String(nac).split('-').map(Number), h = new Date();
+    return p[1]===h.getMonth()+1 && p[2]===h.getDate();
+  }
   function renderClientes(){
     const db = Store.get();
-    $('f-cliente').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}${c.extra?' · '+c.extra:''}</option>`).join('');
+    $('f-cliente').innerHTML = db.clientes.map(c=>{
+      const ref = (c.ref || c.extra) ? ' · '+(c.ref || c.extra) : '';
+      const cumple = esCumpleHoy(c.nac) ? ' 🎂' : '';
+      return `<option value="${c.id}">${c.nombre}${ref}${cumple}</option>`;
+    }).join('');
   }
   function renderMovimientos(){
     const db = Store.get();
@@ -172,20 +235,19 @@ const Caja = (() => {
     return true;
   }
   function init(){
-    renderCarrito(); renderClientes(); renderMovimientos();
+    renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo('');
     const scan = $('scan');
     const intentar = v => {
       const code = (v||'').trim(); if(!code) return;
-      if(scanAgregar(code)){ cerrarSugerencias(); scan.value=''; scan.focus(); return; }
+      if(scanAgregar(code)){ cerrarSugerencias(); scan.value=''; scan.focus(); renderCatalogo(''); return; }
       if(primerSugerencia()) return;
       flash(`Código no encontrado: ${code}`); if(typeof Beep!=='undefined')Beep.err(); scan.select();
     };
-    scan.addEventListener('input', ()=>sugerencias(scan.value));
+    scan.addEventListener('input', ()=>{ sugerencias(scan.value); renderCatalogo(scan.value); });
     scan.addEventListener('keydown', e=>{
       if(e.key==='Enter'){ e.preventDefault(); intentar(scan.value); }
-      else if(e.key==='Escape'){ cerrarSugerencias(); scan.value=''; }
+      else if(e.key==='Escape'){ cerrarSugerencias(); scan.value=''; renderCatalogo(''); }
     });
-    scan.addEventListener('change', ()=>{ if(document.activeElement!==scan) intentar(scan.value); });
     document.addEventListener('click', e=>{ if(!e.target.closest('.scan-wrap')) cerrarSugerencias(); });
     document.getElementById('pos-left').addEventListener('click', e=>{
       if(e.target.tagName!=='INPUT' && e.target.tagName!=='SELECT' && e.target.tagName!=='BUTTON') scan.focus();
@@ -231,5 +293,5 @@ const Caja = (() => {
       btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
     };
   }
-  return {init, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); if(typeof Turnos!=='undefined') Turnos.status();}};
+  return {init, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo($('scan')?$('scan').value:''); if(typeof Turnos!=='undefined') Turnos.status();}};
 })();

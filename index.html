@@ -41,18 +41,33 @@
   <!-- CAJA: escáner + líneas del ticket con columnas, total y cobro -->
   <section class="pos-left" id="pos-left">
     <div id="turno-status"></div>
-    <div class="scanbar">
-      <div class="scan-wrap">
-        <input id="scan" placeholder="Escanear o buscar por código / nombre…" autocomplete="off" autofocus>
-        <div id="sugerencias" class="sugerencias" hidden></div>
+    <div id="cumples-alert" class="cumple-alert" hidden></div>
+    <div class="scan-hero">
+      <div class="scan-hero-head">
+        <span class="scan-step">1 · Buscá el producto</span>
+        <span class="hint">Escaneá el código o escribí parte del nombre…</span>
       </div>
-    </div>
-    <div class="scan-actions">
-      <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo.</span>
-      <button id="cam-btn">Cámara</button>
+      <div class="scanbar">
+        <div class="scan-wrap">
+          <input id="scan" placeholder="Escanear o buscar por código / nombre…" autocomplete="off" autofocus>
+          <div id="sugerencias" class="sugerencias" hidden></div>
+        </div>
+      </div>
+      <div class="scan-actions">
+        <span class="hint">Pistola escribe acá + <kbd>Enter</kbd> y suma directo.</span>
+        <button id="cam-btn">Cámara</button>
+      </div>
     </div>
     <div id="scan-flash"></div>
     <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
+    <section class="catalogo">
+      <div class="catalogo-head">
+        <h2>Productos</h2>
+        <span class="hint" id="catalogo-count"></span>
+      </div>
+      <p class="hint">Tocá una foto para sumarlo al ticket. Con la rueda del mouse recorrés todo el catálogo.</p>
+      <div id="catalogo" class="catalogo-grid"></div>
+    </section>
     <div class="ticket-card">
       <h2>Ticket <span id="nitems" class="tag info">0 ítems</span></h2>
       <div class="ticket-scroll">
@@ -147,7 +162,7 @@
 
   <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
-    <table><thead><tr><th>Nombre completo</th><th>Cumpleaños</th><th>Tel</th><th>Referencia</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
+    <table><thead><tr><th>Nombre</th><th>Referencia</th><th>Tel</th><th>Dirección</th><th>Cumpleaños</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
     <tbody id="tabla-cli"></tbody></table>
   </section>
 
@@ -167,7 +182,7 @@
 
   <section id="mod-proveedores">
     <div class="row"><button id="prov-nuevo" class="primary">+ Nuevo proveedor</button></div>
-    <table><thead><tr><th>Nombre</th><th>Tel</th><th>Notas</th><th></th></tr></thead>
+    <table><thead><tr><th>Nombre</th><th>Referencia</th><th>Tel</th><th>Notas</th><th></th></tr></thead>
     <tbody id="tabla-prov"></tbody></table>
   </section>
 
@@ -275,8 +290,9 @@
     <h3 id="ent-titulo">Nuevo</h3>
     <input id="e-nombre" placeholder="Apellido y nombre completo" required>
     <input id="e-tel" placeholder="Teléfono (WhatsApp)">
-    <input id="e-extra" placeholder="Referencia (para distinguir clientes)">
-    <label class="lbl" id="nac-wrap">Fecha de nacimiento
+    <input id="e-ref" placeholder="Referencia (ej: hermano de Juan, casa del fondo)">
+    <input id="e-extra" placeholder="Dirección / Notas">
+    <label class="lbl" id="e-nac-wrap">Fecha de nacimiento
       <input id="e-nac" type="date">
     </label>
     <div class="row">

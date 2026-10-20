@@ -39,8 +39,7 @@ const Cumple = (() => {
     if(!tel) return;
     window.open(`https://wa.me/${tel}?text=${encodeURIComponent(saludo(c))}`, '_blank', 'noopener');
   }
-  function mismoDia(f, t){ return f.y===t.y && f.m===t.m && f.d===t.d; }
-  function delMes(){ return clientes().filter(x => x.f.y===cursor.y && x.f.m===cursor.m+1); }
+  function delMes(){ return clientes().filter(x => x.f.m===cursor.m+1); }
   function renderGrid(){
     const grid = $('cal-grid'); grid.innerHTML = '';
     DIAS.forEach(d => { const el = document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
@@ -56,14 +55,14 @@ const Cumple = (() => {
       const b = document.createElement('button');
       b.type='button'; b.className='cal-day';
       if(mes!==cursor.m+1) b.classList.add('otro');
-      const n = meses.filter(x => x.f.d===dia && x.f.m===mes && x.f.y===anio).length;
+      const n = meses.filter(x => x.f.d===dia && x.f.m===mes).length;
       if(n) b.classList.add('tiene');
       if(anio===t.y && mes===t.m && dia===t.d) b.classList.add('hoy');
       if(selDia===dia && mes===cursor.m+1 && anio===cursor.y) b.classList.add('sel');
       b.innerHTML = `<span class="cal-num">${dia}</span>${n?`<span class="cal-q">${n}</span>`:''}`;
       b.setAttribute('aria-label', `${dia} de ${MESES[mes-1]}${n?`, ${n} cumpleaños`:''}`);
       b.onclick = ()=>{
-        if(mes!==cursor.m+1 || anio!==cursor.y){ cursor = new Date(anio, mes-1, 1); selDia=null; render(); return; }
+        if(mes!==cursor.m+1 || anio!==cursor.y){ cursor = {y:anio, m:mes-1}; selDia=null; render(); return; }
         selDia = selDia===dia ? null : dia; render();
       };
       grid.appendChild(b);
@@ -86,7 +85,7 @@ const Cumple = (() => {
       const info = document.createElement('span'); info.className='cumple-info';
       const nom = document.createElement('b'); nom.textContent=c.nombre; info.appendChild(nom);
       const det = document.createElement('span'); det.className='hint';
-      det.textContent = `Cumple ${f.d} de ${MESES[f.m-1]}` + (c.extra ? ` · ${c.extra}` : '') + (c.tel ? ` · ${c.tel}` : '');
+      det.textContent = `Cumple ${f.d} de ${MESES[f.m-1]}` + (c.ref ? ` · ${c.ref}` : '') + (c.extra ? ` · ${c.extra}` : '') + (c.tel ? ` · ${c.tel}` : '');
       info.appendChild(det);
       const b = document.createElement('button'); b.type='button'; b.className='primary';
       if(telArg(c.tel)){ b.textContent='Saludar'; b.onclick=()=>wa(c); }
@@ -95,15 +94,15 @@ const Cumple = (() => {
     });
   }
   function render(){
-    if(!cursor){ const t = hoy(); cursor = new Date(t.y, t.m-1, 1); }
+    if(!cursor){ const t = hoy(); cursor = {y:t.y, m:t.m-1}; }
     const mes = $('cal-mes'); if(mes) mes.textContent = `${MESES[cursor.m]} ${cursor.y}`;
     renderGrid(); renderLista();
   }
   function init(){
-    const t = hoy(); cursor = new Date(t.y, t.m-1, 1); selDia = null;
-    $('cal-prev').onclick = ()=>{ cursor = new Date(cursor.y, cursor.m-1, 1); selDia=null; render(); };
-    $('cal-next').onclick = ()=>{ cursor = new Date(cursor.y, cursor.m+1, 1); selDia=null; render(); };
-    $('cal-hoy').onclick = ()=>{ selDia=null; cursor = new Date(t.y, t.m-1, 1); render(); };
+    const t = hoy(); cursor = {y:t.y, m:t.m-1}; selDia = null;
+    $('cal-prev').onclick = ()=>{ cursor = cursor.m===0 ? {y:cursor.y-1, m:11} : {y:cursor.y, m:cursor.m-1}; selDia=null; render(); };
+    $('cal-next').onclick = ()=>{ cursor = cursor.m===11 ? {y:cursor.y+1, m:0} : {y:cursor.y, m:cursor.m+1}; selDia=null; render(); };
+    $('cal-hoy').onclick = ()=>{ const h=hoy(); selDia=null; cursor={y:h.y, m:h.m-1}; render(); };
     render();
   }
   return {init, render};

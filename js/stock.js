@@ -62,7 +62,7 @@ const Stock = (() => {
       bE.onclick=()=>{ editId=p.id; $('modal-titulo').textContent='Editar producto';
         $('f-codigo').value=p.codigo||''; $('f-nombre').value=p.nombre; $('f-cat').value=p.categoria||'';
         $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio; $('f-stock').value=p.stock;
-        fotoActual = p.foto||''; pintarFoto();
+        fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+p.nombre+'?')){ Store.eliminar(p.id); render(); Caja.refresh(); } };

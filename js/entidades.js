@@ -1,21 +1,68 @@
-// entidades.js — puntos 3 y 4: clientes (con deuda de cuenta corriente) y proveedores
+// entidades.js — puntos 3 y 4: clientes (deuda, cumpleaños y referencia) y proveedores
 const Entidades = (() => {
   const $ = id => document.getElementById(id);
   let col = 'clientes', editId = null;
-  function fmtNac(nac){
-    if(!nac) return '—';
-    const m = String(nac).match(/^(\d{4})-(\d{2})-(\d{2})/);
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : nac;
+
+  // Días que faltan para el próximo cumpleaños (0 = hoy).
+  function diasCumple(nac){
+    if(!nac) return null;
+    const p = String(nac).split('-').map(Number);
+    if(p.length<3 || !p[1] || !p[2]) return null;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    let f = new Date(hoy.getFullYear(), p[1]-1, p[2]);
+    if(f < hoy) f = new Date(hoy.getFullYear()+1, p[1]-1, p[2]);
+    return Math.round((f - hoy)/86400000);
   }
-  function mostrarNac(show){ const w = $('nac-wrap'); if(w) w.hidden = !show; }
+  function fmtCumple(nac){
+    if(!nac) return '—';
+    const p = String(nac).split('-');
+    if(p.length<3) return '—';
+    return `${p[2]}/${p[1]}` + (diasCumple(nac)===0 ? ' 🎂' : '');
+  }
+  // Aviso en la caja: cumpleaños de hoy y de los próximos 7 días.
+  function renderCumples(){
+    const box = $('cumples-alert'); if(!box) return;
+    const hoy = [], prox = [];
+    Store.get().clientes.forEach(c=>{
+      const d = diasCumple(c.nac);
+      if(d===0) hoy.push(c);
+      else if(d!==null && d<=7) prox.push({c, d});
+    });
+    if(!hoy.length && !prox.length){ box.hidden = true; box.innerHTML=''; return; }
+    const ref = c => (c.ref || c.extra) ? ` <span class="hint">(${c.ref || c.extra})</span>` : '';
+    const partes = [];
+    if(hoy.length) partes.push(`<b>🎂 Hoy cumple${hoy.length>1?'n':''} años:</b> ${hoy.map(c=>c.nombre+ref(c)).join(' · ')}`);
+    if(prox.length){
+      prox.sort((a,b)=>a.d-b.d);
+      partes.push(`<b>Próximos cumpleaños:</b> ${prox.map(x=>`${x.c.nombre}${ref(x.c)} (${x.d===1?'mañana':'en '+x.d+' días'})`).join(' · ')}`);
+    }
+    box.innerHTML = partes.join('<br>');
+    box.hidden = false;
+  }
+  function mostrarNac(show){ const w = $('e-nac-wrap'); if(w) w.hidden = !show; }
+  function abrir(colName, e){
+    col = colName; editId = e ? e.id : null;
+    $('ent-titulo').textContent = (e?'Editar ':'Nuevo ') + (colName==='clientes'?'cliente':'proveedor');
+    $('e-nombre').value = e ? e.nombre : '';
+    $('e-tel').value = e ? (e.tel||'') : '';
+    $('e-ref').value = e ? (e.ref||'') : '';
+    $('e-extra').value = e ? (e.extra||'') : '';
+    $('e-extra').placeholder = colName==='clientes' ? 'Dirección' : 'Notas';
+    $('e-nac').value = (e && e.nac) || '';
+    mostrarNac(colName==='clientes');
+    $('modal-ent').showModal();
+  }
   function render(){
     const db = Store.get();
+    renderCumples();
     // Clientes
     const tb = $('tabla-cli'); tb.innerHTML='';
     db.clientes.forEach(e=>{
       const tr = document.createElement('tr');
       const deuda = e.deuda||0;
-      tr.innerHTML = `<td>${e.nombre}</td><td>${fmtNac(e.nac)}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`+
+      const hoy = diasCumple(e.nac)===0;
+      tr.innerHTML = `<td>${e.nombre}</td><td>${e.ref||'-'}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`+
+        `<td${hoy?' style="font-weight:700"':''}>${fmtCumple(e.nac)}</td>`+
         `<td>${deuda>0?`<b>$${deuda}</b>`:'$0'}</td>`;
       const td = document.createElement('td');
       if(deuda>0){
@@ -30,11 +77,7 @@ const Entidades = (() => {
         td.appendChild(inp); td.appendChild(med); td.appendChild(bC);
       }
       const bE = document.createElement('button'); bE.textContent='Editar';
-      bE.onclick=()=>{ col='clientes'; editId=e.id;
-        $('ent-titulo').textContent='Cliente';
-        $('e-nombre').value=e.nombre; $('e-tel').value=e.tel||''; $('e-extra').value=e.extra||'';
-        $('e-nac').value=e.nac||''; mostrarNac(true);
-        $('modal-ent').showModal(); };
+      bE.onclick=()=>abrir('clientes', e);
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('clientes', e.id); render(); } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
@@ -43,14 +86,10 @@ const Entidades = (() => {
     const tp = $('tabla-prov'); tp.innerHTML='';
     db.proveedores.forEach(e=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${e.nombre}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`;
+      tr.innerHTML = `<td>${e.nombre}</td><td>${e.ref||'-'}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`;
       const td = document.createElement('td');
       const bE = document.createElement('button'); bE.textContent='Editar';
-      bE.onclick=()=>{ col='proveedores'; editId=e.id;
-        $('ent-titulo').textContent='Proveedor';
-        $('e-nombre').value=e.nombre; $('e-tel').value=e.tel||''; $('e-extra').value=e.extra||'';
-        mostrarNac(false);
-        $('modal-ent').showModal(); };
+      bE.onclick=()=>abrir('proveedores', e);
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('proveedores', e.id); render(); } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tp.appendChild(tr);
@@ -60,27 +99,23 @@ const Entidades = (() => {
   }
   function init(){
     render();
-    $('cli-nuevo').onclick=()=>{ col='clientes'; editId=null; $('ent-titulo').textContent='Nuevo cliente';
-      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('e-nac').value='';
-      mostrarNac(true); $('modal-ent').showModal(); };
-    $('prov-nuevo').onclick=()=>{ col='proveedores'; editId=null; $('ent-titulo').textContent='Nuevo proveedor';
-      $('e-nombre').value=''; $('e-tel').value=''; $('e-extra').value=''; $('e-nac').value='';
-      mostrarNac(false); $('modal-ent').showModal(); };
+    $('cli-nuevo').onclick=()=>abrir('clientes', null);
+    $('prov-nuevo').onclick=()=>abrir('proveedores', null);
     $('e-guardar').onclick=()=>{
       const db = Store.get();
       const cur = editId && db[col].find(x=>x.id===editId);
-      const nac = col==='clientes' ? ($('e-nac').value||'') : ((cur&&cur.nac)||'');
       const e = Object.assign({}, cur||{}, {
         id: editId || col[0]+Date.now(),
         nombre:$('e-nombre').value.trim(),
         tel:$('e-tel').value.trim(),
+        ref:$('e-ref').value.trim(),
         extra:$('e-extra').value.trim(),
-        nac
+        nac: col==='clientes' ? ($('e-nac').value||'') : ((cur&&cur.nac)||'')
       });
       if(!('deuda' in e)) e.deuda = 0;
       if(!e.nombre){ alert('Falta nombre'); return; }
       Store.upsertEntidad(col, e); render();
     };
   }
-  return {init, render};
+  return {init, render, renderCumples};
 })();
