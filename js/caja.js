@@ -6,8 +6,8 @@ const Caja = (() => {
   let carrito = []; // {id,nombre,precio,cant,pres}
   const $ = id => document.getElementById(id);
   const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
-  const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code);
-  function nombreBase(p){ return p.nombre.replace(/\s*1\s*Lt\.?\s*$/i,''); }
+  const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code && x.activo!==false);
+  function nombreBase(p){ return p.nombre.replace(/\s*(1|5|10)\s*(Lt|Lts|L)\b\.?\s*$/i,'').trim(); }
   function prod(id){ return Store.get().productos.find(x=>x.id===id); }
   const norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   // Icono por tipo de producto para la foto demo (si el producto no tiene URL de imagen).
@@ -36,7 +36,7 @@ const Caja = (() => {
     const box = $('catalogo'); if(!box) return;
     const f = norm(q);
     const db = Store.get();
-    const list = db.productos.filter(p => !f || norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).includes(f));
+    const list = db.productos.filter(p => p.activo!==false && (!f || norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')+' '+(p.presentacion||'')).includes(f)));
     const count = $('catalogo-count');
     if(count) count.textContent = f ? `${list.length} resultado${list.length===1?'':'s'}` : `${list.length} productos`;
     box.innerHTML='';
@@ -70,7 +70,7 @@ const Caja = (() => {
     const db = Store.get();
     const seen = new Set(); const out = [];
     db.productos
-      .filter(p => norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).includes(f))
+      .filter(p => p.activo!==false && norm(p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')+' '+(p.presentacion||'')).includes(f))
       .forEach(p=>{ if(seen.has(p.codigo) || out.length>=8) return; seen.add(p.codigo); out.push(p); });
     box.innerHTML='';
     if(!out.length){ cerrarSugerencias(); return; }
@@ -111,8 +111,8 @@ const Caja = (() => {
     let ahorro = 0; const avisos = [];
     const bases = [...new Set(carrito.map(i=>i.codigo).filter(Boolean))];
     bases.forEach(code=>{
-      const v1 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 1L');
-      const v5 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 5L');
+      const v1 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 1L' && p.activo!==false);
+      const v5 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 5L' && p.activo!==false);
       if(!v1 || !v5) return;
       const lin1 = carrito.filter(i=>i.id===v1.id);
       const tot1 = lin1.reduce((a,i)=>a+i.cant,0);

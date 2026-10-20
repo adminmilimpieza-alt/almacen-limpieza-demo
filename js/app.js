@@ -18,6 +18,8 @@ const Panel = (() => {
   function go(id){
     const body = $('panel-body'), sec = document.getElementById(id); if(!sec) return;
     if(!go._origen) go._origen = document.getElementById('modulos');
+    // Si ya habia un modulo abierto, se vuelve a su lugar antes de montar el nuevo.
+    while(body.firstChild) go._origen.appendChild(body.firstChild);
     body.appendChild(sec);
     $('panel-title').textContent = TITULOS[id]||'';
     $('panel-overlay').hidden = false;

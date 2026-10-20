@@ -1,31 +1,94 @@
-# Caja + Stock — demo almacén limpieza
+# Caja + Stock — almacén limpieza (Mi Limpieza)
 
-Base simple y modular para mostrar mañana. 100% estática → lista para GitHub Pages.
+Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática → lista para GitHub Pages.
 
 ## Qué hace
 - **Caja:** buscar producto, armar ticket, cobrar (efectivo/transferencia/cta cte). Descuenta stock y guarda venta.
-- **Stock:** alta, edición, borrado, alerta bajo stock (≤5). Datos demo de limpieza.
-- **Ventas:** historial de tickets.
-- Todo en `localStorage` (sin backend). Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/app.js`.
+- **Stock:** alta, edición, ocultado, borrado, alerta bajo stock (≤5). Filtros por rubro y proveedor.
+- **Precios:** catálogo real importado del proveedor; ver lista por rubro/proveedor, imprimir, recalcular venta.
+- **Turno de caja:** apertura/cierre con arqueo y diferencias por medio.
+- **Clientes / Proveedores / Pedidos / Cumpleaños / Reportes / Respaldo.**
+- Todo en `localStorage` (sin backend). Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
+
+## Catálogo: importado una vez, se administra desde el panel
+
+La lista de precios del proveedor (`MILIMPIEZA-Lista Precios-MATIAS.xlsx`) se importó **una sola vez**
+y quedó en `js/catalogo.js`. Desde ese momento **no se vuelve a leer el Excel**: el catálogo se
+administra 100% desde el panel.
+
+**Origen del import** — `tools/importar-precios.py` (Python + openpyxl):
+
+```bash
+python tools/importar-precios.py "\\servidor\Compartida\...\MILIMPIEZA-Lista Precios-MATIAS.xlsx"
+```
+
+Lee el Excel, normaliza y regenera `js/catalogo.js`. Es reproducible: si el proveedor manda una
+lista nueva, se corre el script y se commitea el catálogo generado.
+
+### Qué trae cada producto
+
+| Campo | Origen | Para qué |
+|---|---|---|
+| `codigo` | col. A (la de 5 Lts hereda el de 1 Lt) | EAN o código interno |
+| `nombre` / `detalle` | col. B | nombre corto para la pantalla, texto original completo |
+| `presentacion` | col. D + descripción | 1 Lt / 5 Lts / x Unid (desambigua el código repetido) |
+| `categoria` | derivado | `Líquidos 1L` · `Líquidos 5L` · `Accesorios` · `Pileta` |
+| `provId` | sección del Excel | UNIBLANC · GEMORA · DON EMILIO |
+| `costo` | col. E | **costo de compra** |
+| `precio` | col. C | **precio de venta** (ya incluye el margen) |
+| `margen` | col. F | % de ganancia del proveedor sobre ese producto |
+| `alerta` | — | marca las filas corregidas a mano (ver abajo) |
+| `activo` | — | `false` = oculto, no se ofrece en caja |
+
+### Regla de precio del Excel
+
+`Venta = Costo × (1 + margen%)`. La columna E es **siempre el costo del paquete**, nunca el costo
+por litro (las fórmulas del Excel están escritas de las dos formas, pero el resultado es el mismo).
+
+### Filas corregidas a mano (16)
+
+El Excel traía datos rotos; el importador los corrige y deja el motivo en `alerta`, visible en el
+panel de Precios con la etiqueta **revisar**:
+
+- 8 filas sin costo de compra (r69, r79, r86, r87, r88, r98, r109 y la 71 vacía, que se descarta).
+- 8 filas con la fórmula pisada a mano (r48, r72, r73, r83, r92, r94, r97, r100). En varias el Excel
+  tenía el **precio de venta en la columna de costo** (p. ej. r92/r94/r100).
+- 1 descripción con la presentación equivocada por copy-paste (r49 decía "5 Lt" en la fila de 1 Lt).
+
+**Estas correcciones son inferencias: hay que confirmarlas contra la lista del proveedor.**
+
+## Desde el panel
+
+- **Cambiar valores:** Stock → *Editar*. Se edita código, nombre, rubro, presentación, costo, precio, margen, stock y visibilidad.
+- **Ocultar / mostrar:** Stock → *Ocultar* (o la casilla *Visible* del modal). Un producto oculto no aparece en la caja ni en los reportes, pero no se borra.
+- **Agregar / borrar:** Stock → *+ Nuevo producto* / *Borrar*.
+- **Precios:** *Ver lista* filtra por rubro y proveedor; *Ocultar/Mostrar* desde la misma tabla; *Imprimir* saca la lista en papel.
+- **Margen:** *Margen propio de cada producto* recalcula la venta con el margen del proveedor (reproduce el precio del Excel). *Margen uniforme* aplica un % a todo.
+- **Recargar precios:** se sigue pudiendo subir un CSV (`codigo,nombre,presentacion,costo,margen`) por si llega una lista nueva.
+
+## Migración
+
+Si el navegador tenía la versión demo (`limpieza_demo_v10`), al abrir la app se conservan **ventas,
+clientes, movimientos, pedidos y turnos**, y se reemplaza el catálogo de productos por el importado
+respetando el stock que ya se había cargado.
 
 ## Probar local
 ```bash
 # opción 1: abrir index.html directo
 open index.html
 # opción 2: servidor local
-python3 -m http.server 8000
+python -m http.server 8000
 # → http://localhost:8000
 ```
 
 ## Publicar en GitHub Pages (2 min)
 ```bash
-git add index.html css js README.md
-git commit -m "demo caja+stock limpieza"
+git add index.html css js README.md tools
+git commit -m "catalogo importado del proveedor"
 git branch -M main
 git remote add origin https://github.com/TU-USUARIO/NOMBRE-REPO.git
 git push -u origin main
 # En GitHub: Settings → Pages → Deploy from branch → main / (root) → Save
-# URL: https://TU-USUARIO.github.io/NOMBRE-REPO/
 ```
 
 ## Repos revisados (inspiración, descartados por requerir backend)
@@ -36,10 +99,10 @@ git push -u origin main
 
 ## Qué cubre (8 puntos del cliente)
 1. **Caja I/E + conciliación:** ventas + movimientos manuales por medio (efectivo/MP/banco), tildado conciliado. Conciliación automática con MP/Banco = fase 2 (requiere backend + APIs).
-2. **Control de Stock:** alta/baja, alerta ≤5, código + rubro.
+2. **Control de Stock:** alta/baja, ocultado, alerta ≤5, código + rubro + proveedor.
 3. **Clientes:** alta y asignación a cada venta.
 4. **Proveedores:** alta y pedidos asociados.
-5. **Lista de precios:** actualización masiva por **código o nombre vía CSV**. PDF directo = fase 2 (pedir 1 PDF de ejemplo para mapear columnas).
+5. **Lista de precios:** catálogo real importado del proveedor + administración desde el panel. PDF directo = fase 2.
 6. **Reportes:** caja diaria/período por medio, historial por cliente y por proveedor, stock general/por rubro valorizado, lista de precios general/por rubro (imprimible).
 7. **Respaldo diario:** export/import JSON + contador. Automático en servidor = fase 2.
 8. **Pedidos:** registro por proveedor con estado pendiente/recibido.
@@ -61,6 +124,6 @@ guardar el `MP_ACCESS_TOKEN`):
 
 ## Siguiente (base para trabajar)
 - [ ] Ticket imprimible / factura
-- [ ] Cierre de caja diario
-- [ ] Proveedores + compras (entradas de stock)
+- [ ] Confirmar con el proveedor las 16 filas corregidas del import
 - [ ] Backend real (cuando escale): misma API de `store.js` contra servidor
+      (hoy cada dispositivo tiene su propia lista en `localStorage`)

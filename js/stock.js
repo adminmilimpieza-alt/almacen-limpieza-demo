@@ -36,13 +36,20 @@ const Stock = (() => {
   function filtros(){
     const db = Store.get();
     const q = ($('stk-q').value||'').toLowerCase(), r = $('stk-rubro').value;
+    const pv = $('stk-prov-filtro') ? $('stk-prov-filtro').value : '';
+    const verOcultos = $('stk-ver-ocultos') && $('stk-ver-ocultos').checked;
     const rubros = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
     $('stk-rubro').innerHTML = '<option value="">Todos los rubros</option>'+rubros.map(x=>`<option ${x===r?'selected':''}>${x}</option>`).join('');
     $('stk-prov').innerHTML = '<option value="">Elegí proveedor…</option>'+
       db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
+    const pf = $('stk-prov-filtro');
+    if(pf) pf.innerHTML = '<option value="">Todos los proveedores</option>'+
+      db.proveedores.map(x=>`<option ${x.id===pv?'selected':''}>${x.nombre}</option>`).join('');
     return db.productos.filter(p =>
+      (verOcultos || p.activo!==false) &&
       (!r || (p.categoria||'General')===r) &&
-      (!q || (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')).toLowerCase().includes(q)));
+      (!pv || p.provId===pv) &&
+      (!q || (p.nombre+' '+(p.codigo||'')+' '+(p.categoria||'')+' '+(p.presentacion||'')).toLowerCase().includes(q)));
   }
   function render(){
     const db = Store.get();
@@ -56,17 +63,24 @@ const Stock = (() => {
       const tdF = document.createElement('td'); tdF.className='td-foto';
       if(p.foto){ const im = document.createElement('img'); im.src=p.foto; im.alt=''; tdF.appendChild(im); }
       tr.appendChild(tdF);
-      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.stock}</td>`);
-      const td = document.createElement('td');
+      const oculto = p.activo===false;
+      if(oculto) tr.classList.add('oculto');
+      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
+      const td = document.createElement('td'); td.style.whiteSpace='nowrap';
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id; $('modal-titulo').textContent='Editar producto';
         $('f-codigo').value=p.codigo||''; $('f-nombre').value=p.nombre; $('f-cat').value=p.categoria||'';
-        $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio; $('f-stock').value=p.stock;
+        $('f-pres').value=p.presentacion||'';
+        $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio;
+        $('f-margen').value=(p.margen==null?'':p.margen); $('f-stock').value=p.stock;
+        $('f-activo').checked = !oculto;
         fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
+      const bV = document.createElement('button'); bV.textContent=oculto?'Mostrar':'Ocultar';
+      bV.onclick=()=>{ Store.toggleActivo(p.id, oculto); render(); Caja.refresh(); };
       const bD = document.createElement('button'); bD.textContent='Borrar';
       bD.onclick=()=>{ if(confirm('Borrar '+p.nombre+'?')){ Store.eliminar(p.id); render(); Caja.refresh(); } };
-      td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
+      td.appendChild(bE); td.appendChild(bV); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
     });
   }
   function fillProv(sel, cur){
@@ -78,12 +92,16 @@ const Stock = (() => {
   function init(){
     render();
     $('nuevo').onclick=()=>{ editId=null; $('modal-titulo').textContent='Nuevo producto';
-      $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-costo').value=''; $('f-precio').value=''; $('f-stock').value='10';
+      $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
+      $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
+      $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
-    $('reset').onclick=()=>{ if(confirm('Volver a datos demo?')){ Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); } };
+    $('reset').onclick=()=>{ if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); } };
     $('stk-q').addEventListener('input', render);
     $('stk-rubro').addEventListener('change', render);
+    $('stk-prov-filtro').addEventListener('change', render);
+    $('stk-ver-ocultos').addEventListener('change', render);
     $('stk-assign').onclick=()=>{
       const pid = $('stk-prov').value;
       if(!pid){ alert('Elegí un proveedor'); return; }
@@ -111,7 +129,11 @@ const Stock = (() => {
       const p = Object.assign({}, cur||{}, {
         id: editId || 'p'+Date.now(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
-        costo:Number($('f-costo').value), precio:Number($('f-precio').value), stock:Number($('f-stock').value),
+        presentacion:$('f-pres').value.trim(),
+        costo:Number($('f-costo').value), precio:Number($('f-precio').value),
+        margen: ($('f-margen').value===''?null:Number($('f-margen').value)),
+        stock:Number($('f-stock').value),
+        activo: $('f-activo').checked,
         provId: $('f-prov').value || ((cur&&cur.provId)||''),
         foto: fotoActual || ''
       });

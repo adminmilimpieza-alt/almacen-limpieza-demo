@@ -2,13 +2,26 @@
 const Precios = (() => {
   const $ = id => document.getElementById(id);
   let pendiente = [];
+  const num = s => { const n = Number(String(s).replace(',','.')); return String(s).trim()!=='' && isFinite(n) ? n : null; };
+
+  // Formato de CSV: codigo,nombre,presentacion,costo,margen
+  // (tambien acepta el viejo codigo,nombre,costo,proveedor)
   function parseCSV(t){
     const provs = Store.get().proveedores;
     return t.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
-      const [codigo,nombre,precio,prov] = l.split(',').map(s=>(s||'').trim());
-      const pe = prov ? provs.find(x=>x.nombre.toLowerCase()===prov.toLowerCase()) : null;
-      return {codigo:codigo||'', nombre:nombre||'', precio, provId:pe?pe.id:null};
-    }).filter(r=>r.precio!=='' && (r.codigo||r.nombre));
+      const f = l.split(',').map(s=>(s||'').trim());
+      let codigo=f[0]||'', nombre=f[1]||'', presentacion='', costo=null, margen=null, provId=null;
+      const f3 = num(f[2]);
+      if(f3!=null){                       // codigo,nombre,costo[,margen|proveedor]
+        costo=f3;
+        const f4=num(f[3]);
+        if(f4!=null) margen=f4;
+        else if(f[3]) { const pe=provs.find(x=>x.nombre.toLowerCase()===f[3].toLowerCase()); provId=pe?pe.id:null; }
+      } else {                            // codigo,nombre,presentacion,costo[,margen]
+        presentacion=f[2]||''; costo=num(f[3]); margen=num(f[4]);
+      }
+      return {codigo, nombre, presentacion, costo, margen, provId};
+    }).filter(r => (r.codigo||r.nombre) && (r.costo!=null || r.margen!=null));
   }
   function rubros(){
     const db = Store.get();
@@ -17,13 +30,40 @@ const Precios = (() => {
   function renderRubro(){
     const r = rubros();
     $('precio-rubro').innerHTML = '<option value="">Todos los rubros</option>'+r.map(x=>`<option>${x}</option>`).join('');
+    $('csv-rubro').innerHTML = '<option value="">Sin rubro (primera coincidencia)</option>'+r.map(x=>`<option>${x}</option>`).join('');
+    const db = Store.get();
+    $('precio-prov').innerHTML = '<option value="">Todos los proveedores</option>'+
+      db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
   }
   function verLista(){
     const db = Store.get();
     const f = $('precio-rubro').value;
-    const list = db.productos.filter(p=>!f||p.categoria===f);
-    $('lista-precios').innerHTML = '<table><thead><tr><th>Cód</th><th>Producto</th><th>Rubro</th><th>Costo</th><th>Venta</th></tr></thead><tbody>'+
-      list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.categoria||'-'}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
+    const pv = $('precio-prov') ? $('precio-prov').value : '';
+    const verOcultos = $('precio-ver-ocultos') && $('precio-ver-ocultos').checked;
+    const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
+    const list = db.productos.filter(p =>
+      (verOcultos || p.activo!==false) &&
+      (!f || p.categoria===f) &&
+      (!pv || p.provId===pv));
+    const ocultos = db.productos.filter(p=>p.activo===false).length;
+    const conAlerta = list.filter(p=>p.alerta).length;
+    const valor = Math.round(list.reduce((a,p)=>a+p.precio*p.stock,0));
+    $('lista-precios').innerHTML =
+      `<p class="hint">${list.length} productos · valor total $${valor.toLocaleString('es-AR')}`+
+      (ocultos?` · <b>${ocultos} ocultos</b> (no se ofrecen en caja)`:'')+
+      (conAlerta?` · <b>${conAlerta}</b> con precio corregido sobre el Excel`:'')+`</p>`+
+      '<table><thead><tr><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th></th></tr></thead><tbody>'+
+      list.map(p=>{
+        const off = p.activo===false;
+        return `<tr class="${off?'oculto':''}"><td>${p.codigo||'-'}</td>`+
+          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}</td>`+
+          `<td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${nom(p.provId)}</td>`+
+          `<td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td>`+
+          `<td><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
+      }).join('')+'</tbody></table>';
+    $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
+      b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
+    });
   }
   function init(){
     renderRubro(); verLista();
@@ -37,24 +77,32 @@ const Precios = (() => {
     $('csv-aplicar').onclick=()=>{
       if(!pendiente.length){alert('Primero previsualizá');return;}
       const r = Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
-      alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.join(', '):'ninguno'}`);
+      alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.slice(0,15).join(', ')+(r.faltan.length>15?'…':''):'ninguno'}`);
       pendiente=[]; $('csv-prev').innerHTML=''; verLista(); Stock.render(); Caja.refresh();
     };
-    const rubrosM = ()=>{ const db=Store.get();
-      const r=[...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
+    const rubrosM = ()=>{ const r=rubros();
       $('margen-rubro').innerHTML='<option value="">Margen a todo</option>'+r.map(x=>`<option>${x}</option>`).join(''); };
     rubrosM();
     $('margen-aplicar').onclick=()=>{
-      const m = Number($('margen').value);
-      if(!(m>=0)){ alert('Margen inválido'); return; }
+      const propio = $('margen-tipo').value==='propio';
+      const m = propio ? 'propio' : Number($('margen').value);
+      if(!propio && !(m>=0)){ alert('Margen inválido'); return; }
       const n = Store.aplicarMargen(m, $('margen-rubro').value||null);
-      alert(`Venta recalculada en ${n} productos (+${m}%)`);
+      alert(propio ? `Venta recalculada con el margen propio de cada producto (${n} productos)` : `Venta recalculada en ${n} productos (+${m}%)`);
       verLista(); Stock.render(); Caja.refresh();
     };
+    $('margen-tipo').addEventListener('change', ()=>{
+      $('margen').disabled = $('margen-tipo').value==='propio';
+      $('margen').placeholder = $('margen-tipo').value==='propio' ? 'no aplica' : '% uniforme';
+    });
+    $('margen').disabled = $('margen-tipo').value==='propio';
     $('precio-ver').onclick=verLista;
+    $('precio-rubro').addEventListener('change', verLista);
+    $('precio-prov').addEventListener('change', verLista);
+    $('precio-ver-ocultos').addEventListener('change', verLista);
     $('precio-print').onclick=()=>window.print();
   }
-  return {init};
+  return {init, render:verLista};
 })();
 
 const Pedidos = (() => {

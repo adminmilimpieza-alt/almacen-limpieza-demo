@@ -102,6 +102,8 @@ body.drawer-open main{padding-left:320px}
 input,select{border:1px solid var(--line);border-radius:var(--radius-s);background:#fff;color:var(--ink);
   padding:10px 12px;min-height:44px;font-size:15px;font-family:var(--font-ui);width:100%}
 input:focus,select:focus,button:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+input[type=checkbox]{width:20px;height:20px;min-height:0;padding:0;accent-color:var(--ink);flex:0 0 auto}
+.chk input[type=checkbox]{width:18px;height:18px}
 kbd{font-family:var(--font-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;
   background:var(--surface-2);padding:2px 7px;white-space:nowrap}
 /* Cards */
@@ -133,6 +135,7 @@ th,td{padding:12px;text-align:left;border-bottom:1px solid var(--line);font-size
 th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 tr:last-child td{border-bottom:none}
 tr.bajo td{background:var(--pastel-red-bg);color:var(--pastel-red-tx)}
+tr.oculto td{opacity:.55;text-decoration:line-through}
 tr.bajo td:first-child{font-weight:700}
 /* Status tags */
 .tag{display:inline-block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border-radius:9999px;padding:3px 10px}
@@ -171,6 +174,7 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
 .pos{display:block;max-width:1500px;width:min(1500px,96vw);margin:0 auto}
 .pos-left{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
 .lbl{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
 .lbl[hidden]{display:none !important}
 .lbl select{margin-top:4px}
 /* Menú hamburguesa + drawer de módulos */

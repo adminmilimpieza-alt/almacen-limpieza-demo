@@ -49,7 +49,7 @@ const Reportes = (() => {
   }
   function verStock(){
     const db = Store.get(); const f = $('rep-rubro').value;
-    const list = db.productos.filter(p=>!f||(p.categoria||'General')===f);
+    const list = db.productos.filter(p=>p.activo!==false && (!f||(p.categoria||'General')===f));
     const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
     $('rep-stock-out').innerHTML = `<div class="venta"><b>Stock ${f||'general'}</b>: ${list.length} productos · valorizado a costo <b>$${val}</b></div>`+
       '<table><tbody>'+list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
@@ -76,7 +76,7 @@ const Reportes = (() => {
   }
   function porProveedor(){
     const db = Store.get(); const f = $('rep-pp').value;
-    const list = db.productos.filter(p=>!f || (f==='__none__' ? !p.provId : p.provId===f));
+    const list = db.productos.filter(p=>p.activo!==false && (!f || (f==='__none__' ? !p.provId : p.provId===f)));
     const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
     const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
     $('rep-pp-out').innerHTML = `<div class="venta"><b>Productos${f&&f!=='__none__'?' de '+nom(f):f==='__none__'?' sin proveedor':''}</b>: ${list.length} · valorizado a costo <b>$${val}</b></div>`+
