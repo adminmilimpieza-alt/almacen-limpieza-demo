@@ -61,6 +61,26 @@ const Pedidos = (() => {
   const $ = id => document.getElementById(id);
   let lineas = []; // [{id,cant}] para el pedido en armado
   const nom = id => (Store.get().productos.find(p=>p.id===id)||{}).nombre||'?';
+  function telArg(t){
+    if(!t) return '';
+    let s = String(t).replace(/\D/g,'');
+    if(s.startsWith('54')) return s;
+    s = s.replace(/^0+/,'');
+    if(s.length===10) return '549'+s;
+    if(s.length===11 && s.startsWith('9')) return '54'+s;
+    return s;
+  }
+  function textoPedido(p, prov){
+    const l = (p.items&&p.items.length)
+      ? p.items.map(i=>`- ${nom(i.id)} x${i.cant}`)
+      : (p.detalle ? ['- '+p.detalle] : []);
+    return `Hola${prov&&prov.nombre?' '+prov.nombre:''}, te paso el pedido:\n\n${l.join('\n')||'- (sin detalle)'}\n\nGracias.`;
+  }
+  function enviarWA(p, prov){
+    const tel = telArg(prov&&prov.tel);
+    if(!tel){ alert('El proveedor no tiene teléfono (WhatsApp) cargado.'); return; }
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(textoPedido(p,prov)), '_blank', 'noopener');
+  }
   function render(){
     const db = Store.get();
     $('ped-prov').innerHTML = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(alta un proveedor)</option>';
@@ -91,6 +111,10 @@ const Pedidos = (() => {
         };
         d.appendChild(wrap); d.appendChild(b);
       }
+      const wa = document.createElement('button'); wa.textContent='Enviar por WhatsApp';
+      wa.onclick=()=>enviarWA(p, prov);
+      if(!prov || !telArg(prov.tel)) wa.disabled = true;
+      d.appendChild(wa);
       const del = document.createElement('button'); del.textContent='Borrar';
       del.onclick=()=>{ if(confirm('Borrar pedido?')){ Store.delPedido(p.id); render(); } };
       d.appendChild(del); box.appendChild(d);
