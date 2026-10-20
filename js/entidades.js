@@ -96,6 +96,7 @@ const Entidades = (() => {
     });
     Caja.refresh();
     if(typeof Cumple!=='undefined' && Cumple.render) Cumple.render();
+    if(typeof Pedidos!=='undefined' && Pedidos.render) Pedidos.render();
   }
   function init(){
     render();
