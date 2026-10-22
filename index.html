@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
 <header>
@@ -136,10 +136,11 @@
   </section>
 
   <section id="mod-precios">
-    <p class="hint">El catálogo se carga desde el <b>archivo publicado</b> (<code>data/catalogo.json</code>), que es la
-      fuente única para todos los equipos. Acá se administra: cambiá <b>costo, precio o margen</b> desde
-      <b>Stock → Editar</b>, o <b>ocultá</b> lo que no se vende. Para recargar desde un CSV nuevo:
-      <code>codigo,nombre,presentacion,costo,margen</code>.</p>
+    <p class="hint">La fuente de verdad es el <b>catálogo publicado</b> (<code>data/catalogo.json</code>), que es la
+      misma lista para todos los equipos. Acá se administra: cambiá <b>Costo</b> y <b>Venta</b> directo en la tabla
+      (el <b>M%</b> se recalcula solo), o actualizá desde un CSV nuevo:
+      <code>codigo,nombre,presentacion,costo,margen</code>. Lo editado y no publicado queda marcado
+      <b>pendiente</b> y sobrevive al repago del servidor. Tocá <b>Publicar cambios</b> para que lo vean los demás.</p>
     <div class="row">
       <span id="precio-estado" class="hint">Cargando estado del catálogo…</span>
     </div>
@@ -289,9 +290,10 @@
     <input id="f-nombre" placeholder="Nombre (ej: PAPEL HIGIENICO Felpita)" required>
     <input id="f-cat" placeholder="Rubro (ej: Accesorios)">
     <select id="f-prov" title="Proveedor"></select>
-    <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra" required>
-    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio de venta" required>
+    <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra">
+    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio de venta">
     <input id="f-margen" type="number" min="0" step="1" placeholder="Margen % (del proveedor)">
+    <p class="hint" style="margin:0">Costo / venta / margen: se administran en el panel <b>Precios</b> (acá solo al crear el producto).</p>
     <input id="f-pres" placeholder="Presentación (ej: 1 Lt, 5 Lts, x Unid)">
     <input id="f-stock" type="number" min="0" step="1" placeholder="Stock inicial" value="10">
     <label class="chk" style="margin-top:10px"><input type="checkbox" id="f-activo" checked> Visible (se ofrece en caja)</label>
@@ -328,17 +330,17 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=23"></script>
-<script src="js/store.js?v=23"></script>
-<script src="js/pagos.js?v=23"></script>
-<script src="js/scan.js?v=23"></script>
-<script src="js/caja.js?v=23"></script>
-<script src="js/stock.js?v=23"></script>
-<script src="js/entidades.js?v=23"></script>
-<script src="js/cumple.js?v=23"></script>
-<script src="js/operacion.js?v=23"></script>
-<script src="js/turnos.js?v=23"></script>
-<script src="js/reportes.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
+<script src="js/catalogo.js?v=24"></script>
+<script src="js/store.js?v=24"></script>
+<script src="js/pagos.js?v=24"></script>
+<script src="js/scan.js?v=24"></script>
+<script src="js/caja.js?v=24"></script>
+<script src="js/stock.js?v=24"></script>
+<script src="js/entidades.js?v=24"></script>
+<script src="js/cumple.js?v=24"></script>
+<script src="js/operacion.js?v=24"></script>
+<script src="js/turnos.js?v=24"></script>
+<script src="js/reportes.js?v=24"></script>
+<script src="js/app.js?v=24"></script>
 </body>
 </html>

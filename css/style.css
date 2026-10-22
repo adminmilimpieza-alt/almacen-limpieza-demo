@@ -1,4 +1,4 @@
-/* Premium utilitarian minimalism · warm monochrome · Apple-HIG targets 44px+ */
+/* Premium utilitarian minimalism Â· warm monochrome Â· Apple-HIG targets 44px+ */
 :root{
   --canvas:#F7F6F3; --surface:#FFFFFF; --surface-2:#F9F9F8;
   --ink:#111111; --ink-2:#2F3437; --muted:#787774;
@@ -58,7 +58,7 @@ body.drawer-open main{padding-left:320px}
 .sug-info b{display:block;color:var(--ink);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sug-info small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sug-btn{min-height:38px;padding:6px 10px;font-size:13px;white-space:nowrap;flex:none}
-/* Aviso de cumpleaños */
+/* Aviso de cumpleaÃ±os */
 .cumple-alert{background:var(--pastel-yellow-bg);border:1px solid #EAD9A8;border-radius:10px;
   padding:10px 14px;margin-bottom:12px;font-size:14px;color:var(--pastel-yellow-tx)}
 .cumple-alert[hidden]{display:none !important}
@@ -73,7 +73,7 @@ body.drawer-open main{padding-left:320px}
 .scan-hero .scanbar input{font-size:18px;font-weight:600;border:2px solid var(--brand);min-height:56px;
   padding-left:48px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322306B' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat 15px center/22px}
 .scan-hero .scan-actions{margin-bottom:8px}
-/* Catálogo visual de productos */
+/* CatÃ¡logo visual de productos */
 .catalogo{margin:16px 0 8px}
 .catalogo-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
 .catalogo-head h2{font-size:19px;margin:0}
@@ -177,7 +177,7 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
 .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
 .lbl[hidden]{display:none !important}
 .lbl select{margin-top:4px}
-/* Menú hamburguesa + drawer de módulos */
+/* MenÃº hamburguesa + drawer de mÃ³dulos */
 .icon-btn{width:44px;height:44px;min-height:44px;padding:0;border:1px solid var(--line);
   background:var(--surface);border-radius:10px;display:inline-flex;flex-direction:column;
   align-items:center;justify-content:center;gap:4px;cursor:pointer;flex:none;color:var(--ink)}
@@ -225,7 +225,7 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
   padding:18px 10px 4px;font-family:var(--font-serif);font-size:32px;color:var(--ink);letter-spacing:-.02em}
 .cobro-bar{display:grid;grid-template-columns:1fr auto;gap:10px;margin:14px 0 8px}
 .cobro-bar .big{font-size:17px;min-height:52px;font-weight:600}
-/* Módulos a pantalla completa */
+/* MÃ³dulos a pantalla completa */
 .panel-overlay{position:fixed;inset:0;z-index:100;background:var(--canvas);overflow:auto;padding:20px}
 .panel-body{max-width:1100px;margin:0 auto;background:var(--surface);border:1px solid var(--line);
   border-radius:var(--radius);padding:24px 28px}
@@ -252,7 +252,7 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 .foto-prev.vacia img{display:none}
 .foto-actions{display:flex;flex-direction:column;gap:6px}
 .foto-actions button{min-height:36px;padding:6px 12px;font-size:13px}
-/* Cumpleaños */
+/* CumpleaÃ±os */
 .cumple-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .cumple-head #cal-mes{font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--ink);
   min-width:150px}
@@ -285,3 +285,6 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
   .cumple-head #cal-mes{min-width:0;font-size:18px}
   .cumple-head #cal-hoy{margin-left:0}
 }
+
+.tab-inp{width:96px;min-width:78px;padding:2px 6px;font-size:13px}
+.tab-inp:disabled{opacity:.5}

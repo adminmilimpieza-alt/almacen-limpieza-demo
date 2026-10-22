@@ -48,21 +48,43 @@ const Precios = (() => {
     const ocultos = db.productos.filter(p=>p.activo===false).length;
     const conAlerta = list.filter(p=>p.alerta).length;
     const valor = Math.round(list.reduce((a,p)=>a+p.precio*p.stock,0));
+    const pendientes = new Set(Store.driftPrecio().map(d=>d.p.id));
     $('lista-precios').innerHTML =
       `<p class="hint">${list.length} productos · valor total $${valor.toLocaleString('es-AR')}`+
+      (pendientes.size?` · <b>${pendientes.size} con precio pendiente de publicar</b>`:'')+
       (ocultos?` · <b>${ocultos} ocultos</b> (no se ofrecen en caja)`:'')+
       (conAlerta?` · <b>${conAlerta}</b> con precio corregido sobre el Excel`:'')+`</p>`+
       '<table><thead><tr><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th></th></tr></thead><tbody>'+
       list.map(p=>{
         const off = p.activo===false;
+        const pend = pendientes.has(p.id);
         return `<tr class="${off?'oculto':''}"><td>${p.codigo||'-'}</td>`+
-          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}</td>`+
+        `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td>`+
           `<td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${nom(p.provId)}</td>`+
-          `<td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" value="${p.costo??p.precio}" title="Costo de compra"></td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" value="${p.precio}" title="Precio de venta"></td>`+
+          `<td>${p.margen==null?'-':p.margen+'%'}</td>`+
           `<td><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
       }).join('')+'</tbody></table>';
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
       b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
+    });
+    // Edicion inline: al salir del input guarda costo o venta y recalcula el margen.
+    $('lista-precios').querySelectorAll('input[data-f]').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const n = Number(String(inp.value).replace(',','.'));
+        if(!(n>0)){ verLista(); return; }
+        const db2 = Store.get();
+        const p = db2.productos.find(x=>x.id===inp.dataset.id);
+        if(!p) return;
+        p[inp.dataset.f] = n;
+        if(p.costo>0){
+          const m = Math.round((p.precio-p.costo)/p.costo*10000)/100;
+          p.margen = m>=0 ? m : null;
+        }
+        Store.import(JSON.stringify(db2));
+        verLista(); Stock.render(); Caja.refresh();
+      });
     });
     estadoUI();
   }
@@ -79,6 +101,8 @@ const Precios = (() => {
       txt = 'Catálogo: <b>respaldo local</b> (no se pudo leer el publicado) — se está trabajando sin conexión.';
     }
     if(drift.length) txt += ' · <b>'+drift.length+'</b> con stock modificado localmente (falta publicar)';
+    const dP = Store.driftPrecio ? Store.driftPrecio() : [];
+    if(dP.length) txt += ' · <b>'+dP.length+'</b> con precio pendiente de publicar';
     const url = $('precio-url');
     if(url && document.activeElement!==url) url.value = e.url||'';
     box.innerHTML = txt;

@@ -119,9 +119,12 @@ const Store = (() => {
       if(p.proveedorNombre==null && p.provId) p.proveedorNombre=(db.proveedores.find(x=>x.id===p.provId)||{}).nombre||'';
       previos[clave(p)]=p;
     });
-    const stockBase={}; const drift=[]; const locales=[];
+    const stockBase={}; const precioBase={}; const drift=[]; const driftP=[]; const locales=[];
     const out=[];
-    const base0=(db.catalogo&&db.catalogo.stockBase)||{};
+    const base0S=(db.catalogo&&db.catalogo.stockBase)||{};
+    const base0P=(db.catalogo&&db.catalogo.precioBase)||{};
+    const dif=(a,b)=>Math.abs((Number(a)||0)-(Number(b)||0))>0.004;
+    const difM=(x,y)=>((x==null?null:Math.round(Number(x)*100))!==(y==null?null:Math.round(Number(y)*100)));
     j.productos.forEach((r,i)=>{
       const k=(r.codigo||'')+'|'+(r.categoria||'')+'|'+(r.presentacion||'');
       const prev=previos[k];
@@ -136,12 +139,20 @@ const Store = (() => {
         activo: prev? (prev.activo!==false) : (r.activo!==false),
         foto: prev? (prev.foto||'') : ''
       };
-      const basePrev = prev ? base0[k] : undefined;
+      const basePrev = prev ? base0S[k] : undefined;
       if(prev && basePrev!=null && basePrev!==prev.stock){
         p.stock = prev.stock;
-        drift.push({codigo:p.codigo, nombre:p.nombre, local:p.stock, publicado:basePrev});
+        drift.push({id:p.id, codigo:p.codigo, nombre:p.nombre, local:p.stock, publicado:basePrev});
+      }
+      // Si este equipo edito costo/precio/margen antes de publicar, quedan los locales.
+      const pbPrev = prev ? base0P[k] : undefined;
+      if(prev && pbPrev!=null &&
+         (dif(prev.costo,pbPrev.costo)||dif(prev.precio,pbPrev.precio)||difM(prev.margen,pbPrev.margen))){
+        p.costo=prev.costo; p.precio=prev.precio; p.margen=(prev.margen==null?null:prev.margen);
+        driftP.push({id:p.id, codigo:p.codigo, nombre:p.nombre, publicado:pbPrev.precio, local:p.precio});
       }
       stockBase[k]=p.stock;
+      precioBase[k]={costo:p.costo, precio:p.precio, margen:(p.margen==null?null:p.margen)};
       out.push(p);
     });
     // productos que solo existen en este equipo (agregados a mano): se conservan
@@ -160,8 +171,9 @@ const Store = (() => {
     db.catalogo.url=urlCatalogo();
     db.catalogo.aplicado=new Date().toISOString();
     db.catalogo.stockBase=stockBase;
+    db.catalogo.precioBase=precioBase;
     save(db);
-    return {productos:out.length, drift:drift, locales:locales};
+    return {productos:out.length, drift:drift, driftP:driftP, locales:locales};
   }
   // Descarga el catalogo publicado. {ok, msg, drift}
   async function cargarRemoto(){
@@ -176,6 +188,7 @@ const Store = (() => {
       const res=aplicarRemoto(j);
       let msg='Catalogo actualizado: '+res.productos+' productos';
       if(res.drift.length) msg+=' · '+res.drift.length+' con diferencia de stock';
+      if(res.driftP.length) msg+=' · '+res.driftP.length+' con precio pendiente de publicar';
       return {ok:true, msg:msg, drift:res.drift};
     }catch(e){
       return {ok:false, msg:'Sin conexion o no se pudo leer el catalogo: '+(e&&e.message||e)};
@@ -206,6 +219,19 @@ const Store = (() => {
     db.productos.forEach(p=>{
       const k=clave(p);
       if(base[k]!=null && base[k]!==p.stock) out.push({p:p, publicado:base[k], local:p.stock, dif:p.stock-base[k]});
+    });
+    return out;
+  }
+  // Productos donde el costo/precio/margen local se aparto del publicado.
+  function driftPrecio(){
+    const db=load(); const base=(db.catalogo&&db.catalogo.precioBase)||{};
+    const out=[];
+    const dif=(a,b)=>Math.abs((Number(a)||0)-(Number(b)||0))>0.004;
+    const difM=(x,y)=>((x==null?null:Math.round(Number(x)*100))!==(y==null?null:Math.round(Number(y)*100)));
+    db.productos.forEach(p=>{
+      const k=clave(p); const b=base[k];
+      if(b!=null && (dif(p.costo,b.costo)||dif(p.precio,b.precio)||difM(p.margen,b.margen)))
+        out.push({p:p, publicado:b.precio, local:p.precio});
     });
     return out;
   }
@@ -377,6 +403,6 @@ const Store = (() => {
 
     // --- catalogo compartido ---
     urlCatalogo, setUrlCatalogo, estadoCatalogo, aplicarRemoto,
-    cargarRemoto, catalogoParaPublicar, driftStock,
+    cargarRemoto, catalogoParaPublicar, driftStock, driftPrecio,
   };
 })();

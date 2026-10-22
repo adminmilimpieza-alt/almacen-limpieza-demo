@@ -56,8 +56,10 @@ const Stock = (() => {
     const tb = $('tabla-stock'); tb.innerHTML='';
     const list = filtros();
     const drift = new Set(Store.driftStock().map(d=>d.p.id));
+    const pend = new Set(Store.driftPrecio().map(d=>d.p.id));
     $('stk-count').textContent = `${list.length} de ${db.productos.length} productos`+
-      (drift.size?` · ${drift.size} con stock modificado localmente (sin publicar)`:'');
+      (drift.size?` · ${drift.size} con stock modificado localmente (sin publicar)`:'')+
+      (pend.size?` · ${pend.size} con precio pendiente de publicar`:'');
     list.forEach(p=>{
       const tr = document.createElement('tr');
       if(p.stock<=5) tr.className='bajo';
@@ -68,7 +70,8 @@ const Stock = (() => {
       const oculto = p.activo===false;
       if(oculto) tr.classList.add('oculto');
       const local = drift.has(p.id);
-      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
+      const pendiente = pend.has(p.id);
+      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
       const td = document.createElement('td'); td.style.whiteSpace='nowrap';
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id; $('modal-titulo').textContent='Editar producto';
@@ -76,6 +79,8 @@ const Stock = (() => {
         $('f-pres').value=p.presentacion||'';
         $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio;
         $('f-margen').value=(p.margen==null?'':p.margen); $('f-stock').value=p.stock;
+        // El costo/precio/margen se administran en el panel Precios, no aca.
+        $('f-costo').disabled=true; $('f-precio').disabled=true; $('f-margen').disabled=true;
         $('f-activo').checked = !oculto;
         fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
@@ -97,6 +102,7 @@ const Stock = (() => {
     $('nuevo').onclick=()=>{ editId=null; $('modal-titulo').textContent='Nuevo producto';
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
       $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
+      $('f-costo').disabled=false; $('f-precio').disabled=false; $('f-margen').disabled=false;
       $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
@@ -129,12 +135,14 @@ const Stock = (() => {
     $('guardar-prod').onclick=()=>{
       const db = Store.get();
       const cur = editId && db.productos.find(x=>x.id===editId);
+      // Editando: costo/precio/margen se mantienen (se cambian en el panel Precios).
       const p = Object.assign({}, cur||{}, {
         id: editId || 'p'+Date.now(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
         presentacion:$('f-pres').value.trim(),
-        costo:Number($('f-costo').value), precio:Number($('f-precio').value),
-        margen: ($('f-margen').value===''?null:Number($('f-margen').value)),
+        costo: cur?cur.costo:Number($('f-costo').value),
+        precio: cur?cur.precio:Number($('f-precio').value),
+        margen: cur?((cur.margen==null)?null:cur.margen):(($('f-margen').value===''?null:Number($('f-margen').value))),
         stock:Number($('f-stock').value),
         activo: $('f-activo').checked,
         provId: $('f-prov').value || ((cur&&cur.provId)||''),
