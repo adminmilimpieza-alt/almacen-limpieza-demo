@@ -102,10 +102,19 @@ const Stock = (() => {
     $('nuevo').onclick=()=>{ editId=null; $('modal-titulo').textContent='Nuevo producto';
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
       $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
-      $('f-costo').disabled=false; $('f-precio').disabled=false; $('f-margen').disabled=false;
+      $('f-costo').disabled=false; $('f-margen').disabled=false;
       $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
+    // El precio de venta no se edita: sale de costo x margen mientras tipea.
+    // (En editar producto, editId != null, los inputs ya estan deshabilitados.)
+    const recalcula = ()=>{
+      if(editId) return;
+      const c=Number($('f-costo').value), m=Number($('f-margen').value);
+      $('f-precio').value = (c>0 && m>=0) ? Math.round(c*(1+m/100)*100)/100 : '';
+    };
+    $('f-costo').addEventListener('input', recalcula);
+    $('f-margen').addEventListener('input', recalcula);
     $('reset').onclick=()=>{ if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); } };
     $('stk-q').addEventListener('input', render);
     $('stk-rubro').addEventListener('change', render);
@@ -148,7 +157,9 @@ const Stock = (() => {
         provId: $('f-prov').value || ((cur&&cur.provId)||''),
         foto: fotoActual || ''
       });
-      if(!p.nombre || !(p.costo>=0) || !(p.precio>=0)){ alert('Faltan datos'); return; }
+      // Nuevo producto: la venta sale de costo x margen, sino no se guarda.
+      const sinPrecio = editId ? !(p.precio>=0) : !(Number($('f-precio').value)>0);
+      if(!p.nombre || !(p.costo>=0) || sinPrecio){ alert('Faltan datos (costo y margen para calcular la venta)'); return; }
       try{ Store.upsertProducto(p); }catch(err){ alert(err && err.name==='QuotaExceededError' ? 'Sin espacio para más fotos en este dispositivo.' : err.message); return; }
       render(); Caja.refresh();
     };
