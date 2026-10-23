@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "milimpieza",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-10-23",
+  "workers_dev": true,
+  "assets": {"directory":"./dist", "binding":"ASSETS", "run_worker_first":["/api/*"]},
+  "d1_databases": [{"binding":"DB", "database_name":"milimpieza-cobros", "database_id":"9e0b5b43-2e55-4baf-a336-249d1153be24", "migrations_dir":"migrations"}],
+  "observability": {"enabled":false}
+}

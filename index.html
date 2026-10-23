@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Almacén · Caja y stock (Demo)</title>
-<link rel="stylesheet" href="css/style.css?v=26">
+<link rel="stylesheet" href="css/style.css?v=27">
 </head>
 <body>
 <header>
@@ -97,6 +97,24 @@
         <button id="t-print">Imprimir ticket</button>
       </div>
       <div id="linkmp-out"></div>
+      <details id="mp-panel">
+        <summary>Cobros de Mercado Pago</summary>
+        <p id="mp-status" class="hint" role="status">Consultando configuración…</p>
+        <div id="mp-login">
+          <form id="mp-login-form">
+            <label for="mp-password">Clave de operador</label>
+            <input id="mp-password" type="password" autocomplete="current-password" required>
+            <button type="submit">Iniciar sesión de cobros</button>
+          </form>
+        </div>
+        <div class="row">
+          <button id="mp-refresh" type="button">Actualizar cobros</button>
+          <button id="mp-account" type="button">Ver cuenta receptora</button>
+          <button id="mp-logout" type="button">Cerrar sesión de cobros</button>
+        </div>
+        <p class="hint">Generar un enlace no registra ingresos ni descuenta stock. Los enlaces vencen a las 24 horas. Verificá el pago antes de entregar y registrá la venta una sola vez desde este equipo. Los importes registrados son brutos; las comisiones se concilian aparte.</p>
+        <div id="mp-orders"></div>
+      </details>
     </div>
   </section>
 </main>
@@ -330,17 +348,18 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=26"></script>
-<script src="js/store.js?v=26"></script>
-<script src="js/pagos.js?v=26"></script>
-<script src="js/scan.js?v=26"></script>
-<script src="js/caja.js?v=26"></script>
-<script src="js/stock.js?v=26"></script>
-<script src="js/entidades.js?v=26"></script>
-<script src="js/cumple.js?v=26"></script>
-<script src="js/operacion.js?v=26"></script>
-<script src="js/turnos.js?v=26"></script>
-<script src="js/reportes.js?v=26"></script>
-<script src="js/app.js?v=26"></script>
+<script src="js/catalogo.js?v=27"></script>
+<script src="js/store.js?v=27"></script>
+<script src="js/pagos.js?v=27"></script>
+<script src="js/scan.js?v=27"></script>
+<script src="js/caja.js?v=27"></script>
+<script src="js/stock.js?v=27"></script>
+<script src="js/entidades.js?v=27"></script>
+<script src="js/cumple.js?v=27"></script>
+<script src="js/operacion.js?v=27"></script>
+<script src="js/turnos.js?v=27"></script>
+<script src="js/reportes.js?v=27"></script>
+<script src="js/app.js?v=27"></script>
+<script>Pagos.init();</script>
 </body>
 </html>

@@ -346,6 +346,25 @@ const Store = (() => {
       }
       save(db); return total;
     },
+    // Solo se llama después de verificar el pago con el backend.
+    registrarPagoMP(order){
+      const db=load();
+      if(!order || order.status!=='approved' || !order.payment_id) throw new Error('El pago todavía no está aprobado.');
+      const existente=db.ventas.find(v=>v.mpOrderId===order.id);
+      if(existente) return existente;
+      const turno=db.turnos.find(t=>t.estado==='abierto');
+      if(!turno) throw new Error('Abrí la caja para registrar la venta pagada.');
+      if(!Array.isArray(order.items)||!order.items.length) throw new Error('El cobro no tiene productos.');
+      for(const it of order.items){
+        const p=db.productos.find(x=>x.id===it.id);
+        if(!p||p.stock<it.cant) throw new Error('Revisá el stock antes de registrar: '+it.nombre);
+      }
+      for(const it of order.items) db.productos.find(x=>x.id===it.id).stock-=it.cant;
+      const venta={id:'mp-'+order.id,mpOrderId:order.id,paymentId:order.payment_id,fecha:new Date().toISOString(),items:order.items,pago:'mercadopago',total:order.total,clienteId:order.cliente_id||'c1',turnoId:turno.id};
+      db.ventas.unshift(venta);
+      db.movimientos.unshift({id:'mp-'+order.id,fecha:venta.fecha,tipo:'ingreso',medio:'mercadopago',concepto:'Venta MP '+order.payment_id,monto:order.total,conciliado:true,turnoId:turno.id,ventaId:venta.id});
+      save(db); return venta;
+    },
     anularVenta(id){
       const db=load();
       const v=db.ventas.find(x=>x.id===id);
