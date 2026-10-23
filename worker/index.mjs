@@ -73,8 +73,15 @@ async function route(request,env){
   const device=request.headers.get('X-Device-ID');
   if(!uuid(device)) throw fail('Identificador de equipo inválido.');
   if(path==='/api/mp/orders'&&request.method==='GET'){
-    const rows=await env.DB.prepare('SELECT * FROM orders WHERE device_id=? ORDER BY created_at DESC LIMIT 50').bind(device).all();
-    return json({orders:rows.results.map(publicOrder)});
+    const before=url.searchParams.get('before');
+    let statement;
+    if(before){
+      const [date,id]=before.split('|');
+      if(!uuid(id)||!/^\d{4}-\d\d-\d\dT/.test(date)||Number.isNaN(Date.parse(date))) throw fail('Página de cobros inválida.');
+      statement=env.DB.prepare('SELECT * FROM orders WHERE device_id=? AND (created_at,id) < (?,?) ORDER BY created_at DESC,id DESC LIMIT 51').bind(device,date,id);
+    }else statement=env.DB.prepare('SELECT * FROM orders WHERE device_id=? ORDER BY created_at DESC,id DESC LIMIT 51').bind(device);
+    const rows=await statement.all(),page=rows.results.slice(0,50),last=page.at(-1);
+    return json({orders:page.map(publicOrder),next:rows.results.length>50?last.created_at+'|'+last.id:null});
   }
   if(path==='/api/mp/orders'&&request.method==='POST'){
     const data=await body(request);

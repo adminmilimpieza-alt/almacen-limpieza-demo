@@ -1,6 +1,6 @@
 // Las credenciales de Mercado Pago se guardan exclusivamente en Cloudflare.
 const Pagos = (() => {
-  let configured=false;
+  let configured=false, shownOrders=[];
   const $=id=>document.getElementById(id);
   const labels={creating:'Creando enlace',creation_failed:'Creación sin confirmar; revisar en Mercado Pago',pending:'Pendiente de pago',approved:'Pago aprobado',refunded:'Reembolsado',charged_back:'Contracargo',review:'Revisar pago'};
   function deviceId(){
@@ -50,8 +50,14 @@ const Pagos = (() => {
       box.append(row);
     });
   }
-  async function refresh(){
-    const data=await api('/api/mp/orders');$('mp-login').hidden=true;render(data.orders);
+  async function refresh(before){
+    const data=await api('/api/mp/orders'+(before?'?before='+encodeURIComponent(before):''));
+    $('mp-login').hidden=true;shownOrders=before?shownOrders.concat(data.orders):data.orders;render(shownOrders);
+    if(data.next){
+      const more=document.createElement('button');more.textContent='Ver cobros anteriores';
+      more.onclick=async()=>{more.disabled=true;try{await refresh(data.next);}catch(e){message(e.message);more.disabled=false;}};
+      $('mp-orders').append(more);
+    }
   }
   async function crearLink({items,clienteId}){
     if(!configured) throw new Error('Falta configurar el servidor de Mercado Pago.');

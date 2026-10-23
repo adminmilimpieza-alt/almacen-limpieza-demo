@@ -147,7 +147,7 @@ La integración usa un Worker y una base D1 para solicitudes de cobro. El códig
 2. **Generar link de pago** captura el ticket, lo retira del carrito y permite compartirlo. No registra un ingreso ni descuenta stock.
 3. **Verificar pago** consulta Mercado Pago desde el servidor; valida referencia, cuenta receptora, ARS e importe. Volver de la pantalla de Mercado Pago no confirma el pago.
 4. **Registrar venta pagada** verifica nuevamente, registra una sola venta con ingreso bruto conciliado y descuenta stock local. Requiere caja abierta y stock disponible.
-5. Los cobros se muestran en el equipo que generó el enlace (últimos 50). Su identificador viaja en el respaldo JSON. No restaurar simultáneamente el mismo respaldo en dos cajas activas: ventas y stock aún son locales.
+5. Los cobros se muestran en el equipo que generó el enlace (50 por página, con acceso a cobros anteriores). Su identificador viaja en el respaldo JSON. No restaurar simultáneamente el mismo respaldo en dos cajas activas: ventas y stock aún son locales.
 
 Los enlaces vencen a las 24 horas. Un reembolso o contracargo se detecta al consultar; las correcciones de una venta ya registrada se realizan manualmente. Anular un registro local no reembolsa dinero en Mercado Pago. Las comisiones se registran/concilian aparte del ingreso bruto. Una creación con resultado incierto no se reintenta automáticamente: revisar Mercado Pago antes de emitir otro enlace.
 
