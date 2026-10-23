@@ -17,8 +17,11 @@ Después del push, el resto de los equipos lo toma al abrir la app
 (busca "Actualizar del servidor" en el panel de Precios).
 """
 import argparse
+import base64
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +29,7 @@ from datetime import datetime
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESTINO_REL = os.path.join("data", "catalogo.json")
+FOTOS_REL = "fotos"
 
 
 def die(msg, code=1):
@@ -143,18 +147,61 @@ def main():
         if not (cambios_precio or cambios_costo or cambios_stock or nuevos or quitados):
             print("  (sin cambios)")
 
-    # ---- 3. copiar ----
+    # ---- 2b. fotos embebidas (data:...) -> archivos en fotos/ ----
+    # Las fotos viven en cada dispositivo; al publicar se guardan como archivos
+    # y el JSON las referencia por ruta (asi todos los equipos las ven).
+    os.makedirs(os.path.join(repo, FOTOS_REL), exist_ok=True)
+    nombres = set()
+    escritas = []
+    for p in prods:
+        f = p.get("foto") or ""
+        m = re.match(r"^data:image/(jpeg|jpg|png|webp);base64,", f)
+        if m:
+            ext = m.group(1).replace("jpeg", "jpg")
+            raw = base64.b64decode(f.split(",", 1)[1])
+            h = hashlib.md5(raw).hexdigest()[:8]
+            base = "-".join(str(x or "").strip() for x in
+                            (p.get("codigo"), p.get("categoria"), p.get("presentacion")))
+            base = re.sub(r"[^A-Za-z0-9._~-]+", "_", base)[:60] or "foto"
+            nombre = base + "-" + h + ("." + ext if ext != "jpg" else ".jpg")
+            ruta_foto = os.path.join(repo, FOTOS_REL, nombre)
+            if (not os.path.isfile(ruta_foto)) or os.path.getsize(ruta_foto) != len(raw):
+                with open(ruta_foto, "wb") as fh:
+                    fh.write(raw)
+                escritas.append(nombre)
+            p["foto"] = FOTOS_REL + "/" + nombre
+            nombres.add(nombre)
+        elif f.startswith(FOTOS_REL + "/"):
+            nombres.add(f[len(FOTOS_REL) + 1:])
+    if escritas:
+        print("  fotos  : %d nuevas" % len(escritas))
+        for n in escritas[:15]:
+            print("     " + n)
+        if len(escritas) > 15:
+            print("     ... y %d mas" % (len(escritas) - 15))
+    # fotos que ya nadie referencia: afuera
+    try:
+        sobrantes = sorted(set(os.listdir(os.path.join(repo, FOTOS_REL))) - nombres)
+        for s in sobrantes:
+            os.remove(os.path.join(repo, FOTOS_REL, s))
+        if sobrantes:
+            print("  fotos  : %d quitadas (ya no usadas)" % len(sobrantes))
+    except Exception as e:
+        print("AVISO: no se pudo limpiar fotos/: %s" % e)
+
+    # ---- 3. copiar (con las fotos ya referenciadas por archivo) ----
     os.makedirs(os.path.dirname(destino), exist_ok=True)
-    shutil.copyfile(origen, destino)
+    with open(destino, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(cat, fh, ensure_ascii=False, indent=1)
     print("\nCopiado a %s" % os.path.relpath(destino, repo))
 
     # ---- 4. commit + push ----
     msg = args.mensaje or ("precios: publica el catalogo (%d productos, %s)"
                            % (len(prods), cat.get("version", "?")))
-    r = git(repo, "add", DESTINO_REL)
+    r = git(repo, "add", DESTINO_REL, FOTOS_REL)
     if r.returncode != 0:
         die("git add fallo: " + r.stderr)
-    r = git(repo, "status", "--porcelain", DESTINO_REL)
+    r = git(repo, "status", "--porcelain", "--", DESTINO_REL, FOTOS_REL)
     if not r.stdout.strip():
         print("No hay cambios para commitear: el publicado ya era igual.")
         return

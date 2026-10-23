@@ -137,7 +137,7 @@ const Store = (() => {
         margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'',
         stock:Number(r.stock)||0,
         activo: prev? (prev.activo!==false) : (r.activo!==false),
-        foto: prev? (prev.foto||'') : ''
+        foto: prev ? (prev.foto||r.foto||'') : (r.foto||'')
       };
       const basePrev = prev ? base0S[k] : undefined;
       if(prev && basePrev!=null && basePrev!==prev.stock){
@@ -208,7 +208,7 @@ const Store = (() => {
         presentacion:p.presentacion||'', categoria:p.categoria,
         prov:provNombre(p.provId), provId:p.provId,
         costo:p.costo, precio:p.precio, margen:p.margen, alerta:p.alerta||'',
-        stock:p.stock, activo:p.activo!==false
+        stock:p.stock, activo:p.activo!==false, foto:p.foto||''
       }))
     };
   }
