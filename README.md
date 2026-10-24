@@ -1,6 +1,6 @@
 # Caja + Stock — almacén limpieza (Mi Limpieza)
 
-Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática → lista para GitHub Pages.
+Sistema de caja, stock y lista de precios para **Mi Limpieza**. La versión con cobros reales está publicada en https://milimpieza.adminmilimpieza.workers.dev/ con Cloudflare Free. GitHub Pages conserva la demo.
 
 ## Qué hace
 - **Caja:** buscar producto, armar ticket, cobrar (efectivo/transferencia/cta cte). Descuenta stock y guarda venta.
@@ -8,7 +8,7 @@ Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática �
 - **Precios:** catálogo real importado del proveedor; ver lista por rubro/proveedor, imprimir, recalcular venta.
 - **Turno de caja:** apertura/cierre con arqueo y diferencias por medio.
 - **Clientes / Proveedores / Pedidos / Cumpleaños / Reportes / Respaldo.**
-- Todo en `localStorage` (sin backend). Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
+- Ventas, stock y clientes en `localStorage`; solicitudes y estados de Mercado Pago en D1 mediante una API autenticada. Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
 
 ## Catálogo: importado una vez, se administra desde el panel
 
@@ -140,6 +140,10 @@ git push -u origin main
 ## Mercado Pago real — Cloudflare Free
 
 La integración usa un Worker y una base D1 para solicitudes de cobro. El código sigue en GitHub. La web y la API se sirven desde la misma dirección gratuita de Cloudflare. GitHub Pages conserva la versión demo hasta completar la migración.
+
+**Verificado el 23/10/2026:** autenticación del operador, consulta de la cuenta argentina del vendedor, creación de una preferencia real, apertura del checkout con producto e importe correctos y consulta de estado pendiente. Se usaron App ID y Client Secret guardados como secretos de ejecución. No se efectuó un pago real ni se registró una venta. El webhook aún no está configurado: usar **Verificar pago** antes de registrar una venta.
+
+Guía para el local: [GUIA-COBROS.md](GUIA-COBROS.md).
 
 ### Uso en caja
 
