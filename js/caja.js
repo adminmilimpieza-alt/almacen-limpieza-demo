@@ -276,21 +276,20 @@ const Caja = (() => {
     };
     $('linkmp').onclick = async ()=>{
       if(!carrito.length){ alert('Armá el ticket primero'); return; }
-      const total = carrito.reduce((a,i)=>a+i.precio*i.cant,0);
-      const btn = $('linkmp'); btn.disabled = true; btn.textContent = 'Generando…';
+      if(!Store.turnoAbierto()){ alert('Abrí la caja primero.'); return; }
+      const items=carrito.map(i=>({...i}));
+      const btn=$('linkmp');btn.disabled=true;btn.textContent='Generando…';
+      // Freeze the ticket while its immutable payment snapshot is created.
+      const controls=[...document.querySelectorAll('#pos-left button, #pos-left input, #pos-left select, #pos-right button, #pos-right input, #pos-right select')];
+      const previous=controls.map(el=>el.disabled);controls.forEach(el=>el.disabled=true);
       try{
-        const link = await Pagos.crearLink({items:carrito, total, medio:'mercadopago'});
-        Store.addMovimiento({tipo:'ingreso', medio:'mercadopago',
-          concepto:'Link MP '+(link.demo?'(demo) ':'')+link.id+' — pendiente de acreditación',
-          monto:total, conciliado:false});
-        renderMovimientos(); Reportes.render();
-        $('linkmp-out').innerHTML =
-          `<div class="venta"><b>Link de pago ${link.demo?'(simulado)':''}</b><br>`+
-          `<a href="${link.init_point}" target="_blank">${link.init_point}</a><br>`+
-          `<span class="hint">ID: ${link.id} · Queda como movimiento NO conciliado hasta que MP avise el pago (webhook fase 2).</span><br>`+
-          `<a href="${Pagos.whatsappShare(link.init_point, total)}" target="_blank"><button class="primary">Pasar al cliente por WhatsApp</button></a></div>`;
-      }catch(e){ alert('No se pudo generar: '+e.message); }
-      btn.disabled = false; btn.textContent = 'Generar link de pago (demo)';
+        const order=await Pagos.crearLink({items,clienteId:$('f-cliente').value});
+        carrito=[];renderCarrito();
+        const out=$('linkmp-out');out.replaceChildren();
+        const text=document.createElement('p');text.textContent='Enlace generado por $'+order.total+'. El cobro está pendiente. Verificá el pago y registrá la venta en “Cobros de Mercado Pago”.';
+        const a=document.createElement('a');a.href=order.init_point;a.textContent='Abrir enlace de pago';a.target='_blank';a.rel='noopener noreferrer';out.append(text,a);
+      }catch(e){alert('No se pudo generar: '+e.message);}
+      finally{controls.forEach((el,i)=>el.disabled=previous[i]);btn.disabled=false;btn.textContent='Generar link de pago';}
     };
   }
   return {init, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo($('scan')?$('scan').value:''); if(typeof Turnos!=='undefined') Turnos.status();}};

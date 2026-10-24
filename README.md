@@ -1,6 +1,6 @@
 # Caja + Stock — almacén limpieza (Mi Limpieza)
 
-Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática → lista para GitHub Pages.
+Sistema de caja, stock y lista de precios para **Mi Limpieza**. La versión con cobros reales está publicada en https://milimpieza.adminmilimpieza.workers.dev/ con Cloudflare Free. GitHub Pages conserva la demo.
 
 ## Qué hace
 - **Caja:** buscar producto, armar ticket, cobrar (efectivo/transferencia/cta cte). Descuenta stock y guarda venta.
@@ -8,7 +8,7 @@ Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática �
 - **Precios:** catálogo real importado del proveedor; ver lista por rubro/proveedor, imprimir, recalcular venta.
 - **Turno de caja:** apertura/cierre con arqueo y diferencias por medio.
 - **Clientes / Proveedores / Pedidos / Cumpleaños / Reportes / Respaldo.**
-- Todo en `localStorage` (sin backend). Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
+- Ventas, stock y clientes en `localStorage`; solicitudes y estados de Mercado Pago en D1 mediante una API autenticada. Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
 
 ## Catálogo: importado una vez, se administra desde el panel
 
@@ -137,20 +137,56 @@ git push -u origin main
 7. **Respaldo diario:** export/import JSON + contador. Automático en servidor = fase 2.
 8. **Pedidos:** registro por proveedor con estado pendiente/recibido.
 
-## Link de pago por venta (Mercado Pago)
-Demo: en Caja, botón **🔗 Generar link de pago** → crea link simulado + botón
-**Pasar al cliente por WhatsApp** + movimiento MP *no conciliado* (el stock se
-descuenta al Cobrar/entregar, no al generar el link).
+## Mercado Pago real — Cloudflare Free
 
-Cableado real (fase 2, backend mínimo requerido — Pages es estático y no puede
-guardar el `MP_ACCESS_TOKEN`):
-1. Cuenta MP del vendedor + credencial `MP_ACCESS_TOKEN` (https://www.mercadopago.com.ar/developers).
-2. Endpoint `POST /api/mp/crear-preferencia {items, total}` → SDK `mercadopago`:
-   `preference.create({items, back_urls, notification_url, external_reference})` → devuelve `init_point`.
-3. En `js/pagos.js`: `MP_CONFIG.modo='real'`, `backendURL` apuntando al endpoint.
-4. Webhook `POST /api/mp/webhook` recibe IPN (`payment` aprobado) → marca el
-   movimiento conciliado (y opcionalmente descuenta stock si se vende solo online).
-5. QR: MP devuelve también `qr_code` para mostrar en mostrador.
+La integración usa un Worker y una base D1 para solicitudes de cobro. El código sigue en GitHub. La web y la API se sirven desde la misma dirección gratuita de Cloudflare. GitHub Pages conserva la versión demo hasta completar la migración.
+
+**Verificado el 23/10/2026:** autenticación del operador, consulta de la cuenta argentina del vendedor, creación de una preferencia real, apertura del checkout con producto e importe correctos y consulta de estado pendiente. Se usaron App ID y Client Secret guardados como secretos de ejecución. No se efectuó un pago real ni se registró una venta. El webhook aún no está configurado: usar **Verificar pago** antes de registrar una venta.
+
+Guía para el local: [GUIA-COBROS.md](GUIA-COBROS.md).
+
+### Uso en caja
+
+1. Abrir turno, armar ticket e iniciar sesión en **Cobros de Mercado Pago**.
+2. **Generar link de pago** captura el ticket, lo retira del carrito y permite compartirlo. No registra un ingreso ni descuenta stock.
+3. **Verificar pago** consulta Mercado Pago desde el servidor; valida referencia, cuenta receptora, ARS e importe. Volver de la pantalla de Mercado Pago no confirma el pago.
+4. **Registrar venta pagada** verifica nuevamente, registra una sola venta con ingreso bruto conciliado y descuenta stock local. Requiere caja abierta y stock disponible.
+5. Los cobros se muestran en el equipo que generó el enlace (50 por página, con acceso a cobros anteriores). Su identificador viaja en el respaldo JSON. No restaurar simultáneamente el mismo respaldo en dos cajas activas: ventas y stock aún son locales.
+
+Los enlaces vencen a las 24 horas. Un reembolso o contracargo se detecta al consultar; las correcciones de una venta ya registrada se realizan manualmente. Anular un registro local no reembolsa dinero en Mercado Pago. Las comisiones se registran/concilian aparte del ingreso bruto. Una creación con resultado incierto no se reintenta automáticamente: revisar Mercado Pago antes de emitir otro enlace.
+
+### Configuración de Cloudflare
+
+- Plan **Workers Free**, sin servicios pagos ni dominio propio.
+- Worker `milimpieza`, base `milimpieza-cobros`, binding `DB`; los archivos estáticos van en binding `ASSETS`.
+- `npm ci && npm run build`, despliegue `npx wrangler deploy`.
+- Las tablas se crean con `migrations/0001.sql` (o el mismo SQL desde la consola D1). La configuración incluye el ID real de D1, que es público y no otorga acceso.
+- Secretos de ejecución en **Settings → Variables and Secrets**:
+  - `ADMIN_PASSWORD`: clave de operador de al menos 16 caracteres, creada y cargada por el titular. Nunca se guarda en código.
+  - `MP_ACCESS_TOKEN`: opción preferida, token del vendedor de Mercado Pago.
+  - Alternativamente `MP_CLIENT_ID` (App ID) y `MP_CLIENT_SECRET`: se intenta obtener un token por Client Credentials. **No se garantiza que ese token tenga permisos de cobro; comprobar `/users/me` y la creación de preferencia antes de producción.**
+  - `MP_WEBHOOK_SECRET`: opcional, firma provista por MP. Sin él se usa verificación manual. Con él, configurar eventos de pagos y URL `https://DIRECCION-DEL-WORKER/api/mp/webhook` en MP Developers. No es el Client Secret.
+- La cuenta debe ser argentina y las credenciales habilitadas para producción para recibir cobros reales.
+- La API requiere cookie de sesión HttpOnly, Secure, SameSite=Strict. Sin CORS. Cinco intentos fallidos por IP cada 15 minutos; no habilitar públicamente la API sin clave.
+- La web se publica aun sin secretos, pero el botón de cobro queda deshabilitado. `/api/health` solo informa indicadores de configuración y jamás secretos.
+
+### Pruebas y desarrollo
+
+Node.js 22 o superior:
+
+```bash
+npm ci
+npm test
+npm run build
+npx wrangler d1 migrations apply milimpieza-cobros --local
+npm run dev
+```
+
+Credenciales de desarrollo en `.dev.vars` (ignorado por Git). Para tablas remotas usar `--remote` solo después de revisar la migración. Nunca agregar archivos de credenciales al repositorio.
+
+### Migración de la caja
+
+Antes de usar la nueva dirección: exportar JSON en la web anterior y restaurarlo en la nueva desde **Respaldo**. Conservar copia. El navegador separa los datos por dirección: Cloudflare no puede leer automáticamente el localStorage de GitHub Pages. D1 guarda cobros; no reemplaza el respaldo local de ventas, stock, clientes y turnos.
 
 ## Siguiente (base para trabajar)
 - [ ] Ticket imprimible / factura
