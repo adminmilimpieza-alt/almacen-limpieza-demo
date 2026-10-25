@@ -8,7 +8,7 @@ Sistema de caja, stock y lista de precios para **Mi Limpieza**. La versión con 
 - **Precios:** catálogo real importado del proveedor; ver lista por rubro/proveedor, imprimir, recalcular venta.
 - **Turno de caja:** apertura/cierre con arqueo y diferencias por medio.
 - **Clientes / Proveedores / Pedidos / Cumpleaños / Reportes / Respaldo.**
-- Ventas, stock y clientes en `localStorage`; solicitudes y estados de Mercado Pago en D1 mediante una API autenticada. Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
+- Ventas, stock y clientes en `localStorage`; solicitudes y estados de Mercado Pago y fotos de productos en D1 mediante una API autenticada. Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
 
 ## Catálogo: importado una vez, se administra desde el panel
 
@@ -193,3 +193,11 @@ Antes de usar la nueva dirección: exportar JSON en la web anterior y restaurarl
 - [ ] Confirmar con el proveedor las 16 filas corregidas del import
 - [ ] Backend real (cuando escale): misma API de `store.js` contra servidor
       (hoy cada dispositivo tiene su propia lista en `localStorage`)
+
+## Fotos compartidas — actualización del 25/10/2026
+
+Las miniaturas se guardan en `product_photos` de la misma base D1 Free. Aplicar `migrations/0002.sql` antes de desplegar el Worker. No cambia las tablas de pagos. GET `/api/photos` entrega solo claves/revisiones/bajas; GET `/api/photos/{key}` devuelve JPEG y PUT exige la sesión de operador y mismo origen. El guardado usa revisión esperada, tope de 150 KB y hasta 2000 claves para mantener las imágenes por debajo de 300 MB. La clave estable se calcula con código, rubro y presentación (nombre cuando no hay código).
+
+El navegador comprime a 480 × 480 y conserva fotos locales pendientes cuando no se puede subir. El editor retiene la revisión original y vuelve a leer los datos al guardar para no revertir movimientos de stock de otra pestaña. Las recuperaciones solo insertan imágenes ausentes, sin tocar datos financieros. Las bajas son lógicas y evitan que un respaldo viejo resucite una foto quitada. D1 entrega BLOB como arreglos de bytes: el Worker los transforma en Uint8Array antes de responder.
+
+Ver la guía para recuperar fotos desde el navegador original o desde su JSON. La lectura de fotos es pública, acorde con el catálogo existente; las escrituras usan `ADMIN_PASSWORD` y no exponen secretos de Mercado Pago. No se activan R2 ni planes pagos.

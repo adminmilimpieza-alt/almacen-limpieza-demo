@@ -137,7 +137,8 @@ const Store = (() => {
         margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'',
         stock:Number(r.stock)||0,
         activo: prev? (prev.activo!==false) : (r.activo!==false),
-        foto: prev ? (prev.foto||r.foto||'') : (r.foto||'')
+        foto: (prev?.fotoOnlineRevision||prev?.fotoPendiente) ? (prev.foto||'') : (prev ? (prev.foto||r.foto||'') : (r.foto||'')),
+        fotoOnlineKey:prev?.fotoOnlineKey, fotoOnlineRevision:prev?.fotoOnlineRevision, fotoPendiente:prev?.fotoPendiente||false
       };
       const basePrev = prev ? base0S[k] : undefined;
       if(prev && basePrev!=null && basePrev!==prev.stock){
@@ -242,6 +243,36 @@ const Store = (() => {
     import(json){ save(JSON.parse(json)); },
     upsertProducto(p){ const db=load(); const i=db.productos.findIndex(x=>x.id===p.id);
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
+    guardarProductoEdicion(draft,base){
+      const db=load(),index=db.productos.findIndex(p=>p.id===draft.id);
+      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');db.productos.push(draft);save(db);return;}
+      if(index<0)throw new Error('El producto fue eliminado en otra pestaña.');
+      const current=db.productos[index],next={...current};
+      const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','stock','activo','provId'];
+      const identifiers=['codigo','categoria','presentacion',...(!base.codigo?['nombre']:[])];
+      for(const field of identifiers)if(current[field]!==base[field]&&draft[field]!==current[field])throw new Error('La identidad del producto cambió en otra pestaña. Reabrí la edición.');
+      for(const field of fields){
+        if(draft[field]===base[field])continue;
+        if(current[field]!==base[field]&&current[field]!==draft[field])throw new Error('Cambió '+field+' durante la subida. Reabrí la edición; la foto puede haberse guardado online.');
+        next[field]=draft[field];
+      }
+      for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])next[field]=draft[field];
+      db.productos[index]=next;save(db);
+    },
+    // Apply photo fields to fresh data, never a stale snapshot of sales/stock.
+    actualizarFotos(patches){
+      const db=load();let changed=false;
+      for(const patch of patches){
+        const p=db.productos.find(x=>x.id===patch.id);if(!p)continue;
+        const fields=['codigo','categoria','presentacion'];
+        if(fields.some(k=>String(p[k]||(k==='categoria'?'Accesorios':'')).normalize('NFC').trim()!==String(patch.product[k]||'').normalize('NFC').trim()))continue;
+        if(!p.codigo&&p.nombre!==patch.product.nombre)continue;
+        if((p.foto||'')!==patch.previousFoto||p.fotoOnlineRevision!==patch.previousRevision)continue;
+        for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])p[field]=patch[field];
+        changed=true;
+      }
+      if(changed)save(db);return changed;
+    },
     eliminar(id){ const db=load(); db.productos=db.productos.filter(x=>x.id!==id); save(db); },
     // Actualiza costo / precio / margen de productos ya cargados.
     // El codigo se repite entre 1L y 5L: se desambigua por categoria y presentacion.

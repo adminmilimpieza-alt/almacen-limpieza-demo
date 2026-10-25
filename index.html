@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=27">
+<link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 <header>
@@ -131,6 +131,27 @@
 <!-- Módulos: viven acá y el overlay los muestra a pedido -->
 <div id="modulos" hidden>
   <section id="mod-stock">
+    <details id="fotos-panel">
+      <summary>Fotos compartidas y recuperación</summary>
+      <p id="fotos-estado" class="hint" role="status">Conectando con las fotos online…</p>
+      <div class="row">
+        <button id="fotos-actualizar" type="button">Actualizar fotos online</button>
+        <button id="fotos-subir-locales" type="button">Subir fotos pendientes de este equipo</button>
+      </div>
+      <p class="hint">Las fotos nuevas se guardan online al guardar el producto. Si ya cargaste fotos en este navegador, subilas con el botón de arriba. Se descarga antes una copia de esas fotos. Si están en otro equipo o en la web anterior, exportá allí el respaldo JSON y elegilo acá: solo se recuperan fotos, sin cambiar ventas, clientes ni stock. La recuperación no reemplaza fotos online existentes.</p>
+      <div class="row">
+        <input id="fotos-respaldo" type="file" accept=".json,application/json" aria-label="Respaldo JSON con fotos antiguas">
+        <button id="fotos-recuperar" type="button">Recuperar fotos del respaldo</button>
+      </div>
+      <details id="fotos-login">
+        <summary>Sesión de operador para guardar fotos</summary>
+        <form id="fotos-login-form">
+          <label for="fotos-password">Clave de operador (la misma de cobros)</label>
+          <input id="fotos-password" type="password" autocomplete="current-password" required>
+          <button type="submit">Iniciar sesión para guardar fotos</button>
+        </form>
+      </details>
+    </details>
     <div class="row">
       <button id="nuevo" class="primary">+ Nuevo producto</button>
       <button id="reset">Restablecer catálogo</button>
@@ -150,7 +171,7 @@
       <thead><tr><th></th><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th>Stock</th><th>Vis</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
-    <p class="hint">Stock 5 o menos en rojo. Todo en el navegador.</p>
+    <p class="hint">Stock 5 o menos en rojo. El stock es local; las fotos se comparten online.</p>
   </section>
 
   <section id="mod-precios">
@@ -325,7 +346,7 @@
     </div>
     <div class="row">
       <button value="cancel">Cancelar</button>
-      <button id="guardar-prod" value="default" class="primary">Guardar</button>
+      <button id="guardar-prod" type="button" class="primary">Guardar</button>
     </div>
   </form>
 </dialog>
@@ -348,18 +369,19 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=27"></script>
-<script src="js/store.js?v=27"></script>
-<script src="js/pagos.js?v=27"></script>
-<script src="js/scan.js?v=27"></script>
-<script src="js/caja.js?v=27"></script>
-<script src="js/stock.js?v=27"></script>
-<script src="js/entidades.js?v=27"></script>
-<script src="js/cumple.js?v=27"></script>
-<script src="js/operacion.js?v=27"></script>
-<script src="js/turnos.js?v=27"></script>
-<script src="js/reportes.js?v=27"></script>
-<script src="js/app.js?v=27"></script>
+<script src="js/catalogo.js?v=28"></script>
+<script src="js/store.js?v=28"></script>
+<script src="js/pagos.js?v=28"></script>
+<script src="js/scan.js?v=28"></script>
+<script src="js/caja.js?v=28"></script>
+<script src="js/stock.js?v=28"></script>
+<script src="js/entidades.js?v=28"></script>
+<script src="js/cumple.js?v=28"></script>
+<script src="js/operacion.js?v=28"></script>
+<script src="js/turnos.js?v=28"></script>
+<script src="js/reportes.js?v=28"></script>
+<script src="js/app.js?v=28"></script>
 <script>Pagos.init();</script>
+<script type="module" src="js/fotos.mjs?v=28"></script>
 </body>
 </html>

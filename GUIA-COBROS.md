@@ -38,3 +38,21 @@ El regreso desde Mercado Pago, un mensaje de WhatsApp o una captura de pantalla 
 ## Costos
 
 El alojamiento está configurado con Workers Free y D1 Free y una dirección gratuita. No se contrató un plan pago. Se aplican los límites de esos servicios. Las comisiones que Mercado Pago cobre por los pagos son independientes del alojamiento.
+
+## Fotos compartidas online
+
+En **Módulos → Stock**, las fotos nuevas se comprimen y se guardan online al pulsar **Guardar** en el producto. La carga usa la misma sesión de operador que los cobros. Otros navegadores muestran las fotos sin necesitar la clave; la clave se pide para modificarlas.
+
+Las fotos se actualizan al abrir, al volver a la pestaña y cada minuto mientras esté visible. Para ver un cambio de inmediato, abrir **Fotos compartidas y recuperación → Actualizar fotos online**. Se identifica cada presentación por código, rubro y presentación; el ID local no interviene.
+
+Si falla la conexión o la sesión venció, la foto queda explícitamente **pendiente en ese navegador**. Iniciar sesión y usar **Subir fotos pendientes de este equipo**. No limpiar los datos del navegador antes de recuperar las pendientes. Si también cambió la imagen en otro equipo, revisar con **Editar**; reemplazar una foto diferente requiere confirmación.
+
+### Recuperar fotos que ya habían cargado
+
+- Si se ven en el mismo navegador de la dirección Cloudflare, abrir **Stock → Fotos compartidas y recuperación → Subir fotos pendientes de este equipo**. Antes de subir se descarga una copia JSON solo de esas fotos.
+- Si están en otra computadora o en la dirección anterior de GitHub Pages, abrir allí **Respaldo → Descargar respaldo**. En Cloudflare, ir a **Stock → Fotos compartidas y recuperación**, elegir ese JSON y pulsar **Recuperar fotos del respaldo**. No hace falta restaurar todo el respaldo.
+- Solo se envían las imágenes y los identificadores de productos reconocidos. No se importan ventas, clientes, precios ni stock. Las fotos online ya existentes (incluidas las que se quitaron) no se pisan con una recuperación antigua.
+- Si un producto no existe en este equipo, se informa como no coincidente; primero debe estar disponible en el catálogo correspondiente.
+- Las fotos que solo existen en un navegador inaccesible no pueden recuperarse desde el servidor. El equipo original o su respaldo son necesarios.
+
+Se usa D1 Free ya contratado, sin activar otros servicios: hasta 2000 identidades y 150 KB por JPEG comprimido. Las imágenes son de hasta 480 × 480 píxeles. Los respaldos antiguos con imágenes PNG/WebP se convierten a JPEG al subirlos. Esto comparte fotografías; ventas, stock y altas de productos siguen con su funcionamiento actual por navegador/catálogo.

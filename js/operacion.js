@@ -271,6 +271,7 @@ const Respaldo = (() => {
       const r = new FileReader();
       r.onload=()=>{ try{ Store.import(r.result); alert('Respaldo restaurado');
         Stock.render(); Caja.refresh(); Entidades.render(); Pedidos.render(); Reportes.render(); info();
+        if(typeof Fotos!=='undefined')Fotos.refresh().catch(()=>{});
       }catch{ alert('Archivo inválido'); } };
       r.readAsText(f);
     };
