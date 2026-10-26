@@ -288,3 +288,24 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 
 .tab-inp{width:96px;min-width:78px;padding:2px 6px;font-size:13px}
 .tab-inp:disabled{opacity:.5}
+
+/* Precios: búsqueda y guardado al frente, herramientas ocasionales plegadas. */
+#mod-precios .precios-guardar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+#mod-precios .precios-guardar h2{margin:0 0 4px}
+#mod-precios #precios-online-estado{margin:0;font-size:14px}
+#mod-precios .precios-guardar button{flex-shrink:0}
+#mod-precios .precios-buscar{display:block;margin:16px 0 12px;font-weight:600}
+#mod-precios .precios-buscar input{display:block;width:100%;margin-top:6px;box-sizing:border-box}
+#mod-precios .precios-opcion{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px}
+#mod-precios summary{cursor:pointer;font-weight:600}
+#mod-precios .precios-tabla{overflow-x:auto}
+#mod-precios .precios-producto-dato{display:block;font-weight:400;color:var(--muted);margin-top:4px}
+#mod-precios .precios-extra{display:none}
+#mod-precios.precios-mostrar-extra .precios-extra{display:table-cell}
+#mod-precios .row{flex-wrap:wrap;align-items:center}
+#mod-precios .row>*{min-width:130px}
+@media(max-width:640px){
+  #mod-precios .precios-guardar{align-items:stretch;flex-direction:column}
+  #mod-precios .precios-guardar button{width:100%}
+  #mod-precios .tab-inp{width:78px;min-width:65px}
+}

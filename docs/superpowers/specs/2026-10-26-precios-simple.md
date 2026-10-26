@@ -1,0 +1,3 @@
+# Precios simple
+Diseño aprobado en conversación: editar mediante búsqueda por nombre/código, CSV plegable y único botón destacado Guardar y compartir precios. Opciones avanzadas contiene filtros, márgenes masivos, visibilidad, impresión y conexión. Mantener IDs y flujo de guardado existente. La tabla principal muestra producto (código/presentación secundarios), costo, margen y venta. La búsqueda ignora acentos y muestra mensaje sin resultados. No modifica el backend ni los datos.
+Validación: pruebas de búsqueda con acentos/código y sin coincidencias; suite completa y build; comprobar activos publicados. No hay herramienta de navegador disponible para inspección visual en esta sesión.

@@ -38,34 +38,37 @@ const Precios = (() => {
   function verLista(){
     const db = Store.get();
     const f = $('precio-rubro').value;
+    const normal=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const query=normal($('precio-buscar')?.value).trim();
     const pv = $('precio-prov') ? $('precio-prov').value : '';
     const verOcultos = $('precio-ver-ocultos') && $('precio-ver-ocultos').checked;
-    const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
     const list = db.productos.filter(p =>
       (verOcultos || p.activo!==false) &&
+      (!query || normal([p.codigo,p.nombre,p.presentacion].join(' ')).includes(query)) &&
       (!f || p.categoria===f) &&
       (!pv || p.provId===pv));
     const ocultos = db.productos.filter(p=>p.activo===false).length;
     const conAlerta = list.filter(p=>p.alerta).length;
-    const valor = Math.round(list.reduce((a,p)=>a+p.precio*p.stock,0));
+
     const pendientes = new Set(Store.driftPrecio().map(d=>d.p.id))
     $('lista-precios').innerHTML =
-      `<p class="hint">${list.length} productos · valor total $${valor.toLocaleString('es-AR')}`+
-      (pendientes.size?` · <b>${pendientes.size} con precio pendiente de publicar</b>`:'')+
+      `<p class="hint">${list.length} productos`+
+      (pendientes.size?` · <b>${pendientes.size} con cambios pendientes de compartir</b>`:'')+
       (ocultos?` · <b>${ocultos} ocultos</b> (no se ofrecen en caja)`:'')+
       (conAlerta?` · <b>${conAlerta}</b> con precio corregido sobre el Excel`:'')+`</p>`+
-      '<table><thead><tr><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th></th></tr></thead><tbody>'+
+      (!list.length?'<p class="hint">No encontramos productos. Probá con otro nombre o código y revisá los filtros en Opciones avanzadas.</p>':'')+
+      '<div class="precios-tabla"><table><thead><tr><th>Producto</th><th>Costo ($)</th><th>Margen (%)</th><th>Venta ($)</th><th class="precios-extra">Visibilidad</th></tr></thead><tbody>'+
       list.map(p=>{
         const off = p.activo===false;
         const pend = pendientes.has(p.id);
-        return `<tr class="${off?'oculto':''}"><td>${p.codigo||'-'}</td>`+
-          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}</td>`+
-          `<td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${nom(p.provId)}</td>`+
+        return `<tr class="${off?'oculto':''}">`+
+          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}<small class="precios-producto-dato">${p.codigo||'Sin código'} · ${p.presentacion||p.categoria||''}</small></td>`+
+
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" value="${p.costo??p.precio}" title="Costo de compra"></td>`+
-          `<td>$${p.precio}</td>`+
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="margen" value="${p.margen==null?'':p.margen}" title="Margen % (lo pones vos; la venta sale de costo x margen)"></td>`+
-          `<td><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
-      }).join('')+'</tbody></table>';
+          `<td>$${p.precio}</td>`+
+          `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
+      }).join('')+'</tbody></table></div>';
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
       b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
     });
@@ -102,13 +105,15 @@ const Precios = (() => {
     }
     if(drift.length) txt += ' · <b>'+drift.length+'</b> con stock modificado localmente (falta publicar)';
     const dP = Store.driftPrecio ? Store.driftPrecio() : [];
-    if(dP.length) txt += ' · <b>'+dP.length+'</b> con precio pendiente de publicar';
+    if(dP.length) txt += ' · <b>'+dP.length+'</b> con cambios pendientes de compartir';
     const url = $('precio-url');
     if(url && document.activeElement!==url) url.value = e.url||'';
     box.innerHTML = txt;
   }
   function init(){
     renderRubro(); verLista(); estadoUI();
+    $('precio-buscar').addEventListener('input',verLista);
+    $('precios-avanzadas').addEventListener('toggle',()=>{ $('mod-precios').classList.toggle('precios-mostrar-extra',$('precios-avanzadas').open); });
     $('csv-ver').onclick=()=>{
       const f = $('csv').files[0]; if(!f){alert('Elegí un CSV');return;}
       const r = new FileReader();

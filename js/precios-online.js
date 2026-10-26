@@ -8,7 +8,7 @@ const PreciosOnline=(()=>{
  }
  function estado(message=''){
   const state=Store.get().preciosOnline,pending=Store.preciosPendientes().length;
-  $('precios-online-estado').textContent=(state?.revision?'Lista compartida online. ':'Todavía no se compartieron precios online. ')+(pending?`${pending} cambio(s) pendientes de compartir. `:'Sin cambios pendientes. ')+(state?.conflicts?.length?'Hay cambios de otro equipo sobre precios que editaste; revisalos antes de compartir. ':'')+message;
+  $('precios-online-estado').textContent=(pending?`Cambios pendientes: ${pending}. Guardá para compartirlos. `:state?.revision?'Precios compartidos. ':'Sin cambios pendientes. ')+(state?.conflicts?.length?'Revisá los cambios de otro equipo antes de compartir. ':'')+message;
  }
  function render(){Precios.render();Stock.render();Caja.refresh();}
  async function refresh(){
