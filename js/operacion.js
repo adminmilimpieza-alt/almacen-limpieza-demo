@@ -59,7 +59,7 @@ const Precios = (() => {
         const off = p.activo===false;
         const pend = pendientes.has(p.id);
         return `<tr class="${off?'oculto':''}"><td>${p.codigo||'-'}</td>`+
-          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavia no publicado">pendiente</span>':''}</td>`+
+          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}</td>`+
           `<td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${nom(p.provId)}</td>`+
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" value="${p.costo??p.precio}" title="Costo de compra"></td>`+
           `<td>$${p.precio}</td>`+
@@ -86,6 +86,7 @@ const Precios = (() => {
       });
     });
     estadoUI();
+    if(typeof PreciosOnline!=='undefined') PreciosOnline.estado();
   }
   // Estado del catalogo compartido: de donde salio la lista que se ve ahora.
   function estadoUI(){
@@ -105,20 +106,6 @@ const Precios = (() => {
     const url = $('precio-url');
     if(url && document.activeElement!==url) url.value = e.url||'';
     box.innerHTML = txt;
-  }
-  // Descarga el catalogo de este equipo para publicarlo.
-  function publicar(){
-    const cat = Store.catalogoParaPublicar();
-    const blob = new Blob([JSON.stringify(cat,null,1)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'catalogo.json';
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    alert('Se descargó catalogo.json ('+cat.productos.length+' productos).\n\n'+
-      'Para que lo vean los demás equipos, publicá el archivo en el repo:\n\n'+
-      '  python tools/publicar-catalogo.py "catalogo.json"\n\n'+
-      '(o copialo a data/catalogo.json y commitealo)');
   }
   function init(){
     renderRubro(); verLista(); estadoUI();
@@ -157,7 +144,7 @@ const Precios = (() => {
       estadoUI(); verLista(); Stock.render(); Caja.refresh();
       alert(r.ok ? r.msg : r.msg);
     };
-    $('precio-publicar').onclick=publicar;
+
     $('precio-url-guardar').onclick=()=>{
       Store.setUrlCatalogo($('precio-url').value);
       $('precio-url').value = Store.urlCatalogo();

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=28">
+<link rel="stylesheet" href="css/style.css?v=29">
 </head>
 <body>
 <header>
@@ -175,17 +175,17 @@
   </section>
 
   <section id="mod-precios">
-    <p class="hint">La fuente de verdad es el <b>catálogo publicado</b> (<code>data/catalogo.json</code>), que es la
-      misma lista para todos los equipos. Acá se administra: ponés <b>Costo</b> (a mano o desde un CSV) y
-      <b>M%</b> a mano — el <b>Venta se calcula solo</b> (costo × margen, no se edita). Cargá un CSV con:
-      <code>codigo,nombre,presentacion,costo,margen</code>. Lo editado y no publicado queda marcado
-      <b>pendiente</b> y sobrevive al repago del servidor. Tocá <b>Publicar cambios</b> para que lo vean los demás.</p>
+    <p class="hint">Cargá costos por CSV o editalos en la lista. La venta se calcula con costo y margen. Pulsá <b>Guardar y compartir precios</b> para que lleguen a los demás dispositivos (hasta 30 segundos). El CSV usa <code>codigo,nombre,presentacion,costo,margen</code>, con punto para decimales. El stock y las ventas siguen siendo locales.</p>
+    <p id="precios-online-estado" role="status">Consultando precios online…</p>
+    <details id="precios-login" hidden><summary>Sesión de operador para compartir precios</summary>
+      <form id="precios-login-form"><input id="precios-password" type="password" required autocomplete="current-password" placeholder="Clave de operador" aria-label="Clave de operador para precios"><button type="submit">Iniciar sesión y compartir precios</button></form>
+    </details>
     <div class="row">
       <span id="precio-estado" class="hint">Cargando estado del catálogo…</span>
     </div>
     <div class="row">
       <button id="precio-actualizar">Actualizar del servidor</button>
-      <button id="precio-publicar" class="primary">Publicar cambios</button>
+      <button id="precio-publicar" class="primary">Guardar y compartir precios</button>
     </div>
     <div class="row">
       <input id="precio-url" placeholder="URL del catálogo publicado (opcional)">
@@ -369,19 +369,20 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=28"></script>
-<script src="js/store.js?v=28"></script>
-<script src="js/pagos.js?v=28"></script>
-<script src="js/scan.js?v=28"></script>
-<script src="js/caja.js?v=28"></script>
-<script src="js/stock.js?v=28"></script>
-<script src="js/entidades.js?v=28"></script>
-<script src="js/cumple.js?v=28"></script>
-<script src="js/operacion.js?v=28"></script>
-<script src="js/turnos.js?v=28"></script>
-<script src="js/reportes.js?v=28"></script>
-<script src="js/app.js?v=28"></script>
+<script src="js/catalogo.js?v=29"></script>
+<script src="js/store.js?v=29"></script>
+<script src="js/pagos.js?v=29"></script>
+<script src="js/scan.js?v=29"></script>
+<script src="js/caja.js?v=29"></script>
+<script src="js/stock.js?v=29"></script>
+<script src="js/entidades.js?v=29"></script>
+<script src="js/cumple.js?v=29"></script>
+<script src="js/operacion.js?v=29"></script>
+<script src="js/turnos.js?v=29"></script>
+<script src="js/reportes.js?v=29"></script>
+<script src="js/app.js?v=29"></script>
+<script src="js/precios-online.js?v=29"></script>
 <script>Pagos.init();</script>
-<script type="module" src="js/fotos.mjs?v=28"></script>
+<script type="module" src="js/fotos.mjs?v=29"></script>
 </body>
 </html>

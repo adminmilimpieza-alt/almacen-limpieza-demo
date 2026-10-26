@@ -56,3 +56,8 @@ Si falla la conexión o la sesión venció, la foto queda explícitamente **pend
 - Las fotos que solo existen en un navegador inaccesible no pueden recuperarse desde el servidor. El equipo original o su respaldo son necesarios.
 
 Se usa D1 Free ya contratado, sin activar otros servicios: hasta 2000 identidades y 150 KB por JPEG comprimido. Las imágenes son de hasta 480 × 480 píxeles. Los respaldos antiguos con imágenes PNG/WebP se convierten a JPEG al subirlos. Esto comparte fotografías; ventas, stock y altas de productos siguen con su funcionamiento actual por navegador/catálogo.
+
+## Guardar y compartir precios
+En la dirección de Cloudflare, ir a Módulos → Precios. Editar costos/márgenes a mano o elegir CSV, rubro, Previsualizar y Aplicar costos. Pulsar **Guardar y compartir precios**. Si se solicita, ingresar la clave de operador (misma de fotos y cobros). La aplicación confirma el guardado online. Otros equipos reciben precios al abrir, volver a la ventana o en hasta 30 segundos mientras estén conectados y no estén editando un campo.
+
+Si no hay conexión o sesión, los cambios quedan pendientes en ese navegador; reintentar desde el mismo equipo. Si otra persona cambió esos precios, se conservan los locales y se solicita revisar antes de reemplazar. La carga comparte únicamente costo, margen y precio para productos coincidentes por código/nombre, categoría y presentación: no crea el producto en otros equipos ni comparte ventas, stock, clientes o proveedores. GitHub Pages sigue siendo la versión anterior. La tabla D1 `shared_prices` se inicializa automáticamente en el primer guardado autorizado, sin modificar tablas existentes ni requerir otro plan.

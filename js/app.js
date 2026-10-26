@@ -52,6 +52,7 @@ Caja.init(); Stock.init(); Entidades.init(); Cumple.init(); Precios.init(); Pedi
     const r = await Store.cargarRemoto();
     if(r.ok){ Precios.render(); Stock.render(); Caja.refresh(); }
     if(typeof Reportes!=='undefined') Reportes.render();
+    if(typeof PreciosOnline!=='undefined') await PreciosOnline.refresh().catch(()=>{});
     if(typeof Fotos!=='undefined') await Fotos.refresh().catch(()=>{});
   }catch(e){ /* sin red: se sigue con lo local */ }
 })();

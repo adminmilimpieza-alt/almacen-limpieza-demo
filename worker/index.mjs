@@ -1,3 +1,4 @@
+import { handlePrices } from './prices.mjs';
 import { handlePhotos } from './photos.mjs';
 import { normalizeItems, paymentResult } from './payments.mjs';
 import { authenticated, sessionCookie, validWebhook, hmac, equal } from './security.mjs';
@@ -42,6 +43,7 @@ async function route(request,env){
   const url=new URL(request.url),path=url.pathname;
   if(path==='/api/health') return json({service:'Mi Limpieza',database:!!env.DB,operatorConfigured:!!env.ADMIN_PASSWORD&&env.ADMIN_PASSWORD.length>=16,mercadoPagoConfigured:!!(env.MP_ACCESS_TOKEN||(env.MP_CLIENT_ID&&env.MP_CLIENT_SECRET)),webhookConfigured:!!env.MP_WEBHOOK_SECRET});
   if(!env.DB) throw fail('Falta vincular la base de cobros D1.',503);
+  if(path==='/api/prices') return handlePrices(request,env);
   if(path==='/api/photos'||path.startsWith('/api/photos/')) return handlePhotos(request,env);
   if(path==='/api/mp/webhook' && request.method==='POST'){
     if(!await validWebhook(request,env.MP_WEBHOOK_SECRET)) throw fail('Notificación no autorizada.',401);

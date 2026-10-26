@@ -152,8 +152,9 @@ const Store = (() => {
         p.costo=prev.costo; p.precio=prev.precio; p.margen=(prev.margen==null?null:prev.margen);
         driftP.push({id:p.id, codigo:p.codigo, nombre:p.nombre, publicado:pbPrev.precio, local:p.precio});
       }
+      if(prev && db.preciosOnline){p.costo=prev.costo;p.precio=prev.precio;p.margen=prev.margen;}
       stockBase[k]=p.stock;
-      precioBase[k]={costo:p.costo, precio:p.precio, margen:(p.margen==null?null:p.margen)};
+      precioBase[k]=db.preciosOnline && base0P[k] ? base0P[k] : {costo:Number(r.costo)||0, precio:Number(r.precio)||0, margen:(r.margen==null?null:Number(r.margen))};
       out.push(p);
     });
     // productos que solo existen en este equipo (agregados a mano): se conservan
@@ -213,6 +214,29 @@ const Store = (() => {
       }))
     };
   }
+  // Stable price identity matches the photo identity; browser IDs are local.
+  const precioKey=p=>{const clean=v=>String(v??'').normalize('NFC').trim();const code=clean(p.codigo);return JSON.stringify([code?'codigo':'nombre',code||clean(p.nombre),clean(p.categoria)||'Accesorios',clean(p.presentacion)]);};
+  const precioIgual=(a,b)=>!!a&&!!b&&['costo','precio','margen'].every(k=>k==='margen'&&(a[k]==null||b[k]==null)?a[k]==null&&b[k]==null:Math.abs(Number(a[k])-Number(b[k]))<.005);
+  function basePrecio(db,p){
+    const online=db.preciosOnline?.entries?.find(r=>precioKey(r.product)===precioKey(p));
+    return online||(db.catalogo?.precioBase||{})[clave(p)]||CATALOGO_SEED.productos.find(r=>precioKey(r)===precioKey(p));
+  }
+  function preciosPendientes(){const db=load();return db.productos.filter(p=>!precioIgual(p,basePrecio(db,p))).map(p=>({product:{codigo:p.codigo||'',nombre:p.nombre||'',categoria:p.categoria||'Accesorios',presentacion:p.presentacion||''},costo:p.costo,precio:p.precio,margen:p.margen??null}));}
+  function aplicarPreciosOnline(packet){
+    const db=load(),previous=db.preciosOnline||{},conflicts=new Set(previous.conflicts||[]);
+    const byKey=new Map(packet.entries.map(r=>[precioKey(r.product),r]));
+    for(const p of db.productos){
+      const key=precioKey(p),row=byKey.get(key);if(!row)continue;
+      const base=basePrecio(db,p),pending=!precioIgual(p,base);
+      if(pending&&!precioIgual(p,row)){
+        if(!precioIgual(base,row))conflicts.add(key);
+      }else{
+        for(const k of ['costo','precio','margen'])p[k]=row[k];
+        conflicts.delete(key);
+      }
+    }
+    db.preciosOnline={revision:packet.revision,entries:packet.entries,conflicts:[...conflicts],checked:new Date().toISOString()};save(db);
+  }
   // Productos donde el stock local se aparto del publicado.
   function driftStock(){
     const db=load(); const base=(db.catalogo&&db.catalogo.stockBase)||{};
@@ -226,6 +250,7 @@ const Store = (() => {
   // Productos donde el costo/precio/margen local se aparto del publicado.
   function driftPrecio(){
     const db=load(); const base=(db.catalogo&&db.catalogo.precioBase)||{};
+    if(db.preciosOnline)return db.productos.filter(p=>!precioIgual(p,basePrecio(db,p))).map(p=>({p,publicado:basePrecio(db,p)?.precio,local:p.precio}));
     const out=[];
     const dif=(a,b)=>Math.abs((Number(a)||0)-(Number(b)||0))>0.004;
     const difM=(x,y)=>((x==null?null:Math.round(Number(x)*100))!==(y==null?null:Math.round(Number(y)*100)));
@@ -304,7 +329,7 @@ const Store = (() => {
     },
     // Precio de venta = costo + margen%.
     // pct === 'propio' usa el margen que trae cada producto del proveedor.
-    // Margen uniforme: redondea a $10. Margen propio: mantiene el precio del Excel.
+    // Ambos modos guardan margen y precio con precisión de centavos.
     aplicarMargen(pct, soloRubro){
       const db=load(); let n=0;
       const propio = (pct==='propio' || pct==='');
@@ -314,7 +339,8 @@ const Store = (() => {
           if(p.margen==null) return;
           p.precio = redondear2(p.costo*(1+p.margen/100));
         } else {
-          p.precio = redondear10(p.costo*(1+Number(pct)/100));
+          p.margen=Number(pct);
+          p.precio = redondear2(p.costo*(1+p.margen/100));
         }
         n++;
       });
@@ -454,5 +480,6 @@ const Store = (() => {
     // --- catalogo compartido ---
     urlCatalogo, setUrlCatalogo, estadoCatalogo, aplicarRemoto,
     cargarRemoto, catalogoParaPublicar, driftStock, driftPrecio,
+    preciosPendientes, aplicarPreciosOnline,
   };
 })();
