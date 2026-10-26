@@ -152,9 +152,9 @@ const Store = (() => {
         p.costo=prev.costo; p.precio=prev.precio; p.margen=(prev.margen==null?null:prev.margen);
         driftP.push({id:p.id, codigo:p.codigo, nombre:p.nombre, publicado:pbPrev.precio, local:p.precio});
       }
-      if(prev && db.preciosOnline){p.costo=prev.costo;p.precio=prev.precio;p.margen=prev.margen;}
+      if(prev && db.preciosOnline?.entries?.some(row=>precioKey(row.product)===precioKey(prev))){p.costo=prev.costo;p.precio=prev.precio;p.margen=prev.margen;}
       stockBase[k]=p.stock;
-      precioBase[k]=db.preciosOnline && base0P[k] ? base0P[k] : {costo:Number(r.costo)||0, precio:Number(r.precio)||0, margen:(r.margen==null?null:Number(r.margen))};
+      precioBase[k]={costo:Number(r.costo)||0, precio:Number(r.precio)||0, margen:(r.margen==null?null:Number(r.margen))};
       out.push(p);
     });
     // productos que solo existen en este equipo (agregados a mano): se conservan

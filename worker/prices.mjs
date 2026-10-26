@@ -15,10 +15,12 @@ export async function handlePrices(request,env){
  if(request.method==='GET')return json(current?{revision:current.revision,entries:JSON.parse(current.data)}:{revision:null,entries:[]});
  const text=await request.text();if(text.length>700000)throw fail('La lista es demasiado grande.',413);
  let data;try{data=JSON.parse(text);}catch{throw fail('Lista inválida.');}
+ if(!data||typeof data!=='object')throw fail('Lista inválida.');
  if(data.expectedRevision!==null&&(typeof data.expectedRevision!=='string'||!/^[a-f0-9-]{36}$/i.test(data.expectedRevision)))throw fail('Revisión inválida.');
  if(!Array.isArray(data.entries)||!data.entries.length||data.entries.length>2000)throw fail('La lista debe contener entre 1 y 2000 precios.');
  const incoming=new Map();
  for(const row of data.entries){
+  if(!row||typeof row!=='object'||!row.product||typeof row.product!=='object')throw fail('Producto inválido.');
   if(Object.keys(row).some(k=>!['product','costo','margen','precio'].includes(k)))throw fail('La lista solo puede contener precios.');
   const key=photoIdentity(row.product),product=photoProduct(row.product);
   const valid=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1000000000;
