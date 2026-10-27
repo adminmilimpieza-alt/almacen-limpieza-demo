@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=30">
+<link rel="stylesheet" href="css/style.css?v=31">
 </head>
 <body>
 <header>
@@ -94,7 +94,7 @@
       </div>
       <div class="row">
         <button id="linkmp">Link de pago</button>
-        <button id="t-print">Imprimir ticket</button>
+        <button id="t-print" title="Imprime el ticket actual o, si está vacío, la última venta registrada">Imprimir remito</button>
       </div>
       <div id="linkmp-out"></div>
       <details id="mp-panel">
@@ -374,20 +374,21 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=30"></script>
-<script src="js/store.js?v=30"></script>
-<script src="js/pagos.js?v=30"></script>
-<script src="js/scan.js?v=30"></script>
-<script src="js/caja.js?v=30"></script>
-<script src="js/stock.js?v=30"></script>
-<script src="js/entidades.js?v=30"></script>
-<script src="js/cumple.js?v=30"></script>
-<script src="js/operacion.js?v=30"></script>
-<script src="js/turnos.js?v=30"></script>
-<script src="js/reportes.js?v=30"></script>
-<script src="js/app.js?v=30"></script>
-<script src="js/precios-online.js?v=30"></script>
+<script src="js/catalogo.js?v=31"></script>
+<script src="js/store.js?v=31"></script>
+<script src="js/pagos.js?v=31"></script>
+<script src="js/scan.js?v=31"></script>
+<script src="js/caja.js?v=31"></script>
+<script src="js/stock.js?v=31"></script>
+<script src="js/entidades.js?v=31"></script>
+<script src="js/cumple.js?v=31"></script>
+<script src="js/operacion.js?v=31"></script>
+<script src="js/turnos.js?v=31"></script>
+<script src="js/reportes.js?v=31"></script>
+<script src="js/app.js?v=31"></script>
+<script src="js/precios-online.js?v=31"></script>
 <script>Pagos.init();</script>
-<script type="module" src="js/fotos.mjs?v=30"></script>
+<script type="module" src="js/fotos.mjs?v=31"></script>
+<script type="module" src="js/remito.mjs?v=31"></script>
 </body>
 </html>

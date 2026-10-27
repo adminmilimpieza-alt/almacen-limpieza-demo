@@ -64,3 +64,6 @@ Si no hay conexión o sesión, los cambios quedan pendientes en ese navegador; r
 
 ### Pantalla de precios simplificada
 Buscar por nombre o código en el campo principal; no hace falta escribir acentos. Editar costo o margen en la fila y pulsar **Guardar y compartir precios**. La venta se calcula sola. Para importar, desplegar **Cargar una lista CSV**, elegir archivo y rubro, **Revisar archivo** y **Aplicar lista**, y después guardar y compartir. **Opciones avanzadas** reúne filtros, margen masivo, visibilidad, impresión y conexión del catálogo.
+
+## Imprimir remito
+El botón **Imprimir remito** de Caja usa el diseño de la hoja REMITO enviada por el cliente: logo, teléfono, fecha, nombre y dirección del cliente, cantidades, descripción, precios unitarios y total. Si hay productos en el ticket, imprime ese contenido; si el ticket está vacío después de cobrar, imprime la última venta guardada en ese navegador, con sus precios y fecha originales. El nombre y dirección se toman de la ficha actual del cliente. Imprimir no registra ni vuelve a cobrar una venta. Se abre el diálogo del navegador para imprimir en A4 o guardar PDF. Ventas con más de 14 líneas continúan en páginas siguientes; las cortas incluyen filas vacías como la plantilla.

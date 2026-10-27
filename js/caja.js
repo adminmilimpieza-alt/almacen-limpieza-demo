@@ -255,7 +255,10 @@ const Caja = (() => {
     setTimeout(()=>scan.focus(), 300);
     if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ scan.value=code; intentar(code); });
     $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
-    $('t-print').onclick = ()=>{ document.body.classList.add('print-ticket'); window.print(); };
+    $('t-print').onclick = ()=>{
+      if(typeof Remito==='undefined'){alert('La impresión está cargando. Volvé a intentarlo en un momento.');return;}
+      Remito.imprimir(Store.get(),carrito,$('f-cliente').value);
+    };
     $('cobrar').onclick = ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
       try{
