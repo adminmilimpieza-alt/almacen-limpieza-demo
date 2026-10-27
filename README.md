@@ -1,159 +1,46 @@
-# Caja + Stock — almacén limpieza (Mi Limpieza)
+# Mi Limpieza · negocio online
 
-Sistema de caja, stock y lista de precios para **Mi Limpieza**. 100% estática → lista para GitHub Pages.
+Aplicación de caja para un negocio, publicada en https://milimpieza.adminmilimpieza.workers.dev/. Cloudflare Workers + D1, sin servicios de pago adicionales. GitHub Pages se retira como aplicación y deja acceso a Workers y exportación del respaldo antiguo.
 
-## Qué hace
-- **Caja:** buscar producto, armar ticket, cobrar (efectivo/transferencia/cta cte). Descuenta stock y guarda venta.
-- **Stock:** alta, edición, ocultado, borrado, alerta bajo stock (≤5). Filtros por rubro y proveedor.
-- **Precios:** catálogo real importado del proveedor; ver lista por rubro/proveedor, imprimir, recalcular venta.
-- **Turno de caja:** apertura/cierre con arqueo y diferencias por medio.
-- **Clientes / Proveedores / Pedidos / Cumpleaños / Reportes / Respaldo.**
-- Todo en `localStorage` (sin backend). Módulos: `js/store.js`, `js/caja.js`, `js/stock.js`, `js/operacion.js`, `js/app.js`.
+## Funcionamiento
 
-## Catálogo: importado una vez, se administra desde el panel
+Todos los equipos autenticados consultan y modifican una misma base: productos/precios/fotos/stock/visibilidad, clientes/deudas/cumpleaños, proveedores, ventas/anulaciones, pedidos/recepciones, turnos/movimientos/conciliación y reportes. Una sola caja compartida. El carrito sin cobrar es propio de cada equipo. No se aceptan escrituras sin conexión ni snapshots locales como fuente de verdad.
 
-La lista de precios del proveedor (`MILIMPIEZA-Lista Precios-MATIAS.xlsx`) se importó **una sola vez**
-y quedó en `js/catalogo.js` (respaldo embebido) y en `data/catalogo.json` (**fuente única de verdad**).
-Desde ese momento **no se vuelve a leer el Excel**: el catálogo se administra 100% desde el panel.
+- `js/store.js`: factory de reglas de negocio compartida entre navegador y Worker. Proxy del cliente envía mutadores online y usa una copia de lectura para consultas.
+- `worker/business.mjs`: `GET /api/business?since=revision` y `POST /api/business`. Ambos requieren sesión. POST además exige mismo origen, UUID idempotente, revisión vigente y un comando permitido.
+- `business_meta`: revisión y contador de operaciones; `business_records`: registros por colección/id; `business_operations`: recibos idempotentes. Se inicializan de forma idempotente en el primer acceso autenticado; se parte del catálogo publicado, sin importar bases locales anteriores.
+- Cada comando se aplica a una copia en memoria y se confirma en un lote D1 atómico con comparación de revisión. Si otro equipo cambió la base, el lote no escribe datos. Ventas, stock, deuda y movimientos se confirman juntos. Una operación repetida con el mismo UUID no se repite.
+- El cliente sondea cada 5 segundos; sin cambios solo se consulta una fila de revisión. Mientras se edita un formulario no se reconstruye su contenido. Se preservan cliente/filtros seleccionados y se reintenta la presentación diferida.
+- Un resultado incierto queda identificado en sessionStorage y se resuelve con el mismo UUID antes de permitir otra escritura. Durante un cobro pendiente se bloquea el ticket. Los datos del piloto local se conservan separados del caché de lectura online.
 
-**Origen del import** — `tools/importar-precios.py` (Python + openpyxl):
+## Precios y fotos
 
-```bash
-python tools/importar-precios.py "\\servidor\Compartida\...\MILIMPIEZA-Lista Precios-MATIAS.xlsx"
+Los costos/márgenes se guardan online al terminar de editar; el CSV se confirma con Aplicar lista. El botón Actualizar precios consulta el negocio. `/api/prices` antiguo responde 410 para evitar dos fuentes de verdad. `shared_prices` previo solo se lee para incorporar precios al crear la base central.
+
+Las imágenes usan `product_photos` y `/api/photos`, JPEG hasta 150 KB, comprimido en el navegador a 480×480. Las referencias se guardan con los productos. Las fotos son públicas; las escrituras requieren sesión y revisión. Las recuperaciones de respaldos antiguos insertan solo imágenes ausentes y no restauran información financiera. Las bajas lógicas impiden que un respaldo viejo reponga una foto quitada.
+
+## Cobros Mercado Pago
+
+Credenciales solo en secretos de Workers: `ADMIN_PASSWORD` de al menos 16 caracteres y `MP_CLIENT_ID`/`MP_CLIENT_SECRET`, o `MP_ACCESS_TOKEN`. No se incluyen en archivos ni en la web. Se usa cookie HttpOnly Secure SameSite con vigencia de 12 horas y control de intentos de inicio de sesión.
+
+Los enlaces y estados se comparten entre todos los operadores autenticados. El dispositivo se conserva como referencia de creación, no restringe visibilidad. La lista se consulta cada 10 segundos, con paginación de 50 registros. Registrar una venta aprobada vuelve a consultar Mercado Pago y usa la misma transacción central para stock/venta/movimiento y `orders.registered_at`. Los reintentos usan el recibo previo. No se captura dinero desde este código; se genera un enlace de Checkout Pro. Las comisiones y reembolsos se concilian por separado.
+
+`MP_WEBHOOK_SECRET` es opcional. Mientras no esté configurado, la aprobación se consulta con Verificar pago. La vuelta del checkout no confirma un pago.
+
+## Impresión
+
+Imprimir remito usa el diseño de la hoja REMITO aportada por el cliente, con logo original y teléfono. Se imprime el carrito actual o la última venta compartida si está vacío. A4, cantidades, descripciones, precios unitarios, total, todas las líneas y filas vacías en ventas cortas. No modifica ventas ni stock.
+
+## Desarrollo y publicación
+
+```sh
+npm test
+npm run build
+npm run dev
 ```
 
-Lee el Excel, normaliza y regenera `js/catalogo.js` + `data/catalogo.json`. Es reproducible: si el
-proveedor manda una lista nueva, se corre el script y se commitea el catálogo generado.
+Build prepara `dist` con solo web/JS/CSS/datos públicos. Worker y secretos no van en los activos. `wrangler.jsonc` vincula `milimpieza-cobros`; aplicar `migrations/0001.sql` y `0002.sql` al crear una instalación nueva para cobros/fotos. Las tablas centrales se crean tras acceso autenticado. Usar `.dev.vars` ignorado para credenciales falsas locales. Las utilidades históricas de importar catálogo siguen siendo útiles para generar la semilla, no para sincronizar una caja en operación.
 
-### Cómo se comparte entre equipos (sin backend)
+Cloudflare despliega la rama `codex/mercadopago-cloudflare` del repositorio del cliente. La página de GitHub `main` contiene únicamente el aviso de traslado y respaldo antiguo. No fusionar esa página de aviso encima de la aplicación de Workers.
 
-`data/catalogo.json` es un archivo **público en el repo**. La app lo baja al abrir, así que todos los
-equipos ven la misma lista de precios. `js/catalogo.js` queda como respaldo si no hay conexión o si se
-abre el `index.html` directo con `file://`.
-
-- **El remoto manda en los datos del catálogo**: costo, precio, margen, nombre, rubro y proveedor.
-- **Cada equipo conserva sus ventas y su stock** (son datos reales del local).
-- **Ocultar/mostrar es local**: si tapás un producto en tu equipo, el refresco no lo destapa.
-- **El stock se publica también**, pero solo pisa lo que este equipo no movió. Si moviste stock, queda
-  el tuyo y se marca con la etiqueta *local* hasta que publiques.
-
-### Publicar cambios
-
-1. En **Precios → Publicar cambios** se descarga `catalogo.json` con la lista de este equipo.
-2. Se publica en el repo:
-
-```bash
-python tools/publicar-catalogo.py "C:\Users\...\Downloads\catalogo.json"
-```
-
-El script valida el archivo, **te muestra qué precios/costos/stock cambian**, lo copia a
-`data/catalogo.json` y hace commit + push. Con `--no-push` deja el commit local.
-
-3. Los demás equipos lo toman con **Precios → Actualizar del servidor** (o al abrir la app).
-
-Si preferís otra fuente, en **Precios** se puede cambiar la URL del catálogo publicado
-(por ejemplo un `raw.githubusercontent.com` o una URL propia).
-
-### Qué trae cada producto
-
-| Campo | Origen | Para qué |
-|---|---|---|
-| `codigo` | col. A (la de 5 Lts hereda el de 1 Lt) | EAN o código interno |
-| `nombre` / `detalle` | col. B | nombre corto para la pantalla, texto original completo |
-| `presentacion` | col. D + descripción | 1 Lt / 5 Lts / x Unid (desambigua el código repetido) |
-| `categoria` | derivado | `Líquidos 1L` · `Líquidos 5L` · `Accesorios` · `Pileta` |
-| `provId` | sección del Excel | UNIBLANC · GEMORA · DON EMILIO |
-| `costo` | col. E | **costo de compra** |
-| `precio` | col. C | **precio de venta** (ya incluye el margen) |
-| `margen` | col. F | % de ganancia del proveedor sobre ese producto |
-| `alerta` | — | marca las filas corregidas a mano (ver abajo) |
-| `activo` | — | `false` = oculto, no se ofrece en caja |
-
-### Regla de precio del Excel
-
-`Venta = Costo × (1 + margen%)`. La columna E es **siempre el costo del paquete**, nunca el costo
-por litro (las fórmulas del Excel están escritas de las dos formas, pero el resultado es el mismo).
-
-### Filas corregidas a mano (16)
-
-El Excel traía datos rotos; el importador los corrige y deja el motivo en `alerta`, visible en el
-panel de Precios con la etiqueta **revisar**:
-
-- 8 filas sin costo de compra (r69, r79, r86, r87, r88, r98, r109 y la 71 vacía, que se descarta).
-- 8 filas con la fórmula pisada a mano (r48, r72, r73, r83, r92, r94, r97, r100). En varias el Excel
-  tenía el **precio de venta en la columna de costo** (p. ej. r92/r94/r100).
-- 1 descripción con la presentación equivocada por copy-paste (r49 decía "5 Lt" en la fila de 1 Lt).
-
-**Estas correcciones son inferencias: hay que confirmarlas contra la lista del proveedor.**
-
-## Desde el panel
-
-- **Cambiar valores:** Stock → *Editar*. Se edita código, nombre, rubro, presentación, costo, precio, margen, stock y visibilidad.
-- **Ocultar / mostrar:** Stock → *Ocultar* (o la casilla *Visible* del modal). Un producto oculto no aparece en la caja ni en los reportes, pero no se borra.
-- **Agregar / borrar:** Stock → *+ Nuevo producto* / *Borrar*.
-- **Precios:** *Ver lista* filtra por rubro y proveedor; *Ocultar/Mostrar* desde la misma tabla; *Imprimir* saca la lista en papel.
-- **Margen:** *Margen propio de cada producto* recalcula la venta con el margen del proveedor (reproduce el precio del Excel). *Margen uniforme* aplica un % a todo.
-- **Catálogo compartido:** *Actualizar del servidor* baja el publicado; *Publicar cambios* descarga el de este equipo para subirlo.
-- **Recargar precios:** se sigue pudiendo subir un CSV (`codigo,nombre,presentacion,costo,margen`) por si llega una lista nueva.
-
-## Migración
-
-Si el navegador tenía la versión demo (`limpieza_demo_v10`), al abrir la app se conservan **ventas,
-clientes, movimientos, pedidos y turnos**, y se reemplaza el catálogo de productos por el importado
-respetando el stock que ya se había cargado.
-
-## Probar local
-```bash
-# opción 1: abrir index.html directo
-open index.html
-# opción 2: servidor local
-python -m http.server 8000
-# → http://localhost:8000
-```
-
-## Publicar en GitHub Pages (2 min)
-```bash
-git add index.html css js README.md tools
-git commit -m "catalogo importado del proveedor"
-git branch -M main
-git remote add origin https://github.com/TU-USUARIO/NOMBRE-REPO.git
-git push -u origin main
-# En GitHub: Settings → Pages → Deploy from branch → main / (root) → Save
-```
-
-## Repos revisados (inspiración, descartados por requerir backend)
-- `abi-collab/open-pos-inventory-laravelvue` (Laravel+Vue, necesita servidor)
-- `Simperfy/pos-inventory-system-ui` (React, necesita build/API)
-- `pasinduprabashwara2000/POS-System-HTML-CSS-JS` (estático pero desordenado/inglés)
-- Se optó por base propia limpia en español, modular y lista para Pages.
-
-## Qué cubre (8 puntos del cliente)
-1. **Caja I/E + conciliación:** ventas + movimientos manuales por medio (efectivo/MP/banco), tildado conciliado. Conciliación automática con MP/Banco = fase 2 (requiere backend + APIs).
-2. **Control de Stock:** alta/baja, ocultado, alerta ≤5, código + rubro + proveedor.
-3. **Clientes:** alta y asignación a cada venta.
-4. **Proveedores:** alta y pedidos asociados.
-5. **Lista de precios:** catálogo real importado del proveedor + administración desde el panel. PDF directo = fase 2.
-6. **Reportes:** caja diaria/período por medio, historial por cliente y por proveedor, stock general/por rubro valorizado, lista de precios general/por rubro (imprimible).
-7. **Respaldo diario:** export/import JSON + contador. Automático en servidor = fase 2.
-8. **Pedidos:** registro por proveedor con estado pendiente/recibido.
-
-## Link de pago por venta (Mercado Pago)
-Demo: en Caja, botón **🔗 Generar link de pago** → crea link simulado + botón
-**Pasar al cliente por WhatsApp** + movimiento MP *no conciliado* (el stock se
-descuenta al Cobrar/entregar, no al generar el link).
-
-Cableado real (fase 2, backend mínimo requerido — Pages es estático y no puede
-guardar el `MP_ACCESS_TOKEN`):
-1. Cuenta MP del vendedor + credencial `MP_ACCESS_TOKEN` (https://www.mercadopago.com.ar/developers).
-2. Endpoint `POST /api/mp/crear-preferencia {items, total}` → SDK `mercadopago`:
-   `preference.create({items, back_urls, notification_url, external_reference})` → devuelve `init_point`.
-3. En `js/pagos.js`: `MP_CONFIG.modo='real'`, `backendURL` apuntando al endpoint.
-4. Webhook `POST /api/mp/webhook` recibe IPN (`payment` aprobado) → marca el
-   movimiento conciliado (y opcionalmente descuenta stock si se vende solo online).
-5. QR: MP devuelve también `qr_code` para mostrar en mostrador.
-
-## Siguiente (base para trabajar)
-- [ ] Ticket imprimible / factura
-- [ ] Confirmar con el proveedor las 16 filas corregidas del import
-- [ ] Backend real (cuando escale): misma API de `store.js` contra servidor
-      (hoy cada dispositivo tiene su propia lista en `localStorage`)
+Guía de operación: [GUIA-COBROS.md](GUIA-COBROS.md).

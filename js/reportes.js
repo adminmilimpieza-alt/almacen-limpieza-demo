@@ -22,10 +22,14 @@ const Reportes = (() => {
   }
   function hist(){
     const db = Store.get();
+    const selectedCli=$('rep-cli').value,selectedProv=$('rep-prov').value,selectedPP=$('rep-pp').value;
     $('rep-cli').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
     const ph = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(sin proveedores)</option>';
     $('rep-prov').innerHTML = ph;
     $('rep-pp').innerHTML = '<option value="">Todos</option><option value="__none__">Sin proveedor</option>' + db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+    if(db.clientes.some(c=>c.id===selectedCli)) $('rep-cli').value=selectedCli;
+    if(db.proveedores.some(p=>p.id===selectedProv)) $('rep-prov').value=selectedProv;
+    if(['','__none__'].includes(selectedPP)||db.proveedores.some(p=>p.id===selectedPP)) $('rep-pp').value=selectedPP;
   }
   function hcli(){
     const db = Store.get(); const id = $('rep-cli').value;
@@ -45,7 +49,9 @@ const Reportes = (() => {
   function stock(){
     const db = Store.get();
     const r = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
+    const selected=$('rep-rubro').value;
     $('rep-rubro').innerHTML = '<option value="">Stock: todos los rubros</option>'+r.map(x=>`<option>${x}</option>`).join('');
+    if(r.includes(selected)) $('rep-rubro').value=selected;
   }
   function verStock(){
     const db = Store.get(); const f = $('rep-rubro').value;
@@ -66,8 +72,8 @@ const Reportes = (() => {
         v.items.map(i=>`${i.nombre} x${i.cant}`).join(', ') + ' ';
       if(!v.anulada && v.id){
         const b = document.createElement('button'); b.textContent='Anular';
-        b.onclick=()=>{ if(confirm(`Anular venta de $${v.total}? Vuelve el stock.`)){
-          try{ Store.anularVenta(v.id); Stock.render(); Caja.refresh(); render(); }
+        b.onclick=async ()=>{ if(confirm(`Anular venta de $${v.total}? Vuelve el stock.`)){
+          try{ await Store.anularVenta(v.id); Stock.render(); Caja.refresh(); render(); }
           catch(e){ alert(e.message); } } };
         d.appendChild(b);
       }

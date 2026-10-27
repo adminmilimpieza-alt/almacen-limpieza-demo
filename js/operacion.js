@@ -38,58 +38,60 @@ const Precios = (() => {
   function verLista(){
     const db = Store.get();
     const f = $('precio-rubro').value;
+    const normal=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const query=normal($('precio-buscar')?.value).trim();
     const pv = $('precio-prov') ? $('precio-prov').value : '';
     const verOcultos = $('precio-ver-ocultos') && $('precio-ver-ocultos').checked;
-    const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
     const list = db.productos.filter(p =>
       (verOcultos || p.activo!==false) &&
+      (!query || normal([p.codigo,p.nombre,p.presentacion].join(' ')).includes(query)) &&
       (!f || p.categoria===f) &&
       (!pv || p.provId===pv));
     const ocultos = db.productos.filter(p=>p.activo===false).length;
     const conAlerta = list.filter(p=>p.alerta).length;
-    const valor = Math.round(list.reduce((a,p)=>a+p.precio*p.stock,0));
+
     const pendientes = new Set(Store.driftPrecio().map(d=>d.p.id))
     $('lista-precios').innerHTML =
-      `<p class="hint">${list.length} productos · valor total $${valor.toLocaleString('es-AR')}`+
-      (pendientes.size?` · <b>${pendientes.size} con precio pendiente de publicar</b>`:'')+
+      `<p class="hint">${list.length} productos`+
+      (pendientes.size?` · <b>${pendientes.size} con cambios pendientes de compartir</b>`:'')+
       (ocultos?` · <b>${ocultos} ocultos</b> (no se ofrecen en caja)`:'')+
       (conAlerta?` · <b>${conAlerta}</b> con precio corregido sobre el Excel`:'')+`</p>`+
-      '<table><thead><tr><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th></th></tr></thead><tbody>'+
+      (!list.length?'<p class="hint">No encontramos productos. Probá con otro nombre o código y revisá los filtros en Opciones avanzadas.</p>':'')+
+      '<div class="precios-tabla"><table><thead><tr><th>Producto</th><th>Costo ($)</th><th>Margen (%)</th><th>Venta ($)</th><th class="precios-extra">Visibilidad</th></tr></thead><tbody>'+
       list.map(p=>{
         const off = p.activo===false;
         const pend = pendientes.has(p.id);
-        return `<tr class="${off?'oculto':''}"><td>${p.codigo||'-'}</td>`+
-          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavia no publicado">pendiente</span>':''}</td>`+
-          `<td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${nom(p.provId)}</td>`+
+        return `<tr class="${off?'oculto':''}">`+
+          `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}<small class="precios-producto-dato">${p.codigo||'Sin código'} · ${p.presentacion||p.categoria||''}</small></td>`+
+
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" value="${p.costo??p.precio}" title="Costo de compra"></td>`+
-          `<td>$${p.precio}</td>`+
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="margen" value="${p.margen==null?'':p.margen}" title="Margen % (lo pones vos; la venta sale de costo x margen)"></td>`+
-          `<td><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
-      }).join('')+'</tbody></table>';
+          `<td>$${p.precio}</td>`+
+          `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
+      }).join('')+'</tbody></table></div>';
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
-      b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
+      b.onclick=async ()=>{ try{ await Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); }catch(err){ alert(err.message); } };
     });
     // Edicion inline: costo y margen se ponen a mano; la venta se calcula sola.
     $('lista-precios').querySelectorAll('input[data-f]').forEach(inp=>{
-      inp.addEventListener('change', ()=>{
+      inp.addEventListener('change', async ()=>{
         const n = Number(String(inp.value).replace(',','.'));
         if(!(n>=0)){ verLista(); return; }
-        const db2 = Store.get();
-        const p = db2.productos.find(x=>x.id===inp.dataset.id);
-        if(!p) return;
-        p[inp.dataset.f] = n;
-        // El precio de venta NO se edita: sale de costo x margen.
-        if(p.costo>0 && p.margen!=null) p.precio = Math.round(p.costo*(1+p.margen/100)*100)/100;
-        else if(!(p.precio>0)) p.precio = p.costo;
-        Store.import(JSON.stringify(db2));
-        verLista(); Stock.render(); Caja.refresh();
+        try{ await Store.editarPrecio(inp.dataset.id,inp.dataset.f,n);
+          verLista(); Stock.render(); Caja.refresh();
+        }catch(err){ alert(err.message); verLista(); }
       });
     });
     estadoUI();
+    if(typeof PreciosOnline!=='undefined') PreciosOnline.estado();
   }
   // Estado del catalogo compartido: de donde salio la lista que se ve ahora.
   function estadoUI(){
     const box = $('precio-estado'); if(!box) return;
+    if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){
+      box.textContent='Catálogo del negocio online. Los precios y el stock se guardan y comparten al confirmar cada cambio.';
+      return;
+    }
     const e = Store.estadoCatalogo();
     const drift = Store.driftStock();
     const ts = e.aplicado ? new Date(e.aplicado).toLocaleString('es-AR') : '';
@@ -101,27 +103,15 @@ const Precios = (() => {
     }
     if(drift.length) txt += ' · <b>'+drift.length+'</b> con stock modificado localmente (falta publicar)';
     const dP = Store.driftPrecio ? Store.driftPrecio() : [];
-    if(dP.length) txt += ' · <b>'+dP.length+'</b> con precio pendiente de publicar';
+    if(dP.length) txt += ' · <b>'+dP.length+'</b> con cambios pendientes de compartir';
     const url = $('precio-url');
     if(url && document.activeElement!==url) url.value = e.url||'';
     box.innerHTML = txt;
   }
-  // Descarga el catalogo de este equipo para publicarlo.
-  function publicar(){
-    const cat = Store.catalogoParaPublicar();
-    const blob = new Blob([JSON.stringify(cat,null,1)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'catalogo.json';
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    alert('Se descargó catalogo.json ('+cat.productos.length+' productos).\n\n'+
-      'Para que lo vean los demás equipos, publicá el archivo en el repo:\n\n'+
-      '  python tools/publicar-catalogo.py "catalogo.json"\n\n'+
-      '(o copialo a data/catalogo.json y commitealo)');
-  }
   function init(){
     renderRubro(); verLista(); estadoUI();
+    $('precio-buscar').addEventListener('input',verLista);
+    $('precios-avanzadas').addEventListener('toggle',()=>{ $('mod-precios').classList.toggle('precios-mostrar-extra',$('precios-avanzadas').open); });
     $('csv-ver').onclick=()=>{
       const f = $('csv').files[0]; if(!f){alert('Elegí un CSV');return;}
       const r = new FileReader();
@@ -129,22 +119,26 @@ const Precios = (() => {
         $('csv-prev').innerHTML = `<p class="hint">${pendiente.length} filas. Primeras:</p><pre>${pendiente.slice(0,5).map(x=>JSON.stringify(x)).join('\n')}</pre>`; };
       r.readAsText(f);
     };
-    $('csv-aplicar').onclick=()=>{
+    $('csv-aplicar').onclick=async ()=>{
+      try{
       if(!pendiente.length){alert('Primero previsualizá');return;}
-      const r = Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
+      const r = await Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
       alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.slice(0,15).join(', ')+(r.faltan.length>15?'…':''):'ninguno'}`);
       pendiente=[]; $('csv-prev').innerHTML=''; verLista(); Stock.render(); Caja.refresh();
+      }catch(err){ alert(err.message); }
     };
     const rubrosM = ()=>{ const r=rubros();
       $('margen-rubro').innerHTML='<option value="">Margen a todo</option>'+r.map(x=>`<option>${x}</option>`).join(''); };
     rubrosM();
-    $('margen-aplicar').onclick=()=>{
+    $('margen-aplicar').onclick=async ()=>{
+      try{
       const propio = $('margen-tipo').value==='propio';
       const m = propio ? 'propio' : Number($('margen').value);
       if(!propio && !(m>=0)){ alert('Margen inválido'); return; }
-      const n = Store.aplicarMargen(m, $('margen-rubro').value||null);
+      const n = await Store.aplicarMargen(m, $('margen-rubro').value||null);
       alert(propio ? `Venta recalculada con el margen propio de cada producto (${n} productos)` : `Venta recalculada en ${n} productos (+${m}%)`);
       verLista(); Stock.render(); Caja.refresh();
+      }catch(err){ alert(err.message); }
     };
     $('margen-tipo').addEventListener('change', ()=>{
       $('margen').disabled = $('margen-tipo').value==='propio';
@@ -153,15 +147,15 @@ const Precios = (() => {
     $('margen').disabled = $('margen-tipo').value==='propio';
     $('precio-actualizar').onclick=async ()=>{
       $('precio-estado').textContent='Actualizando…';
-      const r = await Store.cargarRemoto();
+      try{ const r = await Store.cargarRemoto();
       estadoUI(); verLista(); Stock.render(); Caja.refresh();
-      alert(r.ok ? r.msg : r.msg);
+      alert(r.msg); }catch(err){ estadoUI(); alert(err.message); }
     };
-    $('precio-publicar').onclick=publicar;
-    $('precio-url-guardar').onclick=()=>{
-      Store.setUrlCatalogo($('precio-url').value);
+
+    $('precio-url-guardar').onclick=async ()=>{
+      try{ await Store.setUrlCatalogo($('precio-url').value);
       $('precio-url').value = Store.urlCatalogo();
-      alert('URL guardada. Tocá "Actualizar del servidor" para probarla.');
+      alert('URL guardada. Tocá "Actualizar del servidor" para probarla.'); }catch(err){ alert(err.message); }
     };
     $('precio-ver').onclick=()=>{ verLista(); estadoUI(); };
     $('precio-rubro').addEventListener('change', verLista);
@@ -198,8 +192,11 @@ const Pedidos = (() => {
   }
   function render(){
     const db = Store.get();
+    const selectedProv=$('ped-prov').value,selectedProd=$('ped-prod').value;
     $('ped-prov').innerHTML = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(alta un proveedor)</option>';
     $('ped-prod').innerHTML = db.productos.map(p=>`<option value="${p.id}">${p.codigo||''} · ${p.nombre} (stock ${p.stock})</option>`).join('');
+    if(db.proveedores.some(p=>p.id===selectedProv)) $('ped-prov').value=selectedProv;
+    if(db.productos.some(p=>p.id===selectedProd)) $('ped-prod').value=selectedProd;
     $('ped-lineas').innerHTML = lineas.length
       ? lineas.map((l,i)=>`<div>${nom(l.id)} x${l.cant} <button data-i="${i}">quitar</button></div>`).join('')
       : '<p class="hint">Agregá líneas al pedido.</p>';
@@ -218,9 +215,9 @@ const Pedidos = (() => {
         wrap.innerHTML = ` <input type="number" min="0" placeholder="$ pagado" style="max-width:110px"> ` +
           `<select><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select> `;
         const b = document.createElement('button'); b.textContent='Marcar recibido'; b.className='primary';
-        b.onclick=()=>{
+        b.onclick=async ()=>{
           try{
-            Store.recibirPedido(p.id, wrap.querySelector('input').value, wrap.querySelector('select').value);
+            await Store.recibirPedido(p.id, wrap.querySelector('input').value, wrap.querySelector('select').value);
             render(); Stock.render(); Caja.refresh(); Reportes.render();
           }catch(e){ alert(e.message); }
         };
@@ -231,7 +228,7 @@ const Pedidos = (() => {
       if(!prov || !telArg(prov.tel)) wa.disabled = true;
       d.appendChild(wa);
       const del = document.createElement('button'); del.textContent='Borrar';
-      del.onclick=()=>{ if(confirm('Borrar pedido?')){ Store.delPedido(p.id); render(); } };
+      del.onclick=async ()=>{ if(confirm('Borrar pedido?')){ try{ await Store.delPedido(p.id); render(); }catch(err){ alert(err.message); } } };
       d.appendChild(del); box.appendChild(d);
     });
   }
@@ -244,10 +241,13 @@ const Pedidos = (() => {
       if(ex) ex.cant += cant; else lineas.push({id, cant});
       render();
     };
-    $('ped-agregar').onclick=()=>{
+    $('ped-agregar').onclick=async ()=>{
       if(!$('ped-prov').value || !lineas.length){ alert('Proveedor y al menos una línea'); return; }
-      Store.upsertPedido({id:'ped'+Date.now(), provId:$('ped-prov').value, items:lineas, estado:'pendiente', fecha:new Date().toISOString()});
-      lineas=[]; render();
+      const button=$('ped-agregar'); if(button.disabled)return; button.disabled=true;
+      const snapshot=JSON.stringify(lineas);
+      try{ await Store.upsertPedido({id:crypto.randomUUID(), provId:$('ped-prov').value, items:lineas.map(l=>({...l})), estado:'pendiente', fecha:new Date().toISOString()});
+      if(JSON.stringify(lineas)===snapshot) lineas=[]; render(); }catch(err){ alert(err.message); }
+      finally{button.disabled=false;}
     };
   }
   return {init, render};
@@ -267,10 +267,12 @@ const Respaldo = (() => {
       a.click(); info();
     };
     $('bk-import').onclick=()=>{
+      if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; }
       const f = $('bk-file').files[0]; if(!f){alert('Elegí un JSON');return;}
       const r = new FileReader();
-      r.onload=()=>{ try{ Store.import(r.result); alert('Respaldo restaurado');
+      r.onload=async ()=>{ try{ await Store.import(r.result); alert('Respaldo restaurado');
         Stock.render(); Caja.refresh(); Entidades.render(); Pedidos.render(); Reportes.render(); info();
+        if(typeof Fotos!=='undefined')Fotos.refresh().catch(()=>{});
       }catch{ alert('Archivo inválido'); } };
       r.readAsText(f);
     };

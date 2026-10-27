@@ -288,3 +288,65 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 
 .tab-inp{width:96px;min-width:78px;padding:2px 6px;font-size:13px}
 .tab-inp:disabled{opacity:.5}
+
+/* Precios: búsqueda y guardado al frente, herramientas ocasionales plegadas. */
+#mod-precios .precios-guardar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+#mod-precios .precios-guardar h2{margin:0 0 4px}
+#mod-precios #precios-online-estado{margin:0;font-size:14px}
+#mod-precios .precios-guardar button{flex-shrink:0}
+#mod-precios .precios-buscar{display:block;margin:16px 0 12px;font-weight:600}
+#mod-precios .precios-buscar input{display:block;width:100%;margin-top:6px;box-sizing:border-box}
+#mod-precios .precios-opcion{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px}
+#mod-precios summary{cursor:pointer;font-weight:600}
+#mod-precios .precios-tabla{overflow-x:auto}
+#mod-precios .precios-producto-dato{display:block;font-weight:400;color:var(--muted);margin-top:4px}
+#mod-precios .precios-extra{display:none}
+#mod-precios.precios-mostrar-extra .precios-extra{display:table-cell}
+#mod-precios .row{flex-wrap:wrap;align-items:center}
+#mod-precios .row>*{min-width:130px}
+@media(max-width:640px){
+  #mod-precios .precios-guardar{align-items:stretch;flex-direction:column}
+  #mod-precios .precios-guardar button{width:100%}
+  #mod-precios .tab-inp{width:78px;min-width:65px}
+}
+
+/* Remito basado en la hoja REMITO del archivo del cliente. */
+#remito-print{display:none}
+@media print{
+  @page remito{size:A4 portrait;margin:10mm}
+  body.print-remito{margin:0!important;padding:0!important;background:white!important;color:black!important}
+  body.print-remito>*:not(#remito-print){display:none!important}
+  body.print-remito #remito-print{display:block!important;page:remito;font:11pt Arial,sans-serif;color:#000}
+  #remito-print *{box-sizing:border-box}
+  .remito-hoja{width:100%;margin:0}
+  .remito-cabecera{display:flex;border:1px solid #000;border-bottom:0;break-inside:avoid;min-height:28mm}
+  .remito-marca{width:50%;display:flex;align-items:center;gap:3mm;padding:3mm}
+  .remito-marca img{width:45%;height:auto;object-fit:contain}
+  .remito-marca strong{display:block;font-size:19pt;color:#000;line-height:1.2}
+  .remito-marca span{display:block;font-size:9pt;white-space:nowrap;margin-top:2mm}
+  .remito-cabecera dl{width:50%;margin:0;padding:2mm 3mm;border-left:1px solid #000;font-size:10pt}
+  .remito-cabecera dl>div{display:flex;gap:2mm;min-height:7mm;align-items:baseline}
+  .remito-cabecera dt{font-weight:bold;flex-shrink:0}
+  .remito-cabecera dd{margin:0;overflow-wrap:anywhere}
+  #remito-print .remito-detalle{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10pt}
+  #remito-print .remito-detalle th,#remito-print .remito-detalle td{border:1px solid #000;padding:1.5mm 2mm;color:#000;background:#fff;position:static;height:7mm;vertical-align:middle}
+  #remito-print .remito-detalle th{text-align:center;font-weight:bold}
+  #remito-print .remito-detalle thead{display:table-header-group}
+  #remito-print .remito-detalle tr{break-inside:avoid;page-break-inside:avoid}
+  #remito-print .remito-cantidad{text-align:center}
+  #remito-print .remito-descripcion{overflow-wrap:anywhere}
+  #remito-print .remito-importe{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #remito-print .remito-total{break-inside:avoid;page-break-inside:avoid;font-weight:bold}
+  #remito-print .remito-total th{text-align:left}
+}
+
+#negocio-acceso{position:fixed;inset:0;z-index:10000;background:var(--canvas);display:flex;align-items:center;justify-content:center;padding:24px}
+#negocio-acceso[hidden]{display:none}
+.negocio-acceso-card{width:min(440px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px}
+#negocio-login label,#negocio-login input,#negocio-login button{display:block;width:100%;margin-top:12px}
+#negocio-barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--pastel-green-bg);padding:8px 16px;font-size:13px;border-bottom:1px solid var(--line)}
+#negocio-estado{flex:1;min-width:200px}
+#negocio-barra button{font-size:12px;min-height:32px;padding:4px 10px}
+@media print{#negocio-acceso,#negocio-barra{display:none!important}}
+#caja-controles{border:0;margin:0;padding:0;min-width:0}
+#caja-controles:disabled{opacity:.65}
