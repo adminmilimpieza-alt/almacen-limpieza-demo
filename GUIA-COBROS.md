@@ -1,69 +1,29 @@
-# Cobros con Mercado Pago — Mi Limpieza
+# Mi Limpieza · Guía de uso online
 
-Usar la aplicación de Cloudflare: https://milimpieza.adminmilimpieza.workers.dev/
+Usar únicamente https://milimpieza.adminmilimpieza.workers.dev/. Ingresar la clave de operador en cada equipo. Todos ven el mismo negocio; para operar hace falta Internet. El aviso superior indica si hay conexión y permite **Actualizar datos** o cerrar sesión.
 
-## Antes de usar la nueva dirección
+## Qué se comparte
+Productos, precios, fotos, stock y visibilidad; clientes con dirección, teléfono, cumpleaños y deuda; proveedores; ventas y anulaciones; pedidos y recepciones; turnos de caja, movimientos, conciliación y reportes. Los equipos reciben cambios en unos 5 segundos. Si hay un formulario abierto, la actualización de su contenido se posterga para no borrar lo que se está escribiendo. Si otro equipo cambió datos antes de guardar, se solicita actualizar y revisar.
 
-En el equipo donde se usa la demo anterior, abrir **Módulos → Respaldo → Descargar respaldo**. Conservar el archivo JSON y restaurarlo en la nueva dirección desde **Módulos → Respaldo → Restaurar**. La nueva dirección no puede leer los datos guardados por la anterior.
+La caja es única y compartida: una apertura se ve en todos los equipos. El carrito que todavía no se cobró es propio de cada equipo. Al confirmar una venta, el servidor registra venta, movimiento/deuda y descuento de stock juntos. Los demás equipos ven el resultado confirmado.
 
-La prueba técnica dejó un turno cerrado con saldo cero y un enlace pendiente sin pagar. No es una venta. El enlace caduca a las 24 horas y no debe compartirse con clientes.
+## Clientes y productos
+Guardar en el formulario confirma online; al fallar la conexión el formulario permanece abierto. Los nuevos registros aparecen en los demás equipos. No se permite eliminar clientes, proveedores o productos con operaciones asociadas; se puede ocultar un producto.
 
-## Generar y compartir un cobro
+## Precios
+En **Módulos → Precios**, buscar por nombre o código y editar costo/margen. La venta se calcula sola. Cada edición se guarda online al terminar el campo. Para importar CSV, desplegar **Cargar una lista CSV**, elegir archivo/rubro, **Revisar archivo** y **Aplicar lista**. Columnas: `codigo,nombre,presentacion,costo,margen`, separadas por comas y punto para decimales. El archivo actualiza productos existentes. **Actualizar precios** consulta la última versión; no hay un paso adicional de publicar en GitHub.
 
-1. Abrir el turno desde **Módulos → Turno de caja**.
-2. En caja, abrir **Cobros de Mercado Pago** e iniciar sesión con la clave de operador.
-3. Usar **Ver cuenta receptora** para comprobar que corresponde al negocio.
-4. Armar el ticket y asignar el cliente.
-5. Pulsar **Generar link de pago**. El ticket queda capturado en el cobro pendiente y se retira del carrito. Esto todavía no suma ingresos ni descuenta stock.
-6. Usar **Compartir por WhatsApp** para preparar el mensaje y enviarlo al cliente. También se puede copiar o abrir el enlace.
+## Fotos
+Cargar una imagen en la edición de producto y Guardar. Si la foto no pudo subirse, el producto no se confirma y el editor permanece abierto. Para recuperar imágenes antiguas, **Stock → Fotos compartidas y recuperación** permite elegir un respaldo JSON: solo recupera imágenes de productos coincidentes, sin restaurar datos de caja ni reemplazar fotos online ya existentes.
 
-## Confirmar y registrar
+## Mercado Pago
+Armar el ticket y generar un enlace. Generarlo no registra una venta ni descuenta stock. Los enlaces se ven en todos los equipos del negocio. **Verificar pago** consulta Mercado Pago; cuando está aprobado, **Registrar venta pagada** vuelve a verificarlo y confirma la venta/stock en el servidor una sola vez. Se requiere una caja abierta. La vuelta desde Mercado Pago por sí sola no confirma el pago. Los enlaces vencen a las 24 horas; las comisiones se concilian aparte del importe bruto. Anular una venta en el sistema no reembolsa dinero: eso se gestiona en Mercado Pago.
 
-1. Volver a **Cobros de Mercado Pago** en el equipo que generó el enlace.
-2. Pulsar **Verificar pago**. El sistema consulta directamente Mercado Pago y comprueba que la cuenta, la referencia, la moneda y el importe coincidan.
-3. Cuando figure **Pago aprobado**, pulsar **Registrar venta pagada**. Debe haber una caja abierta y stock suficiente. Se registra la venta y su ingreso bruto y se descuenta stock una vez.
-4. Si ya figura **Venta registrada**, no cobrar el mismo ticket otra vez con el botón general **Cobrar**.
+## Si se corta Internet
+No continuar cobrando mientras el sistema no confirme conexión. Si se informa que el resultado de una operación no pudo confirmarse, no repetirla: usar **Actualizar datos** para consultar/reintentar la misma operación de manera segura. El ticket queda bloqueado hasta resolver un cobro incierto. Guardar nuevamente no crea una copia del mismo cobro pendiente.
 
-El regreso desde Mercado Pago, un mensaje de WhatsApp o una captura de pantalla no confirman el pago. Actualmente la verificación se realiza con el botón; las notificaciones automáticas requieren configurar el webhook en Mercado Pago Developers.
+## Remitos
+**Imprimir remito** usa el ticket actual o la última venta guardada si el ticket está vacío. Usa el logo/plantilla REMITO entregados: fecha, cliente, dirección, cantidades, descripción, unitario y total, en A4. Imprimir no vuelve a cobrar ni registra una venta. En una caja compartida, «última venta» es la más reciente de todo el negocio.
 
-## Datos y respaldo
-
-- Los cobros se guardan en el servidor, incluso si la computadora está apagada. No se actualizan los registros locales de venta y stock hasta registrar la venta aprobada.
-- Ventas, stock y turnos siguen guardados en cada navegador. Descargar respaldo diario. No limpiar los datos del navegador sin conservar una copia.
-- El respaldo incluye el identificador del equipo usado para recuperar sus cobros. No usar simultáneamente el mismo respaldo en dos cajas activas.
-- Las comisiones de Mercado Pago se concilian aparte: el ingreso registrado es bruto.
-- Anular una venta local no devuelve dinero en Mercado Pago. Los reembolsos deben gestionarse en la cuenta del negocio y reflejarse luego en el sistema.
-- Si una generación falla con resultado incierto, revisar los cobros en Mercado Pago antes de emitir un segundo enlace.
-
-## Costos
-
-El alojamiento está configurado con Workers Free y D1 Free y una dirección gratuita. No se contrató un plan pago. Se aplican los límites de esos servicios. Las comisiones que Mercado Pago cobre por los pagos son independientes del alojamiento.
-
-## Fotos compartidas online
-
-En **Módulos → Stock**, las fotos nuevas se comprimen y se guardan online al pulsar **Guardar** en el producto. La carga usa la misma sesión de operador que los cobros. Otros navegadores muestran las fotos sin necesitar la clave; la clave se pide para modificarlas.
-
-Las fotos se actualizan al abrir, al volver a la pestaña y cada minuto mientras esté visible. Para ver un cambio de inmediato, abrir **Fotos compartidas y recuperación → Actualizar fotos online**. Se identifica cada presentación por código, rubro y presentación; el ID local no interviene.
-
-Si falla la conexión o la sesión venció, la foto queda explícitamente **pendiente en ese navegador**. Iniciar sesión y usar **Subir fotos pendientes de este equipo**. No limpiar los datos del navegador antes de recuperar las pendientes. Si también cambió la imagen en otro equipo, revisar con **Editar**; reemplazar una foto diferente requiere confirmación.
-
-### Recuperar fotos que ya habían cargado
-
-- Si se ven en el mismo navegador de la dirección Cloudflare, abrir **Stock → Fotos compartidas y recuperación → Subir fotos pendientes de este equipo**. Antes de subir se descarga una copia JSON solo de esas fotos.
-- Si están en otra computadora o en la dirección anterior de GitHub Pages, abrir allí **Respaldo → Descargar respaldo**. En Cloudflare, ir a **Stock → Fotos compartidas y recuperación**, elegir ese JSON y pulsar **Recuperar fotos del respaldo**. No hace falta restaurar todo el respaldo.
-- Solo se envían las imágenes y los identificadores de productos reconocidos. No se importan ventas, clientes, precios ni stock. Las fotos online ya existentes (incluidas las que se quitaron) no se pisan con una recuperación antigua.
-- Si un producto no existe en este equipo, se informa como no coincidente; primero debe estar disponible en el catálogo correspondiente.
-- Las fotos que solo existen en un navegador inaccesible no pueden recuperarse desde el servidor. El equipo original o su respaldo son necesarios.
-
-Se usa D1 Free ya contratado, sin activar otros servicios: hasta 2000 identidades y 150 KB por JPEG comprimido. Las imágenes son de hasta 480 × 480 píxeles. Los respaldos antiguos con imágenes PNG/WebP se convierten a JPEG al subirlos. Esto comparte fotografías; ventas, stock y altas de productos siguen con su funcionamiento actual por navegador/catálogo.
-
-## Guardar y compartir precios
-En la dirección de Cloudflare, ir a Módulos → Precios. Editar costos/márgenes a mano o elegir CSV, rubro, Previsualizar y Aplicar costos. Pulsar **Guardar y compartir precios**. Si se solicita, ingresar la clave de operador (misma de fotos y cobros). La aplicación confirma el guardado online. Otros equipos reciben precios al abrir, volver a la ventana o en hasta 30 segundos mientras estén conectados y no estén editando un campo.
-
-Si no hay conexión o sesión, los cambios quedan pendientes en ese navegador; reintentar desde el mismo equipo. Si otra persona cambió esos precios, se conservan los locales y se solicita revisar antes de reemplazar. La carga comparte únicamente costo, margen y precio para productos coincidentes por código/nombre, categoría y presentación: no crea el producto en otros equipos ni comparte ventas, stock, clientes o proveedores. GitHub Pages sigue siendo la versión anterior. La tabla D1 `shared_prices` se inicializa automáticamente en el primer guardado autorizado, sin modificar tablas existentes ni requerir otro plan.
-
-### Pantalla de precios simplificada
-Buscar por nombre o código en el campo principal; no hace falta escribir acentos. Editar costo o margen en la fila y pulsar **Guardar y compartir precios**. La venta se calcula sola. Para importar, desplegar **Cargar una lista CSV**, elegir archivo y rubro, **Revisar archivo** y **Aplicar lista**, y después guardar y compartir. **Opciones avanzadas** reúne filtros, margen masivo, visibilidad, impresión y conexión del catálogo.
-
-## Imprimir remito
-El botón **Imprimir remito** de Caja usa el diseño de la hoja REMITO enviada por el cliente: logo, teléfono, fecha, nombre y dirección del cliente, cantidades, descripción, precios unitarios y total. Si hay productos en el ticket, imprime ese contenido; si el ticket está vacío después de cobrar, imprime la última venta guardada en ese navegador, con sus precios y fecha originales. El nombre y dirección se toman de la ficha actual del cliente. Imprimir no registra ni vuelve a cobrar una venta. Se abre el diálogo del navegador para imprimir en A4 o guardar PDF. Ventas con más de 14 líneas continúan en páginas siguientes; las cortas incluyen filas vacías como la plantilla.
+## Respaldos y piloto
+Los datos se guardan en Cloudflare. **Módulos → Respaldo → Descargar respaldo** permite guardar una copia adicional del negocio. La restauración local y el reinicio están desactivados para no reemplazar datos compartidos. El piloto online inicia desde el catálogo publicado, conserva fotos/precios que ya estaban en el servidor y no mezcla automáticamente bases antiguas de navegadores. Las copias locales anteriores de Workers se conservan separadas y GitHub Pages ofrece descargar su respaldo antes de ir a Workers.

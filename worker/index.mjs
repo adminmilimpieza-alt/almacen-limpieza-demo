@@ -1,4 +1,4 @@
-import { handlePrices } from './prices.mjs';
+import {handleBusiness,transactBusiness,replayBusiness} from './business.mjs';
 import { handlePhotos } from './photos.mjs';
 import { normalizeItems, paymentResult } from './payments.mjs';
 import { authenticated, sessionCookie, validWebhook, hmac, equal } from './security.mjs';
@@ -10,6 +10,7 @@ async function body(request){
   try{return JSON.parse(text);}catch{throw fail('Solicitud inválida.');}
 }
 let cachedToken=null;
+const sharedOrderIndexes=new WeakSet();
 async function accessToken(env){
   if(env.MP_ACCESS_TOKEN) return env.MP_ACCESS_TOKEN;
   if(!env.MP_CLIENT_ID||!env.MP_CLIENT_SECRET) throw fail('Falta cargar las credenciales de Mercado Pago en Cloudflare.',503);
@@ -43,7 +44,8 @@ async function route(request,env){
   const url=new URL(request.url),path=url.pathname;
   if(path==='/api/health') return json({service:'Mi Limpieza',database:!!env.DB,operatorConfigured:!!env.ADMIN_PASSWORD&&env.ADMIN_PASSWORD.length>=16,mercadoPagoConfigured:!!(env.MP_ACCESS_TOKEN||(env.MP_CLIENT_ID&&env.MP_CLIENT_SECRET)),webhookConfigured:!!env.MP_WEBHOOK_SECRET});
   if(!env.DB) throw fail('Falta vincular la base de cobros D1.',503);
-  if(path==='/api/prices') return handlePrices(request,env);
+  if(path==='/api/business') return handleBusiness(request,env);
+  if(path==='/api/prices') return json({error:'Actualizá la página: los precios ahora se guardan en el negocio online.'},410);
   if(path==='/api/photos'||path.startsWith('/api/photos/')) return handlePhotos(request,env);
   if(path==='/api/mp/webhook' && request.method==='POST'){
     if(!await validWebhook(request,env.MP_WEBHOOK_SECRET)) throw fail('Notificación no autorizada.',401);
@@ -75,15 +77,16 @@ async function route(request,env){
     return json({id:user.id,nickname:user.nickname,site_id:user.site_id});
   }
   const device=request.headers.get('X-Device-ID');
-  if(!uuid(device)) throw fail('Identificador de equipo inválido.');
+  if(path==='/api/mp/orders'&&request.method==='POST'&&!uuid(device)) throw fail('Identificador de equipo inválido.');
   if(path==='/api/mp/orders'&&request.method==='GET'){
+    if(!sharedOrderIndexes.has(env.DB)){await env.DB.prepare('CREATE INDEX IF NOT EXISTS orders_shared_created ON orders(created_at DESC,id DESC)').run();sharedOrderIndexes.add(env.DB);}
     const before=url.searchParams.get('before');
     let statement;
     if(before){
       const [date,id]=before.split('|');
       if(!uuid(id)||!/^\d{4}-\d\d-\d\dT/.test(date)||Number.isNaN(Date.parse(date))) throw fail('Página de cobros inválida.');
-      statement=env.DB.prepare('SELECT * FROM orders WHERE device_id=? AND (created_at,id) < (?,?) ORDER BY created_at DESC,id DESC LIMIT 51').bind(device,date,id);
-    }else statement=env.DB.prepare('SELECT * FROM orders WHERE device_id=? ORDER BY created_at DESC,id DESC LIMIT 51').bind(device);
+      statement=env.DB.prepare('SELECT * FROM orders WHERE (created_at,id) < (?,?) ORDER BY created_at DESC,id DESC LIMIT 51').bind(date,id);
+    }else statement=env.DB.prepare('SELECT * FROM orders ORDER BY created_at DESC,id DESC LIMIT 51');
     const rows=await statement.all(),page=rows.results.slice(0,50),last=page.at(-1);
     return json({orders:page.map(publicOrder),next:rows.results.length>50?last.created_at+'|'+last.id:null});
   }
@@ -92,7 +95,6 @@ async function route(request,env){
     if(!uuid(data.id)) throw fail('Identificador de cobro inválido.');
     const existing=await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(data.id).first();
     if(existing){
-      if(existing.device_id!==device) throw fail('El cobro pertenece a otro equipo.',409);
       if(existing.init_point) return json(publicOrder(existing));
       throw fail('El cobro está en proceso o falló. Revisá el listado antes de generar otro enlace.',409);
     }
@@ -113,12 +115,21 @@ async function route(request,env){
   }
   const match=path.match(/^\/api\/mp\/orders\/([a-f0-9-]{36})\/(check|register)$/i);
   if(match&&request.method==='POST'){
-    const order=await env.DB.prepare('SELECT * FROM orders WHERE id=? AND device_id=?').bind(match[1],device).first();
-    if(!order) throw fail('Cobro no encontrado en este equipo.',404);
+    const order=await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(match[1]).first();
+    if(!order) throw fail('Cobro no encontrado.',404);
+    let registration;
+    if(match[2]==='register'){
+      registration=await body(request);
+      if(!uuid(registration.id)||!uuid(registration.revision))throw fail('Actualizá la página antes de registrar el pago.');
+      const receipt=await replayBusiness(env,{id:registration.id,op:'registrarPagoMP',args:[{id:order.id}]});
+      if(receipt)return json(receipt);
+    }
     const updated=await refreshOrder(env,order);
     if(match[2]==='register'){
       if(updated.status!=='approved') throw fail('Mercado Pago todavía no confirmó este pago.',409);
-      await env.DB.prepare('UPDATE orders SET registered_at=COALESCE(registered_at,?) WHERE id=?').bind(new Date().toISOString(),order.id).run();
+      const data=registration;
+      const verified={id:updated.id,status:updated.status,payment_id:updated.payment_id,cliente_id:updated.cliente_id,items:JSON.parse(updated.items),total:updated.total};
+      return json(await transactBusiness(env,{id:data.id,revision:data.revision,op:'registrarPagoMP',args:[verified],verifiedMP:true}));
     }
     return json(publicOrder(updated));
   }
@@ -129,6 +140,7 @@ export default {async fetch(request,env){
     if(new URL(request.url).pathname.startsWith('/api/')) return await route(request,env);
     const response=await env.ASSETS.fetch(request);
     const headers=new Headers(response.headers);
+    if(response.headers.get('Content-Type')?.includes('text/html'))headers.set('Cache-Control','no-store');
     headers.set('X-Content-Type-Options','nosniff'); headers.set('Referrer-Policy','same-origin'); headers.set('X-Frame-Options','DENY');
     return new Response(response.body,{status:response.status,headers});
   }catch(error){return json({error:error.status?error.message:'No se pudo completar la operación. Intentá nuevamente.'},error.status||500);}

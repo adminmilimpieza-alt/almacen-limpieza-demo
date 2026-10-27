@@ -1,12 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import worker from '../worker/index.mjs';
+import {handlePrices} from '../worker/prices.mjs';
 import {sessionCookie} from '../worker/security.mjs';
 const password='clave-operador-pruebas-precios';
 const product={codigo:'482',nombre:'Lavandina',categoria:'Líquidos 1L',presentacion:'1 Lt'};
 function database(){const db=new DatabaseSync(':memory:');return {prepare(q){const s=db.prepare(q);return {a:[],bind(...a){this.a=a;return this;},async first(){return s.get(...this.a)||null;},async run(){return {meta:{changes:Number(s.run(...this.a).changes)}};}};}};}
-async function req(env,method='GET',data,auth=false,origin='https://app.test'){return worker.fetch(new Request('https://app.test/api/prices',{method,headers:{Origin:origin,'Content-Type':'application/json',...(auth?{Cookie:'milimpieza_session='+await sessionCookie(password)}:{})},body:data?JSON.stringify(data):undefined}),env);}
+async function req(env,method='GET',data,auth=false,origin='https://app.test'){try{return await handlePrices(new Request('https://app.test/api/prices',{method,headers:{Origin:origin,'Content-Type':'application/json',...(auth?{Cookie:'milimpieza_session='+await sessionCookie(password)}:{})},body:data?JSON.stringify(data):undefined}),env);}catch(e){return Response.json({error:e.message},{status:e.status||500});}}
 test('precios online se leen en otro equipo y rechazan escrituras obsoletas',async()=>{
  const env={DB:database(),ADMIN_PASSWORD:password};
  const initial=await req(env);assert.equal(initial.status,200);assert.deepEqual(await initial.json(),{revision:null,entries:[]});

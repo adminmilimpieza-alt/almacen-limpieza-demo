@@ -22,8 +22,8 @@ const Turnos = (() => {
         <div class="row"><input id="t-saldo" type="number" min="0" value="${arrastre}" title="Saldo inicial en efectivo">
         <button id="t-abrir" class="primary">Abrir caja</button></div>
         ${ult?`<p class="hint">Arrastre sugerido del cierre anterior: ${fmt(arrastre)}</p>`:''}`;
-      $('t-abrir').onclick = ()=>{
-        try{ Store.abrirTurno(Number($('t-saldo').value)); render(); Caja.refresh(); Reportes.render(); }
+      $('t-abrir').onclick = async ()=>{
+        try{ await Store.abrirTurno(Number($('t-saldo').value)); render(); Caja.refresh(); Reportes.render(); }
         catch(e){ alert(e.message); }
       };
     } else {
@@ -44,10 +44,10 @@ const Turnos = (() => {
       }); };
       ['efectivo','mercadopago','banco'].forEach(m=>{ $('t-c-'+m).addEventListener('input', viva); });
       $('t-printc').onclick = ()=>{ document.body.classList.add('print-cierre'); window.print(); };
-      $('t-cerrar').onclick = ()=>{
+      $('t-cerrar').onclick = async ()=>{
         try{
           const conteo = {efectivo:Number($('t-c-efectivo').value)||0, mercadopago:Number($('t-c-mercadopago').value)||0, banco:Number($('t-c-banco').value)||0};
-          const c = Store.cerrarTurno(conteo, $('t-notas').value);
+          const c = await Store.cerrarTurno(conteo, $('t-notas').value);
           const dt = c.diferencia.efectivo.diferencia + c.diferencia.mercadopago.diferencia + c.diferencia.banco.diferencia;
           alert(`Caja cerrada. Diferencia total: ${dt} (${dt===0?'sin diferencias':dt<0?'faltante':'sobrante'})`);
           render(); Caja.refresh(); Reportes.render();

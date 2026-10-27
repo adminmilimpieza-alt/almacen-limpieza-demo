@@ -41,11 +41,13 @@ const Stock = (() => {
     const verOcultos = $('stk-ver-ocultos') && $('stk-ver-ocultos').checked;
     const rubros = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
     $('stk-rubro').innerHTML = '<option value="">Todos los rubros</option>'+rubros.map(x=>`<option ${x===r?'selected':''}>${x}</option>`).join('');
+    const assigned=$('stk-prov').value;
     $('stk-prov').innerHTML = '<option value="">Elegí proveedor…</option>'+
       db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
+    if(db.proveedores.some(x=>x.id===assigned)) $('stk-prov').value=assigned;
     const pf = $('stk-prov-filtro');
     if(pf) pf.innerHTML = '<option value="">Todos los proveedores</option>'+
-      db.proveedores.map(x=>`<option ${x.id===pv?'selected':''}>${x.nombre}</option>`).join('');
+      db.proveedores.map(x=>`<option value="${x.id}" ${x.id===pv?'selected':''}>${x.nombre}</option>`).join('');
     return db.productos.filter(p =>
       (verOcultos || p.activo!==false) &&
       (!r || (p.categoria||'General')===r) &&
@@ -86,9 +88,9 @@ const Stock = (() => {
         fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
       const bV = document.createElement('button'); bV.textContent=oculto?'Mostrar':'Ocultar';
-      bV.onclick=()=>{ Store.toggleActivo(p.id, oculto); render(); Caja.refresh(); };
+      bV.onclick=async ()=>{ try{ await Store.toggleActivo(p.id, oculto); render(); Caja.refresh(); }catch(err){ alert(err.message); } };
       const bD = document.createElement('button'); bD.textContent='Borrar';
-      bD.onclick=()=>{ if(confirm('Borrar '+p.nombre+'?')){ Store.eliminar(p.id); render(); Caja.refresh(); } };
+      bD.onclick=async ()=>{ if(confirm('Borrar '+p.nombre+'?')){ try{ await Store.eliminar(p.id); render(); Caja.refresh(); }catch(err){ alert(err.message); } } };
       td.appendChild(bE); td.appendChild(bV); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
     });
   }
@@ -100,6 +102,8 @@ const Stock = (() => {
   }
   function init(){
     render();
+    $('form-prod').onsubmit=event=>{event.preventDefault();$('guardar-prod').click();};
+    $('cancelar-prod').onclick=()=>$('modal').close();
     $('nuevo').onclick=()=>{ editId=null;fotoBase=null; $('modal-titulo').textContent='Nuevo producto';
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
       $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
@@ -116,22 +120,21 @@ const Stock = (() => {
     };
     $('f-costo').addEventListener('input', recalcula);
     $('f-margen').addEventListener('input', recalcula);
-    $('reset').onclick=()=>{ if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); } };
+    $('reset').onclick=async ()=>{ if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; } if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ try{ await Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); }catch(err){ alert(err.message); } } };
     $('stk-q').addEventListener('input', render);
     $('stk-rubro').addEventListener('change', render);
     $('stk-prov-filtro').addEventListener('change', render);
     $('stk-ver-ocultos').addEventListener('change', render);
-    $('stk-assign').onclick=()=>{
+    $('stk-assign').onclick=async ()=>{
       const pid = $('stk-prov').value;
       if(!pid){ alert('Elegí un proveedor'); return; }
       const list = filtros();
       if(!list.length){ alert('Nada filtrado'); return; }
       const nom = (Store.get().proveedores.find(x=>x.id===pid)||{}).nombre||'';
       if(!confirm(`Asignar ${nom} a ${list.length} productos?`)) return;
-      const db = Store.get();
-      list.forEach(p=>{ const real = db.productos.find(x=>x.id===p.id); if(real) real.provId = pid; });
-      Store.import(JSON.stringify(db));
-      render(); Caja.refresh(); Reportes.render();
+      try{ await Store.asignarProveedor(list.map(p=>p.id),pid);
+        render(); Caja.refresh(); Reportes.render();
+      }catch(err){ alert(err.message); }
     };
     $('foto-pick').onclick=()=>$('f-foto').click();
     $('f-foto').addEventListener('change', async ev=>{
@@ -149,7 +152,7 @@ const Stock = (() => {
       const cur = editId && db.productos.find(x=>x.id===editId);
       // Editando: costo/precio/margen se mantienen (se cambian en el panel Precios).
       let p = Object.assign({}, cur||{}, {
-        id: editId || 'p'+Date.now(), codigo:$('f-codigo').value.trim(),
+        id: editId || crypto.randomUUID(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
         presentacion:$('f-pres').value.trim(),
         costo: cur?cur.costo:Number($('f-costo').value),
@@ -163,18 +166,17 @@ const Stock = (() => {
       // Nuevo producto: la venta sale de costo x margen, sino no se guarda.
       const sinPrecio = editId ? !(p.precio>=0) : !(Number($('f-precio').value)>0);
       if(!p.nombre || !(p.costo>=0) || sinPrecio){ alert('Faltan datos (costo y margen para calcular la venta)'); return; }
-      button.disabled=true;button.textContent='Guardando…';let pendingError='';
+      button.disabled=true;button.textContent='Guardando…';
       try{
         if(typeof Fotos==='undefined'){
           if(p.foto!==cur?.foto)throw new Error('Esperá a que cargue la conexión de fotos online.');
         }else{
           try{const draft=await Fotos.prepararEdicion(p,fotoBase,cur);p=draft.product;p=await Fotos.guardar(p,draft.base);}
-          catch(error){p.fotoPendiente=true;pendingError=error.message;}
+          catch(error){throw new Error('La foto no se pudo guardar online. Reintentá sin cerrar este formulario. '+error.message);}
         }
-        Store.guardarProductoEdicion(p,fotoBase);render();Caja.refresh();$('modal').close();
+        await Store.guardarProductoEdicion(p,fotoBase);render();Caja.refresh();$('modal').close();
         if(typeof Fotos!=='undefined'){
-          if(pendingError){Fotos.avisar('Guardado SOLO en este navegador. La foto está pendiente de subir: '+pendingError);alert('La foto NO se guardó online. Se conservó en este navegador para reintentar. '+pendingError);}
-          else Fotos.refresh().catch(()=>{});
+          Fotos.refresh().catch(()=>{});
         }
       }catch(error){alert(error?.name==='QuotaExceededError'?'No hay espacio local. Conservá un respaldo antes de limpiar datos.':error.message);}
       finally{button.disabled=false;button.textContent='Guardar';}

@@ -4,9 +4,7 @@ const Pagos = (() => {
   const $=id=>document.getElementById(id);
   const labels={creating:'Creando enlace',creation_failed:'Creación sin confirmar; revisar en Mercado Pago',pending:'Pendiente de pago',approved:'Pago aprobado',refunded:'Reembolsado',charged_back:'Contracargo',review:'Revisar pago'};
   function deviceId(){
-    const db=Store.get();
-    if(!db.cfg.mpDeviceId){db.cfg.mpDeviceId=crypto.randomUUID();Store.import(JSON.stringify(db));}
-    return db.cfg.mpDeviceId;
+    let id=localStorage.getItem('milimpieza-device');if(!id){id=crypto.randomUUID();localStorage.setItem('milimpieza-device',id);}return id;
   }
   async function api(path,options={}){
     const r=await fetch(path,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Device-ID':deviceId(),...options.headers}});
@@ -25,7 +23,7 @@ const Pagos = (() => {
   function message(text){$('mp-status').textContent=text;}
   function render(orders){
     const box=$('mp-orders');box.replaceChildren();
-    if(!orders.length){box.textContent='Todavía no hay enlaces generados en este equipo.';return;}
+    if(!orders.length){box.textContent='Todavía no hay enlaces de pago del negocio.';return;}
     orders.forEach(order=>{
       const row=document.createElement('div');row.className='venta';
       const title=document.createElement('b');title.textContent=`$${order.total} · ${labels[order.status]||order.status}`;row.append(title,document.createElement('br'));
@@ -42,8 +40,7 @@ const Pagos = (() => {
           register.disabled=true;
           try{
             if(!Store.turnoAbierto())throw new Error('Abrí la caja para registrar la venta.');
-            const verified=await api(`/api/mp/orders/${order.id}/register`,{method:'POST'});
-            Store.registrarPagoMP(verified);Stock.render();Caja.refresh();Reportes.render();await refresh();message('Venta registrada. El ingreso bruto y el stock se actualizaron.');
+            await OnlineBusiness.mutate('mp-register',[order.id]);Stock.render();Caja.refresh();Reportes.render();await refresh();message('Venta registrada. El ingreso bruto y el stock se actualizaron.');
           }catch(e){message(e.message);}finally{register.disabled=false;}
         };row.append(register);
       }
@@ -75,7 +72,7 @@ const Pagos = (() => {
       catch(e){message(e.message);}
     };
     $('mp-refresh').onclick=()=>refresh().catch(e=>message(e.message));
-    $('mp-logout').onclick=async()=>{try{await api('/api/logout',{method:'POST'});$('mp-orders').replaceChildren();$('mp-login').hidden=false;message('Sesión cerrada.');}catch(e){message(e.message);}};
+    $('mp-logout').onclick=async()=>{try{await api('/api/logout',{method:'POST'});location.reload();}catch(e){message(e.message);}};
     $('mp-account').onclick=async()=>{try{const account=await api('/api/mp/account');message(`Cuenta receptora: ${account.nickname} · ID ${account.id} · ${account.site_id}. Confirmá que corresponda al cliente antes de cobrar.`);}catch(e){message(e.message);}};
     try{
       const r=await fetch('/api/health',{cache:'no-store'});if(!r.ok)throw new Error();const health=await r.json();
@@ -86,6 +83,7 @@ const Pagos = (() => {
     }catch{
       $('linkmp').disabled=true;message('Los cobros reales funcionan desde la nueva dirección de Cloudflare.');
     }
+    setInterval(()=>{if(configured&&!document.hidden)refresh().catch(()=>{});},10000);
     if(new URLSearchParams(location.search).has('pago'))message('El regreso de Mercado Pago no confirma el cobro. Usá “Verificar pago”.');
   }
   return {init,crearLink,whatsappShare,refresh};

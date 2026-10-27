@@ -4,9 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=31">
+<link rel="stylesheet" href="css/style.css?v=32">
 </head>
 <body>
+<section id="negocio-acceso" role="dialog" aria-modal="true" aria-labelledby="negocio-acceso-titulo">
+ <div class="negocio-acceso-card"><h1 id="negocio-acceso-titulo">Mi Limpieza · Online</h1><p>Todos los equipos trabajan con los mismos datos.</p>
+ <p id="negocio-acceso-estado" role="status">Conectando con el negocio…</p>
+ <form id="negocio-login"><label>Clave de operador<input id="negocio-clave" type="password" autocomplete="current-password" required></label><button id="negocio-entrar" type="submit" class="primary">Ingresar</button></form></div>
+</section>
+<div id="negocio-barra"><span id="negocio-estado" role="status" aria-live="polite">Conectando…</span><button id="negocio-actualizar">Actualizar datos</button><button id="negocio-salir">Cerrar sesión</button></div>
 <header>
   <div class="brand">
     <button id="menu-btn" class="icon-btn" aria-label="Módulos" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -33,13 +39,14 @@
     <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
     <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
     <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
-    <button data-go="mod-respaldo">Respaldo<small>copia diaria</small></button>
+    <button data-go="mod-respaldo">Respaldo<small>descargar copia</small></button>
   </nav>
 </aside>
 
 <main class="pos">
   <!-- CAJA: escáner + líneas del ticket con columnas, total y cobro -->
   <section class="pos-left" id="pos-left">
+    <fieldset id="caja-controles">
     <div id="turno-status"></div>
     <div id="cumples-alert" class="cumple-alert" hidden></div>
     <div class="scan-hero">
@@ -112,10 +119,11 @@
           <button id="mp-account" type="button">Ver cuenta receptora</button>
           <button id="mp-logout" type="button">Cerrar sesión de cobros</button>
         </div>
-        <p class="hint">Generar un enlace no registra ingresos ni descuenta stock. Los enlaces vencen a las 24 horas. Verificá el pago antes de entregar y registrá la venta una sola vez desde este equipo. Los importes registrados son brutos; las comisiones se concilian aparte.</p>
+        <p class="hint">Generar un enlace no registra ingresos ni descuenta stock. Los enlaces vencen a las 24 horas. Verificá el pago antes de entregar y registrá la venta una sola vez; se comparte con todos los equipos. Los importes registrados son brutos; las comisiones se concilian aparte.</p>
         <div id="mp-orders"></div>
       </details>
     </div>
+    </fieldset>
   </section>
 </main>
 
@@ -154,7 +162,7 @@
     </details>
     <div class="row">
       <button id="nuevo" class="primary">+ Nuevo producto</button>
-      <button id="reset">Restablecer catálogo</button>
+      <button id="reset" disabled title="El negocio online no se reinicia desde este panel">Restablecer catálogo</button>
     </div>
     <div class="row">
       <input id="stk-q" placeholder="Buscar por código o nombre…">
@@ -171,21 +179,21 @@
       <thead><tr><th></th><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th>Stock</th><th>Vis</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
-    <p class="hint">Stock 5 o menos en rojo. El stock es local; las fotos se comparten online.</p>
+    <p class="hint">Stock 5 o menos en rojo. Stock y fotos guardados online para todos los equipos.</p>
   </section>
 
   <section id="mod-precios">
     <div class="precios-guardar">
       <div><h2>Precios</h2><p id="precios-online-estado" role="status" aria-live="polite">Consultando precios online…</p></div>
-      <button id="precio-publicar" class="primary">Guardar y compartir precios</button>
+      <button id="precio-publicar" class="primary">Actualizar precios</button>
     </div>
     <details id="precios-login" hidden><summary>Ingresar clave de operador</summary>
       <form id="precios-login-form" class="row"><input id="precios-password" type="password" required autocomplete="current-password" placeholder="Clave de operador" aria-label="Clave de operador para precios"><button type="submit">Iniciar sesión y compartir precios</button></form>
     </details>
-    <p class="hint">Buscá un producto y cambiá su costo o margen. El precio de venta se calcula solo. Después, guardá para compartir los cambios con los otros equipos.</p>
+    <p class="hint">Buscá un producto y cambiá su costo o margen. El precio de venta se calcula solo. Los cambios se guardan online al terminar cada edición.</p>
     <label class="precios-buscar">Buscar producto<input id="precio-buscar" type="search" placeholder="Nombre o código del producto" autocomplete="off"></label>
     <details class="precios-opcion" id="precios-carga"><summary>Cargar una lista CSV</summary>
-      <p class="hint">Elegí el archivo y la lista a actualizar. Revisá la vista previa y aplicá los costos. Al terminar, pulsá Guardar y compartir precios.</p>
+      <p class="hint">Elegí el archivo y la lista a actualizar. Revisá la vista previa y aplicá los costos. Los costos se guardan online al aplicar la lista.</p>
       <p class="hint">Columnas: <code>codigo,nombre,presentacion,costo,margen</code>. Usá punto para los decimales.</p>
     <div class="row">
       <input type="file" id="csv" accept=".csv" aria-label="Archivo de lista de precios CSV">
@@ -219,7 +227,7 @@
       <select id="margen-rubro"><option value="">Margen a todo</option></select>
       <button id="margen-aplicar">Aplicar margen</button>
     </div>
-      <details class="precios-opcion"><summary>Conexión y catálogo</summary>
+      <details class="precios-opcion" hidden><summary>Conexión y catálogo</summary>
         <p id="precio-estado" class="hint">Cargando estado del catálogo…</p>
         <button id="precio-actualizar">Actualizar del servidor</button>
         <div class="row"><input id="precio-url" placeholder="URL del catálogo publicado (opcional)" aria-label="URL del catálogo publicado"><button id="precio-url-guardar">Guardar URL</button></div>
@@ -316,11 +324,11 @@
   </section>
 
   <section id="mod-respaldo">
-    <p class="hint">Exportá el JSON cada día y guardalo (Drive/pendrive). En fase 2 va respaldo automático en servidor.</p>
+    <p class="hint">Los datos del negocio se guardan online. Podés descargar una copia JSON adicional. La restauración local está desactivada para no reemplazar datos compartidos.</p>
     <div class="row">
       <button id="bk-export" class="primary">Descargar respaldo</button>
       <input type="file" id="bk-file" accept=".json">
-      <button id="bk-import">Restaurar</button>
+      <button id="bk-import" disabled title="La restauración local está desactivada en el negocio online">Restaurar</button>
     </div>
     <div id="bk-info"></div>
   </section>
@@ -329,6 +337,7 @@
 <!-- Modal producto -->
 <dialog id="modal">
   <form method="dialog" id="form-prod">
+    <button type="submit" hidden aria-hidden="true" tabindex="-1">Guardar</button>
     <h3 id="modal-titulo">Nuevo producto</h3>
     <input id="f-codigo" placeholder="Código de barras (ej: 7791828000046)" autofocus>
     <input id="f-nombre" placeholder="Nombre (ej: PAPEL HIGIENICO Felpita)" required>
@@ -350,7 +359,7 @@
       <input type="file" id="f-foto" accept="image/*" capture="environment" hidden>
     </div>
     <div class="row">
-      <button value="cancel">Cancelar</button>
+      <button type="button" id="cancelar-prod">Cancelar</button>
       <button id="guardar-prod" type="button" class="primary">Guardar</button>
     </div>
   </form>
@@ -358,7 +367,8 @@
 
 <!-- Modal genérico entidades -->
 <dialog id="modal-ent">
-  <form method="dialog">
+  <form method="dialog" id="form-ent">
+    <button type="submit" hidden aria-hidden="true" tabindex="-1">Guardar</button>
     <h3 id="ent-titulo">Nuevo</h3>
     <input id="e-nombre" placeholder="Apellido y nombre completo" required>
     <input id="e-tel" placeholder="Teléfono (WhatsApp)">
@@ -368,27 +378,28 @@
       <input id="e-nac" type="date">
     </label>
     <div class="row">
-      <button value="cancel">Cancelar</button>
-      <button id="e-guardar" value="default" class="primary">Guardar</button>
+      <button type="button" id="cancelar-ent">Cancelar</button>
+      <button type="button" id="e-guardar" value="default" class="primary">Guardar</button>
     </div>
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=31"></script>
-<script src="js/store.js?v=31"></script>
-<script src="js/pagos.js?v=31"></script>
-<script src="js/scan.js?v=31"></script>
-<script src="js/caja.js?v=31"></script>
-<script src="js/stock.js?v=31"></script>
-<script src="js/entidades.js?v=31"></script>
-<script src="js/cumple.js?v=31"></script>
-<script src="js/operacion.js?v=31"></script>
-<script src="js/turnos.js?v=31"></script>
-<script src="js/reportes.js?v=31"></script>
-<script src="js/app.js?v=31"></script>
-<script src="js/precios-online.js?v=31"></script>
-<script>Pagos.init();</script>
-<script type="module" src="js/fotos.mjs?v=31"></script>
-<script type="module" src="js/remito.mjs?v=31"></script>
+<script src="js/catalogo.js?v=32"></script>
+<script src="js/store.js?v=32"></script>
+<script src="js/negocio-online.js?v=32"></script>
+<script src="js/pagos.js?v=32"></script>
+<script src="js/scan.js?v=32"></script>
+<script src="js/caja.js?v=32"></script>
+<script src="js/stock.js?v=32"></script>
+<script src="js/entidades.js?v=32"></script>
+<script src="js/cumple.js?v=32"></script>
+<script src="js/operacion.js?v=32"></script>
+<script src="js/turnos.js?v=32"></script>
+<script src="js/reportes.js?v=32"></script>
+<script src="js/app.js?v=32"></script>
+<script src="js/precios-online.js?v=32"></script>
+
+<script type="module" src="js/fotos.mjs?v=32"></script>
+<script type="module" src="js/remito.mjs?v=32"></script>
 </body>
 </html>

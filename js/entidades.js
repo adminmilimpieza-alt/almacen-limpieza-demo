@@ -1,7 +1,7 @@
 // entidades.js — puntos 3 y 4: clientes (deuda, cumpleaños y referencia) y proveedores
 const Entidades = (() => {
   const $ = id => document.getElementById(id);
-  let col = 'clientes', editId = null;
+  let col = 'clientes', editId = null, baseEntidad = null;
 
   // Días que faltan para el próximo cumpleaños (0 = hoy).
   function diasCumple(nac){
@@ -42,6 +42,7 @@ const Entidades = (() => {
   function mostrarNac(show){ const w = $('e-nac-wrap'); if(w) w.hidden = !show; }
   function abrir(colName, e){
     col = colName; editId = e ? e.id : null;
+    baseEntidad = e ? {...e} : null;
     $('ent-titulo').textContent = (e?'Editar ':'Nuevo ') + (colName==='clientes'?'cliente':'proveedor');
     $('e-nombre').value = e ? e.nombre : '';
     $('e-tel').value = e ? (e.tel||'') : '';
@@ -72,14 +73,14 @@ const Entidades = (() => {
         med.innerHTML = '<option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option>';
         med.style.maxWidth='150px';
         const bC = document.createElement('button'); bC.textContent='Cobrar'; bC.className='primary';
-        bC.onclick=()=>{ try{ Store.cobrarDeuda(e.id, inp.value, med.value); render(); Reportes.render(); }
+        bC.onclick=async ()=>{ try{ await Store.cobrarDeuda(e.id, inp.value, med.value); render(); Reportes.render(); }
           catch(err){ alert(err.message); } };
         td.appendChild(inp); td.appendChild(med); td.appendChild(bC);
       }
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>abrir('clientes', e);
       const bD = document.createElement('button'); bD.textContent='Borrar';
-      bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('clientes', e.id); render(); } };
+      bD.onclick=async ()=>{ if(confirm('Borrar '+e.nombre+'?')){ try{ await Store.delEntidad('clientes', e.id); render(); }catch(err){ alert(err.message); } } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
     });
     // Proveedores
@@ -91,7 +92,7 @@ const Entidades = (() => {
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>abrir('proveedores', e);
       const bD = document.createElement('button'); bD.textContent='Borrar';
-      bD.onclick=()=>{ if(confirm('Borrar '+e.nombre+'?')){ Store.delEntidad('proveedores', e.id); render(); } };
+      bD.onclick=async ()=>{ if(confirm('Borrar '+e.nombre+'?')){ try{ await Store.delEntidad('proveedores', e.id); render(); }catch(err){ alert(err.message); } } };
       td.appendChild(bE); td.appendChild(bD); tr.appendChild(td); tp.appendChild(tr);
     });
     Caja.refresh();
@@ -100,13 +101,17 @@ const Entidades = (() => {
   }
   function init(){
     render();
+    $('form-ent').onsubmit=event=>{event.preventDefault();$('e-guardar').click();};
+    $('cancelar-ent').onclick=()=>$('modal-ent').close();
     $('cli-nuevo').onclick=()=>abrir('clientes', null);
     $('prov-nuevo').onclick=()=>abrir('proveedores', null);
-    $('e-guardar').onclick=()=>{
+    $('e-guardar').onclick=async event=>{
+      event.preventDefault();
+      const button=$('e-guardar'); if(button.disabled)return;
       const db = Store.get();
       const cur = editId && db[col].find(x=>x.id===editId);
       const e = Object.assign({}, cur||{}, {
-        id: editId || col[0]+Date.now(),
+        id: editId || crypto.randomUUID(),
         nombre:$('e-nombre').value.trim(),
         tel:$('e-tel').value.trim(),
         ref:$('e-ref').value.trim(),
@@ -115,7 +120,10 @@ const Entidades = (() => {
       });
       if(!('deuda' in e)) e.deuda = 0;
       if(!e.nombre){ alert('Falta nombre'); return; }
-      Store.upsertEntidad(col, e); render();
+      button.disabled=true;
+      try{ await Store.upsertEntidad(col, e, baseEntidad); render(); $('modal-ent').close(); }
+      catch(err){ alert(err.message); }
+      finally{ button.disabled=false; }
     };
   }
   return {init, render, renderCumples};

@@ -5,6 +5,8 @@
 const Caja = (() => {
   let carrito = []; // {id,nombre,precio,cant,pres}
   const $ = id => document.getElementById(id);
+  let ticketBloqueado=false;
+  const bloquearTicket=value=>{ticketBloqueado=value;if($('caja-controles'))$('caja-controles').disabled=value;};
   const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
   const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code && x.activo!==false);
   function nombreBase(p){ return p.nombre.replace(/\s*(1|5|10)\s*(Lt|Lts|L)\b\.?\s*$/i,'').trim(); }
@@ -96,6 +98,7 @@ const Caja = (() => {
   function cerrarSugerencias(){ const box=$('sugerencias'); if(!box) return; box.hidden=true; box._items=[]; }
   function primerSugerencia(){ const box=$('sugerencias'); const it = box && box._items && box._items[0]; if(it){ it.click(); return true; } return false; }
   function agregar(p){
+    if(ticketBloqueado)return;
     const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
     if(enCarro+1 > p.stock){ alert('No hay más stock'); return; }
     const it = carrito.find(x=>x.id===p.id);
@@ -191,11 +194,13 @@ const Caja = (() => {
   }
   function renderClientes(){
     const db = Store.get();
+    const selected=$('f-cliente').value;
     $('f-cliente').innerHTML = db.clientes.map(c=>{
       const ref = (c.ref || c.extra) ? ' · '+(c.ref || c.extra) : '';
       const cumple = esCumpleHoy(c.nac) ? ' 🎂' : '';
       return `<option value="${c.id}">${c.nombre}${ref}${cumple}</option>`;
     }).join('');
+    if(db.clientes.some(c=>c.id===selected)) $('f-cliente').value=selected;
   }
   function renderMovimientos(){
     const db = Store.get();
@@ -206,7 +211,7 @@ const Caja = (() => {
       const f = new Date(m.fecha).toLocaleString('es-AR');
       const signo = m.tipo==='ingreso'?'+':'−';
       d.innerHTML = `<input type="checkbox" ${m.conciliado?'checked':''} title="Conciliado MP/Banco"> <b>${signo}$${m.monto}</b> ${m.tipo} · ${m.medio} · ${m.concepto} <br><span class="hint">${f}</span>`;
-      d.querySelector('input').onchange = e=>{ Store.conciliar(m.id, e.target.checked); Reportes.render(); };
+      d.querySelector('input').onchange = async e=>{ try{ await Store.conciliar(m.id, e.target.checked); Reportes.render(); }catch(err){ e.target.checked=m.conciliado; alert(err.message); } };
       box.appendChild(d);
     });
   }
@@ -218,6 +223,7 @@ const Caja = (() => {
   // El código interno es el mismo en 1L y 5L: el escáner suma la presentación
   // de 1L por defecto (venta suelta) y en el ticket se puede cambiar a 5L.
   function scanAgregar(codigo){
+    if(ticketBloqueado)return false;
     const code = (codigo||'').trim(); if(!code) return false;
     const vars = variantes(code);
     if(!vars.length) return false;
@@ -238,6 +244,7 @@ const Caja = (() => {
     renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo('');
     const scan = $('scan');
     const intentar = v => {
+      if(ticketBloqueado)return;
       const code = (v||'').trim(); if(!code) return;
       if(scanAgregar(code)){ cerrarSugerencias(); scan.value=''; scan.focus(); renderCatalogo(''); return; }
       if(primerSugerencia()) return;
@@ -259,20 +266,23 @@ const Caja = (() => {
       if(typeof Remito==='undefined'){alert('La impresión está cargando. Volvé a intentarlo en un momento.');return;}
       Remito.imprimir(Store.get(),carrito,$('f-cliente').value);
     };
-    $('cobrar').onclick = ()=>{
+    $('cobrar').onclick = async ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
+      const button=$('cobrar'); if(button.disabled)return;
+      const items=carrito.map(i=>({...i})); button.disabled=true;bloquearTicket(true);
       try{
-        const total = Store.cobrar(carrito, $('pago').value, $('f-cliente').value);
+        const total = await Store.cobrar(items, $('pago').value, $('f-cliente').value);
         alert('Venta cobrada: $'+total);
-        carrito=[]; renderCarrito(); scan.focus();
+        confirmarRecuperacion(items); scan.focus();
         Stock.render(); renderMovimientos(); Reportes.render();
       }catch(e){ alert(e.message); }
+      finally{button.disabled=false;if(typeof OnlineBusiness==='undefined'||!OnlineBusiness.hasPending())bloquearTicket(false);}
     };
-    $('m-agregar').onclick = ()=>{
+    $('m-agregar').onclick = async ()=>{
       try{
         const monto = Number($('m-monto').value);
         if(!($('m-concepto').value.trim()) || !(monto>0)){ alert('Concepto y monto'); return; }
-        Store.addMovimiento({tipo:$('m-tipo').value, medio:$('m-medio').value, concepto:$('m-concepto').value.trim(), monto});
+        await Store.addMovimiento({tipo:$('m-tipo').value, medio:$('m-medio').value, concepto:$('m-concepto').value.trim(), monto});
         $('m-concepto').value=''; $('m-monto').value='';
         renderMovimientos(); Reportes.render();
       }catch(e){ alert(e.message); }
@@ -281,7 +291,7 @@ const Caja = (() => {
       if(!carrito.length){ alert('Armá el ticket primero'); return; }
       if(!Store.turnoAbierto()){ alert('Abrí la caja primero.'); return; }
       const items=carrito.map(i=>({...i}));
-      const btn=$('linkmp');btn.disabled=true;btn.textContent='Generando…';
+      const btn=$('linkmp');btn.disabled=true;btn.textContent='Generando…';bloquearTicket(true);
       // Freeze the ticket while its immutable payment snapshot is created.
       const controls=[...document.querySelectorAll('#pos-left button, #pos-left input, #pos-left select, #pos-right button, #pos-right input, #pos-right select')];
       const previous=controls.map(el=>el.disabled);controls.forEach(el=>el.disabled=true);
@@ -292,8 +302,12 @@ const Caja = (() => {
         const text=document.createElement('p');text.textContent='Enlace generado por $'+order.total+'. El cobro está pendiente. Verificá el pago y registrá la venta en “Cobros de Mercado Pago”.';
         const a=document.createElement('a');a.href=order.init_point;a.textContent='Abrir enlace de pago';a.target='_blank';a.rel='noopener noreferrer';out.append(text,a);
       }catch(e){alert('No se pudo generar: '+e.message);}
-      finally{controls.forEach((el,i)=>el.disabled=previous[i]);btn.disabled=false;btn.textContent='Generar link de pago';}
+      finally{controls.forEach((el,i)=>el.disabled=previous[i]);btn.disabled=false;btn.textContent='Generar link de pago';bloquearTicket(false);}
     };
   }
-  return {init, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo($('scan')?$('scan').value:''); if(typeof Turnos!=='undefined') Turnos.status();}};
+  function confirmarRecuperacion(items){
+    if(JSON.stringify(carrito)!==JSON.stringify(items)) return false;
+    carrito=[]; renderCarrito(); return true;
+  }
+  return {init, confirmarRecuperacion, bloquearTicket, refresh:()=>{renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo($('scan')?$('scan').value:''); if(typeof Turnos!=='undefined') Turnos.status();}};
 })();

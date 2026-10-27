@@ -122,4 +122,4 @@ async function init(){
   await refresh().catch(()=>{});
 }
 globalThis.Fotos={init,refresh,guardar,normalizarFoto,prepararEdicion:preparePhotoEdit,pendientes:counters,avisar:text=>{notice=text;setStatus(text);counters();}};
-init();
+if(globalThis.OnlineBusiness)OnlineBusiness.ready.then(init);else init();

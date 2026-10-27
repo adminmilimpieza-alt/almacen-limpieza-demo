@@ -70,22 +70,16 @@ const Precios = (() => {
           `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
       }).join('')+'</tbody></table></div>';
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
-      b.onclick=()=>{ Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); };
+      b.onclick=async ()=>{ try{ await Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); }catch(err){ alert(err.message); } };
     });
     // Edicion inline: costo y margen se ponen a mano; la venta se calcula sola.
     $('lista-precios').querySelectorAll('input[data-f]').forEach(inp=>{
-      inp.addEventListener('change', ()=>{
+      inp.addEventListener('change', async ()=>{
         const n = Number(String(inp.value).replace(',','.'));
         if(!(n>=0)){ verLista(); return; }
-        const db2 = Store.get();
-        const p = db2.productos.find(x=>x.id===inp.dataset.id);
-        if(!p) return;
-        p[inp.dataset.f] = n;
-        // El precio de venta NO se edita: sale de costo x margen.
-        if(p.costo>0 && p.margen!=null) p.precio = Math.round(p.costo*(1+p.margen/100)*100)/100;
-        else if(!(p.precio>0)) p.precio = p.costo;
-        Store.import(JSON.stringify(db2));
-        verLista(); Stock.render(); Caja.refresh();
+        try{ await Store.editarPrecio(inp.dataset.id,inp.dataset.f,n);
+          verLista(); Stock.render(); Caja.refresh();
+        }catch(err){ alert(err.message); verLista(); }
       });
     });
     estadoUI();
@@ -94,6 +88,10 @@ const Precios = (() => {
   // Estado del catalogo compartido: de donde salio la lista que se ve ahora.
   function estadoUI(){
     const box = $('precio-estado'); if(!box) return;
+    if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){
+      box.textContent='Catálogo del negocio online. Los precios y el stock se guardan y comparten al confirmar cada cambio.';
+      return;
+    }
     const e = Store.estadoCatalogo();
     const drift = Store.driftStock();
     const ts = e.aplicado ? new Date(e.aplicado).toLocaleString('es-AR') : '';
@@ -121,22 +119,26 @@ const Precios = (() => {
         $('csv-prev').innerHTML = `<p class="hint">${pendiente.length} filas. Primeras:</p><pre>${pendiente.slice(0,5).map(x=>JSON.stringify(x)).join('\n')}</pre>`; };
       r.readAsText(f);
     };
-    $('csv-aplicar').onclick=()=>{
+    $('csv-aplicar').onclick=async ()=>{
+      try{
       if(!pendiente.length){alert('Primero previsualizá');return;}
-      const r = Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
+      const r = await Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
       alert(`Costos actualizados: ${r.tocados}. No encontrados: ${r.faltan.length?r.faltan.slice(0,15).join(', ')+(r.faltan.length>15?'…':''):'ninguno'}`);
       pendiente=[]; $('csv-prev').innerHTML=''; verLista(); Stock.render(); Caja.refresh();
+      }catch(err){ alert(err.message); }
     };
     const rubrosM = ()=>{ const r=rubros();
       $('margen-rubro').innerHTML='<option value="">Margen a todo</option>'+r.map(x=>`<option>${x}</option>`).join(''); };
     rubrosM();
-    $('margen-aplicar').onclick=()=>{
+    $('margen-aplicar').onclick=async ()=>{
+      try{
       const propio = $('margen-tipo').value==='propio';
       const m = propio ? 'propio' : Number($('margen').value);
       if(!propio && !(m>=0)){ alert('Margen inválido'); return; }
-      const n = Store.aplicarMargen(m, $('margen-rubro').value||null);
+      const n = await Store.aplicarMargen(m, $('margen-rubro').value||null);
       alert(propio ? `Venta recalculada con el margen propio de cada producto (${n} productos)` : `Venta recalculada en ${n} productos (+${m}%)`);
       verLista(); Stock.render(); Caja.refresh();
+      }catch(err){ alert(err.message); }
     };
     $('margen-tipo').addEventListener('change', ()=>{
       $('margen').disabled = $('margen-tipo').value==='propio';
@@ -145,15 +147,15 @@ const Precios = (() => {
     $('margen').disabled = $('margen-tipo').value==='propio';
     $('precio-actualizar').onclick=async ()=>{
       $('precio-estado').textContent='Actualizando…';
-      const r = await Store.cargarRemoto();
+      try{ const r = await Store.cargarRemoto();
       estadoUI(); verLista(); Stock.render(); Caja.refresh();
-      alert(r.ok ? r.msg : r.msg);
+      alert(r.msg); }catch(err){ estadoUI(); alert(err.message); }
     };
 
-    $('precio-url-guardar').onclick=()=>{
-      Store.setUrlCatalogo($('precio-url').value);
+    $('precio-url-guardar').onclick=async ()=>{
+      try{ await Store.setUrlCatalogo($('precio-url').value);
       $('precio-url').value = Store.urlCatalogo();
-      alert('URL guardada. Tocá "Actualizar del servidor" para probarla.');
+      alert('URL guardada. Tocá "Actualizar del servidor" para probarla.'); }catch(err){ alert(err.message); }
     };
     $('precio-ver').onclick=()=>{ verLista(); estadoUI(); };
     $('precio-rubro').addEventListener('change', verLista);
@@ -190,8 +192,11 @@ const Pedidos = (() => {
   }
   function render(){
     const db = Store.get();
+    const selectedProv=$('ped-prov').value,selectedProd=$('ped-prod').value;
     $('ped-prov').innerHTML = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(alta un proveedor)</option>';
     $('ped-prod').innerHTML = db.productos.map(p=>`<option value="${p.id}">${p.codigo||''} · ${p.nombre} (stock ${p.stock})</option>`).join('');
+    if(db.proveedores.some(p=>p.id===selectedProv)) $('ped-prov').value=selectedProv;
+    if(db.productos.some(p=>p.id===selectedProd)) $('ped-prod').value=selectedProd;
     $('ped-lineas').innerHTML = lineas.length
       ? lineas.map((l,i)=>`<div>${nom(l.id)} x${l.cant} <button data-i="${i}">quitar</button></div>`).join('')
       : '<p class="hint">Agregá líneas al pedido.</p>';
@@ -210,9 +215,9 @@ const Pedidos = (() => {
         wrap.innerHTML = ` <input type="number" min="0" placeholder="$ pagado" style="max-width:110px"> ` +
           `<select><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select> `;
         const b = document.createElement('button'); b.textContent='Marcar recibido'; b.className='primary';
-        b.onclick=()=>{
+        b.onclick=async ()=>{
           try{
-            Store.recibirPedido(p.id, wrap.querySelector('input').value, wrap.querySelector('select').value);
+            await Store.recibirPedido(p.id, wrap.querySelector('input').value, wrap.querySelector('select').value);
             render(); Stock.render(); Caja.refresh(); Reportes.render();
           }catch(e){ alert(e.message); }
         };
@@ -223,7 +228,7 @@ const Pedidos = (() => {
       if(!prov || !telArg(prov.tel)) wa.disabled = true;
       d.appendChild(wa);
       const del = document.createElement('button'); del.textContent='Borrar';
-      del.onclick=()=>{ if(confirm('Borrar pedido?')){ Store.delPedido(p.id); render(); } };
+      del.onclick=async ()=>{ if(confirm('Borrar pedido?')){ try{ await Store.delPedido(p.id); render(); }catch(err){ alert(err.message); } } };
       d.appendChild(del); box.appendChild(d);
     });
   }
@@ -236,10 +241,13 @@ const Pedidos = (() => {
       if(ex) ex.cant += cant; else lineas.push({id, cant});
       render();
     };
-    $('ped-agregar').onclick=()=>{
+    $('ped-agregar').onclick=async ()=>{
       if(!$('ped-prov').value || !lineas.length){ alert('Proveedor y al menos una línea'); return; }
-      Store.upsertPedido({id:'ped'+Date.now(), provId:$('ped-prov').value, items:lineas, estado:'pendiente', fecha:new Date().toISOString()});
-      lineas=[]; render();
+      const button=$('ped-agregar'); if(button.disabled)return; button.disabled=true;
+      const snapshot=JSON.stringify(lineas);
+      try{ await Store.upsertPedido({id:crypto.randomUUID(), provId:$('ped-prov').value, items:lineas.map(l=>({...l})), estado:'pendiente', fecha:new Date().toISOString()});
+      if(JSON.stringify(lineas)===snapshot) lineas=[]; render(); }catch(err){ alert(err.message); }
+      finally{button.disabled=false;}
     };
   }
   return {init, render};
@@ -259,9 +267,10 @@ const Respaldo = (() => {
       a.click(); info();
     };
     $('bk-import').onclick=()=>{
+      if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; }
       const f = $('bk-file').files[0]; if(!f){alert('Elegí un JSON');return;}
       const r = new FileReader();
-      r.onload=()=>{ try{ Store.import(r.result); alert('Respaldo restaurado');
+      r.onload=async ()=>{ try{ await Store.import(r.result); alert('Respaldo restaurado');
         Stock.render(); Caja.refresh(); Entidades.render(); Pedidos.render(); Reportes.render(); info();
         if(typeof Fotos!=='undefined')Fotos.refresh().catch(()=>{});
       }catch{ alert('Archivo inválido'); } };

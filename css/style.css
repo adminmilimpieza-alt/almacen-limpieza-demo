@@ -339,3 +339,14 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
   #remito-print .remito-total{break-inside:avoid;page-break-inside:avoid;font-weight:bold}
   #remito-print .remito-total th{text-align:left}
 }
+
+#negocio-acceso{position:fixed;inset:0;z-index:10000;background:var(--canvas);display:flex;align-items:center;justify-content:center;padding:24px}
+#negocio-acceso[hidden]{display:none}
+.negocio-acceso-card{width:min(440px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px}
+#negocio-login label,#negocio-login input,#negocio-login button{display:block;width:100%;margin-top:12px}
+#negocio-barra{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--pastel-green-bg);padding:8px 16px;font-size:13px;border-bottom:1px solid var(--line)}
+#negocio-estado{flex:1;min-width:200px}
+#negocio-barra button{font-size:12px;min-height:32px;padding:4px 10px}
+@media print{#negocio-acceso,#negocio-barra{display:none!important}}
+#caja-controles{border:0;margin:0;padding:0;min-width:0}
+#caja-controles:disabled{opacity:.65}

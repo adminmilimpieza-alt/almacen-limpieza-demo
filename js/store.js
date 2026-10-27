@@ -10,12 +10,14 @@ const ICONOS = {
   'Piso': '#EDF3EC', 'Cocina': '#E1F3FE', 'Baño': '#FBF3DB', 'Vidrios': '#E1F3FE',
   'Pileta': '#E1F3FE', 'Ropa': '#FDEBEC', 'General': '#F7F6F3'
 };
-const Store = (() => {
+function crearStore(localStorage, catalogoInput){
   // Version 11: el catalogo viene importado (js/catalogo.js). No se edita a mano.
   // Cada producto: {codigo, nombre, detalle, categoria, presentacion, provId,
   //                 costo, precio, margen, alerta, stock, activo, foto}
   const KEY = 'almacen_mi_limpieza_v11';
-  const CATALOGO_SEED = (typeof CATALOGO !== 'undefined') ? CATALOGO : {productos:[], proveedores:[]};
+  const CATALOGO_SEED = catalogoInput || {productos:[], proveedores:[]};
+  let idCounter=0;
+  const newId=prefix=>prefix+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+(++idCounter));
   const redondear10 = v => Math.round(v/10)*10;
   const redondear2 = v => Math.round(v*100)/100;
   const seed = () => ({
@@ -266,6 +268,17 @@ const Store = (() => {
     reset(){ const d=seed(); save(d); },
     export(){ return JSON.stringify(load(), null, 2); },
     import(json){ save(JSON.parse(json)); },
+    editarPrecio(id,field,value){
+      if(!['costo','margen'].includes(field))throw new Error('Campo de precio inválido.');
+      const n=Number(value);if(!Number.isFinite(n)||n<0)throw new Error('Precio inválido.');
+      const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');
+      p[field]=n;if(p.costo>0&&p.margen!=null)p.precio=redondear2(p.costo*(1+p.margen/100));
+      save(db);return p;
+    },
+    asignarProveedor(ids,provId){
+      const db=load();if(!db.proveedores.some(p=>p.id===provId))throw new Error('Proveedor no encontrado.');
+      const set=new Set(ids);db.productos.forEach(p=>{if(set.has(p.id))p.provId=provId;});save(db);
+    },
     upsertProducto(p){ const db=load(); const i=db.productos.findIndex(x=>x.id===p.id);
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     guardarProductoEdicion(draft,base){
@@ -358,7 +371,7 @@ const Store = (() => {
       const db=load();
       if(db.turnos.some(t=>t.estado==='abierto')) throw new Error('Ya hay una caja abierta');
       if(!(saldo>=0)) throw new Error('Saldo inicial inválido');
-      db.turnos.unshift({id:'t'+Date.now(), apertura:new Date().toISOString(), saldo_inicial:saldo, estado:'abierto'});
+      db.turnos.unshift({id:newId('t'), apertura:new Date().toISOString(), saldo_inicial:saldo, estado:'abierto'});
       save(db);
     },
     // Esperado por medio para un turno (ventas generan movimientos con turnoId).
@@ -391,7 +404,7 @@ const Store = (() => {
         if(!p||p.stock<it.cant) throw new Error('Sin stock: '+(it.nombre||it.id)); }
       for(const it of items){ db.productos.find(x=>x.id===it.id).stock-=it.cant; }
       const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
-      const vid='v'+Date.now();
+      const vid=newId('v');
       const cid=clienteId||'c1';
       const v={id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:cid, turnoId:turno.id};
       db.ventas.unshift(v);
@@ -399,7 +412,7 @@ const Store = (() => {
         // Cuenta corriente: no entra plata, queda como deuda del cliente.
         const c=db.clientes.find(x=>x.id===cid); if(c) c.deuda=(c.deuda||0)+total;
       } else {
-        db.movimientos.unshift({id:'m'+Date.now(), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id, ventaId:vid});
+        db.movimientos.unshift({id:newId('m'), fecha:v.fecha, tipo:'ingreso', medio:pago, concepto:'Venta', monto:total, conciliado:false, turnoId:turno.id, ventaId:vid});
       }
       save(db); return total;
     },
@@ -445,16 +458,29 @@ const Store = (() => {
       monto=Number(monto); if(!(monto>0)) throw new Error('Monto inválido');
       if(monto>(c.deuda||0)) throw new Error('El monto supera la deuda ($'+c.deuda+')');
       c.deuda-=monto;
-      db.movimientos.unshift({id:'m'+Date.now(), fecha:new Date().toISOString(), tipo:'ingreso', medio, concepto:'Cobro cuenta · '+c.nombre, monto, conciliado:false, turnoId:turno.id});
+      db.movimientos.unshift({id:newId('m'), fecha:new Date().toISOString(), tipo:'ingreso', medio, concepto:'Cobro cuenta · '+c.nombre, monto, conciliado:false, turnoId:turno.id});
       save(db);
     },
     addMovimiento(m){ const db=load();
       const turno=db.turnos.find(t=>t.estado==='abierto');
       if(!turno) throw new Error('Abrí la caja primero (panel Turno)');
-      m.turnoId=turno.id; m.id=m.id||'m'+Date.now(); m.fecha=m.fecha||new Date().toISOString(); m.conciliado=!!m.conciliado; db.movimientos.unshift(m); save(db); },
+      m.turnoId=turno.id; m.id=m.id||newId('m'); m.fecha=m.fecha||new Date().toISOString(); m.conciliado=!!m.conciliado; db.movimientos.unshift(m); save(db); },
     conciliar(id, v){ const db=load(); const m=db.movimientos.find(x=>x.id===id); if(m){m.conciliado=!!v; save(db);} },
-    upsertEntidad(col, e){ const db=load(); const i=db[col].findIndex(x=>x.id===e.id);
-      if(i>=0)db[col][i]=e; else db[col].push(e); save(db); },
+    upsertEntidad(col,e,base){
+      const db=load(),i=db[col].findIndex(x=>x.id===e.id);
+      if(base===null&&i>=0)throw new Error('El registro ya existe. Actualizá los datos.');
+      if(base&&i<0)throw new Error('El registro fue eliminado en otro equipo.');
+      if(base){
+        const current=db[col][i],next={...current};
+        for(const field of ['nombre','tel','ref','extra','nac']){
+          if(e[field]===base[field])continue;
+          if(current[field]!==base[field]&&current[field]!==e[field])throw new Error('Cambió '+field+' en otro equipo. Reabrí la ficha para revisar.');
+          next[field]=e[field];
+        }
+        db[col][i]=next;
+      }else if(i>=0)db[col][i]=e;else db[col].push(e);
+      save(db);
+    },
     delEntidad(col, id){ const db=load(); db[col]=db[col].filter(x=>x.id!==id); save(db); },
     upsertPedido(p){ const db=load(); const i=db.pedidos.findIndex(x=>x.id===p.id);
       if(i>=0)db.pedidos[i]=p; else db.pedidos.unshift(p); save(db); },
@@ -470,7 +496,7 @@ const Store = (() => {
       if(montoPagado>0){
         if(!turno) throw new Error('Para registrar el pago abrí la caja primero');
         const prov=(db.proveedores.find(x=>x.id===p.provId)||{}).nombre||'Proveedor';
-        db.movimientos.unshift({id:'m'+Date.now(), fecha:new Date().toISOString(), tipo:'egreso', medio:medio||'efectivo', concepto:'Compra '+prov, monto:montoPagado, conciliado:false, turnoId:turno.id});
+        db.movimientos.unshift({id:newId('m'), fecha:new Date().toISOString(), tipo:'egreso', medio:medio||'efectivo', concepto:'Compra '+prov, monto:montoPagado, conciliado:false, turnoId:turno.id});
         p.montoPagado=montoPagado; p.medioPago=medio||'efectivo';
       }
       save(db);
@@ -482,4 +508,21 @@ const Store = (() => {
     cargarRemoto, catalogoParaPublicar, driftStock, driftPrecio,
     preciosPendientes, aplicarPreciosOnline,
   };
-})();
+}
+// Browser and Worker use the same business rules. Only the storage adapter differs.
+globalThis.MiLimpiezaStoreFactory=crearStore;
+const LocalStore=crearStore(globalThis.localStorage,typeof CATALOGO!=='undefined'?CATALOGO:undefined);
+const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido']);
+const Store=new Proxy(LocalStore,{get(target,key){
+  const online=globalThis.OnlineBusiness;
+  if(online?.activo){
+    if(key==='get')return ()=>online.get();
+    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes'].includes(key))return (...args)=>online.read(key,args);
+    if(key==='actualizarFotos')return patches=>online.applyPhotos(patches);
+    if(key==='export')return ()=>JSON.stringify(online.get(),null,2);
+    if(onlineMutations.has(key))return (...args)=>online.mutate(key,args);
+    if(['reset','import','aplicarRemoto','setUrlCatalogo','registrarPagoMP','aplicarPreciosOnline','upsertProducto'].includes(key))return ()=>{throw new Error('Esta acción local está desactivada. Los datos del negocio se guardan online.');};
+    if(key==='cargarRemoto')return async()=>{await online.refresh();return {ok:true,msg:'Datos online actualizados.'};};
+  }
+  return Reflect.get(target,key);
+}});
