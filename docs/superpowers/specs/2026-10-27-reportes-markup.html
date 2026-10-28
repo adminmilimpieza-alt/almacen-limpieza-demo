@@ -1,0 +1,29 @@
+<section id="mod-reportes">
+  <h2>Reportes</h2>
+  <div class="row rep-filtros">
+    <label>Tipo de informe<select id="rep-tipo"><option value="ventas">Ventas por período</option><option value="caja">Caja por período</option><option value="proveedores">Pedidos y pagos a proveedores</option><option value="stock">Stock actual</option><option value="clientes">Clientes · privado</option><option value="historial">Historial de compras</option><option value="precios">Lista de precios para compartir</option></select></label>
+    <label data-rep-fechas>Desde<input id="rep-desde" type="date"></label>
+    <label data-rep-fechas>Hasta (inclusive)<input id="rep-hasta" type="date"></label>
+    <label data-rep-cliente>Cliente<select id="rep-cli"></select></label>
+    <label id="rep-lista-wrap" hidden>Lista de precios<select id="rep-lista"></select></label>
+    <label id="rep-historicas-wrap"><span><input id="rep-historicas" type="checkbox"> Incluir compras históricas</span></label>
+    <button id="rep-ver" class="primary">Ver informe</button>
+  </div>
+  <div class="row" aria-label="Exportar el informe visible">
+    <button data-rep-export="pdf" disabled>PDF</button><button data-rep-export="xlsx" disabled>Excel</button><button data-rep-export="csv" disabled>CSV</button><button data-rep-export="imprimir" disabled>Imprimir informe</button>
+  </div>
+  <p class="hint">Se exporta únicamente el informe visible con los filtros elegidos. Las listas para compartir muestran sólo precios de venta.</p>
+  <div id="rep-informe" aria-live="polite"></div>
+  <details><summary>Registrar una compra anterior</summary>
+    <p>Se guarda en el historial del cliente como compra histórica. No modifica caja, stock ni deuda.</p>
+    <form id="rep-anterior-form">
+      <div class="row rep-filtros"><label>Cliente<select id="rep-anterior-cli" required></select></label><label>Fecha de la compra<input id="rep-anterior-fecha" type="date" required></label></div>
+      <div class="row rep-filtros"><label>Producto<select id="rep-anterior-producto"></select></label><button id="rep-anterior-agregar" type="button">Agregar producto</button></div>
+      <div id="rep-anterior-lineas"></div>
+      <label>Notas<textarea id="rep-anterior-notas" rows="2"></textarea></label>
+      <button type="submit" class="primary">Guardar compra histórica</button>
+      <p id="rep-anterior-estado" role="status"></p>
+    </form>
+  </details>
+  <details><summary>Últimas ventas operativas · anulación</summary><div id="ventas"></div></details>
+</section>

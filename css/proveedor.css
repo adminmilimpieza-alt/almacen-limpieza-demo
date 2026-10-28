@@ -1,0 +1,14 @@
+#prov-mapeo{border:1px solid var(--line);padding:12px;margin:12px 0;min-width:0}
+#prov-mapeo .row{align-items:flex-end}
+#precios-carga label{display:flex;flex-direction:column;gap:4px;font-size:14px}
+#prov-comparacion .prov-scroll{overflow-x:auto}
+#prov-comparacion table{min-width:900px}
+#prov-comparacion th,#prov-comparacion td{vertical-align:top}
+#prov-comparacion small{display:block;font-size:12px;max-width:250px}
+#prov-comparacion select{max-width:260px}
+#prov-comparacion .prov-sube{background:#fff0ee}
+#prov-comparacion .prov-baja{background:#edf7ec}
+#prov-comparacion .prov-igual{background:#fff}
+#prov-comparacion .prov-duplicada,#prov-comparacion .prov-ambigua{background:#fff8df}
+#prov-comparacion button{white-space:normal;min-width:100px}
+#prov-aplicar-todas{border-color:var(--brand);font-weight:600}

@@ -1,0 +1,31 @@
+#remito-print{display:none}
+#remito-print *{box-sizing:border-box}
+#remito-print .remito-hoja{width:198mm;height:135mm;margin:0;display:flex;flex-direction:column;font:8.5pt Arial,sans-serif;line-height:1.2;color:#000;background:#fff;break-after:page;page-break-after:always;break-inside:avoid}
+#remito-print .remito-hoja:last-child{break-after:auto;page-break-after:auto}
+#remito-print .remito-cabecera{display:flex;border:1px solid #000;min-height:27mm;margin-bottom:2mm}
+#remito-print .remito-marca{width:50%;display:flex;align-items:center;gap:3mm;padding:2mm}
+#remito-print .remito-marca img{width:39mm;height:21mm;object-fit:contain}
+#remito-print .remito-marca strong{display:block;font-size:16pt}
+#remito-print .remito-marca span{display:block;font-size:8pt;margin-top:1mm}
+#remito-print dl{width:50%;margin:0;padding:2mm;border-left:1px solid #000}
+#remito-print dl>div{display:flex;gap:2mm;margin-bottom:1mm}
+#remito-print dt{font-weight:bold;flex-shrink:0}
+#remito-print dd{margin:0;overflow-wrap:anywhere}
+#remito-print .remito-detalle{width:100%;border-collapse:collapse;table-layout:fixed;font:8.5pt Arial,sans-serif}
+#remito-print .remito-detalle th,#remito-print .remito-detalle td{border:1px solid #000;padding:.6mm 1.5mm;color:#000;background:#fff;position:static;height:4.6mm;line-height:3.4mm;vertical-align:middle}
+#remito-print .remito-detalle th{text-align:center;font-weight:bold}
+#remito-print .remito-detalle tr{break-inside:avoid;page-break-inside:avoid}
+#remito-print .remito-cantidad{text-align:center}
+#remito-print .remito-descripcion{overflow-wrap:anywhere;white-space:pre-wrap}
+#remito-print .remito-descripcion small{font-size:8pt}
+#remito-print .remito-importe{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+#remito-print .remito-pie{margin-top:auto;padding-top:2mm;break-inside:avoid}
+#remito-print .remito-pie>div{display:flex;justify-content:space-between;border:1px solid #000;padding:1.2mm 2mm}
+#remito-print .remito-pie p{font-size:8pt;margin:1mm 0}
+#remito-print .remito-total{font-size:10pt;font-weight:bold}
+@media print{
+ @page remito{size:210mm 148mm;margin:6mm}
+ body.print-remito{margin:0!important;padding:0!important;background:white!important;color:black!important}
+ body.print-remito>*:not(#remito-print){display:none!important}
+ body.print-remito #remito-print{display:block!important;page:remito;margin:0;padding:0}
+}

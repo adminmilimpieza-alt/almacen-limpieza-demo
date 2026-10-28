@@ -31,6 +31,7 @@ function crearStore(localStorage, catalogoInput){
     ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
     proveedores: CATALOGO_SEED.proveedores.map(p=>({id:p.id, nombre:p.nombre, tel:'', notas:p.notas||''})),
     movimientos:[], pedidos:[], turnos:[],
+    listasPrecios:[{id:'revendedores',nombre:'Revendedores',precios:{}}],
     // catalogo: estado del catalogo publicado (fuente unica de verdad compartida)
     catalogo:{version:'', origen:'', url:'', aplicado:'', stockBase:{}},
     // cfg: ajustes de la app
@@ -44,6 +45,7 @@ function crearStore(localStorage, catalogoInput){
       db.productos=db.productos||[]; db.ventas=db.ventas||[];
       db.clientes=db.clientes||seed().clientes; db.proveedores=db.proveedores||[];
       db.movimientos=db.movimientos||[]; db.pedidos=db.pedidos||[]; db.turnos=db.turnos||[];
+      db.listasPrecios=Array.isArray(db.listasPrecios)?db.listasPrecios:[];if(!db.listasPrecios.some(l=>l.id==='revendedores'))db.listasPrecios.unshift({id:'revendedores',nombre:'Revendedores',precios:{}});
       db.productos.forEach(p=>{ if(p.activo==null) p.activo=true; if(p.stock==null) p.stock=0; });
       db.catalogo = db.catalogo || {version:'', origen:'', url:'', aplicado:'', stockBase:{}};
       db.catalogo.stockBase = db.catalogo.stockBase || {};
@@ -263,17 +265,72 @@ function crearStore(localStorage, catalogoInput){
     });
     return out;
   }
+  const margenReal=(precio,costo)=>costo>0?Math.round((precio/costo-1)*1e12)/1e10:null;
+  const listaDefault='mostrador';
+  function listas(db){return [{id:listaDefault,nombre:'Mostrador',precios:{}},...(db.listasPrecios||[]).filter(l=>l.id!==listaDefault)];}
+  function precioLista(db,id,listaId){const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');const list=listas(db).find(l=>l.id===(listaId||listaDefault));if(!list)throw new Error('Lista de precios no encontrada.');return Number(list.precios?.[id]??p.precio);}
+  function cambiarCosto(db,p,costo){
+    const anterior=Number(p.costo)||0,venta=Number(p.precio)||0;
+    if(costo>anterior){
+      p.precio=redondear2(anterior>0?venta*costo/anterior:costo*(1+(Number(p.margen)||0)/100));
+      for(const list of db.listasPrecios||[])if(Object.hasOwn(list.precios||{},p.id))list.precios[p.id]=redondear2(anterior>0?list.precios[p.id]*costo/anterior:list.precios[p.id]);
+    }
+    p.costo=costo;p.margen=margenReal(p.precio,costo);
+  }
   return {
     get(){ return load(); },
     reset(){ const d=seed(); save(d); },
     export(){ return JSON.stringify(load(), null, 2); },
     import(json){ save(JSON.parse(json)); },
+    listarListasPrecios(){return listas(load());},
+    precioEnLista(id,listaId='mostrador'){return precioLista(load(),id,listaId);},
+    precioParaCliente(id,clienteId='c1'){const db=load(),c=db.clientes.find(c=>c.id===clienteId);return precioLista(db,id,c?.listaPrecioId||listaDefault);},
+    previsualizarCambioCosto(id,costoNuevo){const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');const old={...p};cambiarCosto(db,p,Number(costoNuevo));return {costoAnterior:old.costo,costoNuevo:p.costo,precioAnterior:old.precio,precioNuevo:p.precio,margenNuevo:p.margen};},
     editarPrecio(id,field,value){
-      if(!['costo','margen'].includes(field))throw new Error('Campo de precio inválido.');
-      const n=Number(value);if(!Number.isFinite(n)||n<0)throw new Error('Precio inválido.');
+      if(!['costo','margen','precio'].includes(field))throw new Error('Campo de precio inválido.');
+      const n=Number(value);if(!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Precio inválido.');
       const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');
-      p[field]=n;if(p.costo>0&&p.margen!=null)p.precio=redondear2(p.costo*(1+p.margen/100));
+      if(field==='costo')cambiarCosto(db,p,n);
+      if(field==='precio'){p.precio=redondear2(n);p.margen=margenReal(p.precio,p.costo);}
+      if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100));}
       save(db);return p;
+    },
+    guardarListaPrecios(input){
+      const db=load(),id=String(input.id||newId('lista-')),nombre=String(input.nombre||'').trim();
+      if(id===listaDefault||nombre.toLowerCase()==='mostrador'||!nombre||nombre.length>100)throw new Error('Nombre de lista inválido.');
+      const existing=db.listasPrecios.find(l=>l.id===id);
+      if(db.listasPrecios.some(l=>l.id!==id&&l.nombre.toLowerCase()===nombre.toLowerCase()))throw new Error('Ya existe una lista con ese nombre.');
+      if(existing)existing.nombre=nombre;else db.listasPrecios.push({id,nombre,precios:{}});save(db);return {id,nombre};
+    },
+    eliminarListaPrecios(id){const db=load();if([listaDefault,'revendedores'].includes(id))throw new Error('La lista predeterminada no se elimina.');if(db.clientes.some(c=>c.listaPrecioId===id))throw new Error('La lista está asignada a un cliente. Reasignalo primero.');db.listasPrecios=db.listasPrecios.filter(l=>l.id!==id);save(db);},
+    editarPrecioLista(listaId,id,field,value){
+      if(!listaId||listaId===listaDefault)return this.editarPrecio(id,field,value);
+      if(!['margen','precio'].includes(field))throw new Error('El costo es común. Modificalo en Mostrador.');
+      const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),p=db.productos.find(p=>p.id===id),n=Number(value);
+      if(!list||!p||!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Lista, producto o precio inválido.');
+      list.precios=list.precios||{};list.precios[id]=redondear2(field==='precio'?n:p.costo*(1+n/100));save(db);
+    },
+    aplicarMargenLista(listaId,margen,categoria){
+      if(listaId===listaDefault)return this.aplicarMargen(margen,categoria);
+      const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),n=Number(margen);if(!list||!Number.isFinite(n)||n< -100)throw new Error('Lista o margen inválido.');let count=0;
+      for(const p of db.productos)if((!categoria||p.categoria===categoria)&&p.costo>0){list.precios[p.id]=redondear2(p.costo*(1+n/100));count++;}save(db);return count;
+    },
+    restablecerPrecioLista(listaId,id){const db=load(),list=db.listasPrecios.find(l=>l.id===listaId);if(!list)throw new Error('Lista no encontrada.');delete list.precios[id];save(db);},
+    aplicarComparacionCostos(rows){
+      if(!Array.isArray(rows)||!rows.length)throw new Error('Elegí cambios para aplicar.');
+      const db=load(),seen=new Set();
+      for(const row of rows){const p=db.productos.find(p=>p.id===row.id);if(!p||seen.has(row.id)||!Number.isFinite(row.costoNuevo)||row.costoNuevo<0)throw new Error('Cambio de costo inválido.');if(Math.abs(p.costo-row.costoAnterior)>.004)throw new Error('El costo cambió en otro equipo. Actualizá la comparación.');seen.add(row.id);}
+      for(const row of rows)cambiarCosto(db,db.productos.find(p=>p.id===row.id),row.costoNuevo);
+      save(db);return rows.length;
+    },
+    registrarCompraHistorica(input){
+      const db=load(),cliente=db.clientes.find(c=>c.id===input.clienteId);
+      if(!cliente||!Array.isArray(input.items)||!input.items.length)throw new Error('Cliente y productos requeridos.');
+      const fecha=/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)?input.fecha+'T12:00:00-03:00':input.fecha;
+      const date=new Date(fecha),onlyDate=/^\d{4}-\d{2}-\d{2}$/.test(input.fecha),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      if(!Number.isFinite(date.getTime())||(onlyDate?(date.toISOString().slice(0,10)!==input.fecha||input.fecha>today):date.getTime()>Date.now()))throw new Error('La fecha de la compra anterior es inválida.');
+      const items=input.items.map(i=>{const p=db.productos.find(p=>p.id===i.id);if(!p||!Number.isFinite(i.cant)||i.cant<=0||!Number.isFinite(i.precio)||i.precio<0)throw new Error('Producto, cantidad o precio inválido.');return {...i,nombre:p.nombre};});
+      const v={id:newId('hist-'),fecha:date.toISOString(),clienteId:cliente.id,clienteSnapshot:{id:cliente.id,nombre:cliente.nombre,extra:cliente.extra||''},items,total:redondear2(items.reduce((a,i)=>a+i.cant*i.precio,0)),historica:true,pago:'historica',turnoId:null,notas:String(input.notas||'')};db.ventas.unshift(v);save(db);return v;
     },
     asignarProveedor(ids,provId){
       const db=load();if(!db.proveedores.some(p=>p.id===provId))throw new Error('Proveedor no encontrado.');
@@ -311,7 +368,7 @@ function crearStore(localStorage, catalogoInput){
       }
       if(changed)save(db);return changed;
     },
-    eliminar(id){ const db=load(); db.productos=db.productos.filter(x=>x.id!==id); save(db); },
+    eliminar(id){ const db=load(); db.productos=db.productos.filter(x=>x.id!==id);for(const l of db.listasPrecios)delete l.precios[id]; save(db); },
     // Actualiza costo / precio / margen de productos ya cargados.
     // El codigo se repite entre 1L y 5L: se desambigua por categoria y presentacion.
     // lista: [{codigo?, nombre?, presentacion?, costo?, precio?, margen?, provId?}]
@@ -406,7 +463,9 @@ function crearStore(localStorage, catalogoInput){
       const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
       const vid=newId('v');
       const cid=clienteId||'c1';
-      const v={id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:cid, turnoId:turno.id};
+      const client=db.clientes.find(c=>c.id===cid);
+      const snapshot={id:cid,nombre:client?.nombre||'Mostrador',extra:client?.extra||''};
+      const v={clienteSnapshot:snapshot,listaPrecioId:client?.listaPrecioId||listaDefault,id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:cid, turnoId:turno.id};
       db.ventas.unshift(v);
       if(pago==='cuenta'){
         // Cuenta corriente: no entra plata, queda como deuda del cliente.
@@ -430,7 +489,8 @@ function crearStore(localStorage, catalogoInput){
         if(!p||p.stock<it.cant) throw new Error('Revisá el stock antes de registrar: '+it.nombre);
       }
       for(const it of order.items) db.productos.find(x=>x.id===it.id).stock-=it.cant;
-      const venta={id:'mp-'+order.id,mpOrderId:order.id,paymentId:order.payment_id,fecha:new Date().toISOString(),items:order.items,pago:'mercadopago',total:order.total,clienteId:order.cliente_id||'c1',turnoId:turno.id};
+      const mpClient=db.clientes.find(c=>c.id===(order.cliente_id||'c1'));
+      const venta={clienteSnapshot:{id:mpClient?.id||'c1',nombre:mpClient?.nombre||'Mostrador',extra:mpClient?.extra||''},listaPrecioId:mpClient?.listaPrecioId||listaDefault,id:'mp-'+order.id,mpOrderId:order.id,paymentId:order.payment_id,fecha:new Date().toISOString(),items:order.items,pago:'mercadopago',total:order.total,clienteId:order.cliente_id||'c1',turnoId:turno.id};
       db.ventas.unshift(venta);
       db.movimientos.unshift({id:'mp-'+order.id,fecha:venta.fecha,tipo:'ingreso',medio:'mercadopago',concepto:'Venta MP '+order.payment_id,monto:order.total,conciliado:true,turnoId:turno.id,ventaId:venta.id});
       save(db); return venta;
@@ -440,6 +500,7 @@ function crearStore(localStorage, catalogoInput){
       const v=db.ventas.find(x=>x.id===id);
       if(!v) throw new Error('Venta no encontrada');
       if(v.anulada) throw new Error('Ya estaba anulada');
+      if(v.historica){v.anulada=true;v.fechaAnulacion=new Date().toISOString();save(db);return;}
       for(const it of v.items){ const pr=db.productos.find(x=>x.id===it.id); if(pr) pr.stock+=it.cant; }
       v.anulada=true; v.fechaAnulacion=new Date().toISOString();
       if(v.pago==='cuenta'){
@@ -472,7 +533,7 @@ function crearStore(localStorage, catalogoInput){
       if(base&&i<0)throw new Error('El registro fue eliminado en otro equipo.');
       if(base){
         const current=db[col][i],next={...current};
-        for(const field of ['nombre','tel','ref','extra','nac']){
+        for(const field of ['nombre','tel','ref','extra','nac','listaPrecioId']){
           if(e[field]===base[field])continue;
           if(current[field]!==base[field]&&current[field]!==e[field])throw new Error('Cambió '+field+' en otro equipo. Reabrí la ficha para revisar.');
           next[field]=e[field];
@@ -512,12 +573,12 @@ function crearStore(localStorage, catalogoInput){
 // Browser and Worker use the same business rules. Only the storage adapter differs.
 globalThis.MiLimpiezaStoreFactory=crearStore;
 const LocalStore=crearStore(globalThis.localStorage,typeof CATALOGO!=='undefined'?CATALOGO:undefined);
-const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido']);
+const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista']);
 const Store=new Proxy(LocalStore,{get(target,key){
   const online=globalThis.OnlineBusiness;
   if(online?.activo){
     if(key==='get')return ()=>online.get();
-    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes'].includes(key))return (...args)=>online.read(key,args);
+    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto'].includes(key))return (...args)=>online.read(key,args);
     if(key==='actualizarFotos')return patches=>online.applyPhotos(patches);
     if(key==='export')return ()=>JSON.stringify(online.get(),null,2);
     if(onlineMutations.has(key))return (...args)=>online.mutate(key,args);

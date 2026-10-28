@@ -30,13 +30,16 @@ const Precios = (() => {
   function renderRubro(){
     const r = rubros();
     $('precio-rubro').innerHTML = '<option value="">Todos los rubros</option>'+r.map(x=>`<option>${x}</option>`).join('');
-    $('csv-rubro').innerHTML = '<option value="">Sin rubro (primera coincidencia)</option>'+r.map(x=>`<option>${x}</option>`).join('');
+    if($('csv-rubro')) $('csv-rubro').innerHTML = '<option value="">Sin rubro (primera coincidencia)</option>'+r.map(x=>`<option>${x}</option>`).join('');
     const db = Store.get();
     $('precio-prov').innerHTML = '<option value="">Todos los proveedores</option>'+
       db.proveedores.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
   }
   function verLista(){
+    if(typeof ListasPrecios!=='undefined') ListasPrecios.render();
     const db = Store.get();
+    const listaId=$('precio-lista')?.value||'mostrador';
+    const lista=Store.listarListasPrecios().find(l=>l.id===listaId);
     const f = $('precio-rubro').value;
     const normal=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     const query=normal($('precio-buscar')?.value).trim();
@@ -60,15 +63,19 @@ const Precios = (() => {
       '<div class="precios-tabla"><table><thead><tr><th>Producto</th><th>Costo ($)</th><th>Margen (%)</th><th>Venta ($)</th><th class="precios-extra">Visibilidad</th></tr></thead><tbody>'+
       list.map(p=>{
         const off = p.activo===false;
+        const venta=Store.precioEnLista(p.id,listaId);
+        const margen=Number(p.costo)>0 ? Math.round((venta/Number(p.costo)-1)*10000)/100 : '';
+        const override=listaId!=='mostrador' && Object.prototype.hasOwnProperty.call(lista?.precios||{},p.id);
         const pend = pendientes.has(p.id);
         return `<tr class="${off?'oculto':''}">`+
           `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}<small class="precios-producto-dato">${p.codigo||'Sin código'} · ${p.presentacion||p.categoria||''}</small></td>`+
 
-          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" value="${p.costo??p.precio}" title="Costo de compra"></td>`+
-          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="margen" value="${p.margen==null?'':p.margen}" title="Margen % (lo pones vos; la venta sale de costo x margen)"></td>`+
-          `<td>$${p.precio}</td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" ${listaId!=='mostrador'?'disabled':''} value="${p.costo??p.precio}" title="Costo de compra"></td>`+
+          `<td><input class="tab-inp" type="number" min="-100" step="0.01" data-id="${p.id}" data-f="margen" value="${margen}" title="Margen sobre el costo; cambiarlo recalcula la venta"></td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" value="${venta}" title="Precio final de venta">${listaId!=='mostrador'?(override?'<button data-restablecer="'+p.id+'">Usar Mostrador</button>':'<small>Hereda Mostrador</small>'): ''}</td>`+
           `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
       }).join('')+'</tbody></table></div>';
+    $('lista-precios').querySelectorAll('button[data-restablecer]').forEach(b=>{ b.onclick=async()=>{try{await Store.restablecerPrecioLista(listaId,b.dataset.restablecer);verLista();Caja.refresh();}catch(err){alert(err.message);}}; });
     $('lista-precios').querySelectorAll('button[data-id]').forEach(b=>{
       b.onclick=async ()=>{ try{ await Store.toggleActivo(b.dataset.id, b.dataset.off!=='1'); verLista(); Stock.render(); Caja.refresh(); }catch(err){ alert(err.message); } };
     });
@@ -76,8 +83,8 @@ const Precios = (() => {
     $('lista-precios').querySelectorAll('input[data-f]').forEach(inp=>{
       inp.addEventListener('change', async ()=>{
         const n = Number(String(inp.value).replace(',','.'));
-        if(!(n>=0)){ verLista(); return; }
-        try{ await Store.editarPrecio(inp.dataset.id,inp.dataset.f,n);
+        if(!Number.isFinite(n)||n<(inp.dataset.f==='margen'?-100:0)){ verLista(); return; }
+        try{ await Store.editarPrecioLista(listaId,inp.dataset.id,inp.dataset.f,n);
           verLista(); Stock.render(); Caja.refresh();
         }catch(err){ alert(err.message); verLista(); }
       });
@@ -109,17 +116,19 @@ const Precios = (() => {
     box.innerHTML = txt;
   }
   function init(){
+    if(typeof ListasPrecios!=='undefined') ListasPrecios.init();
     renderRubro(); verLista(); estadoUI();
+    $('precio-lista')?.addEventListener('change',verLista);
     $('precio-buscar').addEventListener('input',verLista);
     $('precios-avanzadas').addEventListener('toggle',()=>{ $('mod-precios').classList.toggle('precios-mostrar-extra',$('precios-avanzadas').open); });
-    $('csv-ver').onclick=()=>{
+    if($('csv-ver')) $('csv-ver').onclick=()=>{
       const f = $('csv').files[0]; if(!f){alert('Elegí un CSV');return;}
       const r = new FileReader();
       r.onload=()=>{ pendiente=parseCSV(r.result);
         $('csv-prev').innerHTML = `<p class="hint">${pendiente.length} filas. Primeras:</p><pre>${pendiente.slice(0,5).map(x=>JSON.stringify(x)).join('\n')}</pre>`; };
       r.readAsText(f);
     };
-    $('csv-aplicar').onclick=async ()=>{
+    if($('csv-aplicar')) $('csv-aplicar').onclick=async ()=>{
       try{
       if(!pendiente.length){alert('Primero previsualizá');return;}
       const r = await Store.actualizarPrecios(pendiente, $('csv-rubro').value||null);
@@ -132,10 +141,13 @@ const Precios = (() => {
     rubrosM();
     $('margen-aplicar').onclick=async ()=>{
       try{
+      const selectedLista=$('precio-lista')?.value||'mostrador';
       const propio = $('margen-tipo').value==='propio';
       const m = propio ? 'propio' : Number($('margen').value);
       if(!propio && !(m>=0)){ alert('Margen inválido'); return; }
-      const n = await Store.aplicarMargen(m, $('margen-rubro').value||null);
+      if(selectedLista!=='mostrador'&&propio){alert('Para cambiar varios precios de esta lista, elegí Margen uniforme.');return;}
+      if(!confirm('¿Recalcular los precios de la lista seleccionada con este margen?'))return;
+      const n=selectedLista==='mostrador'?await Store.aplicarMargen(m,$('margen-rubro').value||null):await Store.aplicarMargenLista(selectedLista,m,$('margen-rubro').value||null);
       alert(propio ? `Venta recalculada con el margen propio de cada producto (${n} productos)` : `Venta recalculada en ${n} productos (+${m}%)`);
       verLista(); Stock.render(); Caja.refresh();
       }catch(err){ alert(err.message); }
@@ -161,7 +173,7 @@ const Precios = (() => {
     $('precio-rubro').addEventListener('change', verLista);
     $('precio-prov').addEventListener('change', verLista);
     $('precio-ver-ocultos').addEventListener('change', verLista);
-    $('precio-print').onclick=()=>window.print();
+    $('precio-print').onclick=()=>ExportarInforme.imprimir(ListasPrecios.informe($('precio-lista')?.value||'mostrador'));
   }
   return {init, render:verLista};
 })();

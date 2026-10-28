@@ -51,6 +51,8 @@ const Entidades = (() => {
     $('e-extra').placeholder = colName==='clientes' ? 'Dirección' : 'Notas';
     $('e-nac').value = (e && e.nac) || '';
     mostrarNac(colName==='clientes');
+    const lista=$('e-lista-precio');
+    if(lista){ lista.closest('label').hidden=colName!=='clientes'; lista.replaceChildren(...Store.listarListasPrecios().map(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.nombre;return o;})); lista.value=e?.listaPrecioId||'mostrador'; }
     $('modal-ent').showModal();
   }
   function render(){
@@ -64,6 +66,7 @@ const Entidades = (() => {
       const hoy = diasCumple(e.nac)===0;
       tr.innerHTML = `<td>${e.nombre}</td><td>${e.ref||'-'}</td><td>${e.tel||'-'}</td><td>${e.extra||'-'}</td>`+
         `<td${hoy?' style="font-weight:700"':''}>${fmtCumple(e.nac)}</td>`+
+        `<td>${Store.listarListasPrecios().find(l=>l.id===(e.listaPrecioId||'mostrador'))?.nombre||'Mostrador'}</td>`+
         `<td>${deuda>0?`<b>$${deuda}</b>`:'$0'}</td>`;
       const td = document.createElement('td');
       if(deuda>0){
@@ -77,6 +80,8 @@ const Entidades = (() => {
           catch(err){ alert(err.message); } };
         td.appendChild(inp); td.appendChild(med); td.appendChild(bC);
       }
+      const bH=document.createElement('button');bH.textContent='Ver compras';bH.onclick=()=>Reportes.verHistorial(e.id).catch(err=>alert(err.message));
+      td.appendChild(bH);
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>abrir('clientes', e);
       const bD = document.createElement('button'); bD.textContent='Borrar';
@@ -118,6 +123,7 @@ const Entidades = (() => {
         extra:$('e-extra').value.trim(),
         nac: col==='clientes' ? ($('e-nac').value||'') : ((cur&&cur.nac)||'')
       });
+      if(col==='clientes') e.listaPrecioId=$('e-lista-precio')?.value||'mostrador';
       if(!('deuda' in e)) e.deuda = 0;
       if(!e.nombre){ alert('Falta nombre'); return; }
       button.disabled=true;

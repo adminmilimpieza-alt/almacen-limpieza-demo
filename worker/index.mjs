@@ -1,4 +1,4 @@
-import {handleBusiness,transactBusiness,replayBusiness} from './business.mjs';
+import {handleBusiness,transactBusiness,replayBusiness,readBusiness,comprobarTicket} from './business.mjs';
 import { handlePhotos } from './photos.mjs';
 import { normalizeItems, paymentResult } from './payments.mjs';
 import { authenticated, sessionCookie, validWebhook, hmac, equal } from './security.mjs';
@@ -99,6 +99,7 @@ async function route(request,env){
       throw fail('El cobro está en proceso o falló. Revisá el listado antes de generar otro enlace.',409);
     }
     const {items,total,mpItems}=normalizeItems(data.items);
+    comprobarTicket((await readBusiness(env)).state,items,data.cliente_id||'c1');
     const account=await mp(env,'/users/me');
     if(account.site_id!=='MLA') throw fail('La cuenta de Mercado Pago debe ser de Argentina.',422);
     await env.DB.prepare('INSERT INTO orders(id,device_id,cliente_id,items,total,collector_id,created_at) VALUES(?,?,?,?,?,?,?)').bind(data.id,device,String(data.cliente_id||'c1').slice(0,80),JSON.stringify(items),total,String(account.id),new Date().toISOString()).run();

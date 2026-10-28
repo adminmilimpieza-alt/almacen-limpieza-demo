@@ -1,105 +1,100 @@
-// reportes.js — punto 6: caja diaria/período, historial cliente/proveedor, stock, listas
+// Todos los formatos comparten la misma instantánea del informe visible.
 const Reportes = (() => {
-  const $ = id => document.getElementById(id);
-  const dia = iso => new Date(iso).toLocaleDateString('es-AR');
-  function enRango(iso, d, h){
-    const t = new Date(iso).getTime();
-    if(d && t < new Date(d+'T00:00').getTime()) return false;
-    if(h && t > new Date(h+'T23:59').getTime()) return false;
-    return true;
+  const $=id=>document.getElementById(id);
+  const datos=import('./reportes-datos.mjs');
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let actual=null;
+  const opts=()=>({tipo:$('rep-tipo')?.value||'ventas',desde:$('rep-desde')?.value||'',hasta:$('rep-hasta')?.value||'',clienteId:$('rep-cli')?.value||'',listaId:$('rep-lista')?.value||'',incluirHistoricas:$('rep-historicas')?.checked||false});
+  function tabla(columnas,filas) {
+    return `<div class="rep-tabla"><table><thead><tr>${columnas.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${filas.map(f=>`<tr>${f.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
-  function caja(){
-    const db = Store.get();
-    const d = $('rep-desde').value, h = $('rep-hasta').value;
-    const movs = db.movimientos.filter(m=>enRango(m.fecha,d,h) && !m.anulado);
-    const ing = movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+m.monto,0);
-    const egr = movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+m.monto,0);
-    const porMedio = {};
-    movs.forEach(m=>{ porMedio[m.medio]=porMedio[m.medio]||{ing:0,egr:0}; porMedio[m.medio][m.tipo==='ingreso'?'ing':'egr']+=m.monto; });
-    $('rep-caja-out').innerHTML =
-      `<div class="venta"><b>Caja ${d||'…'} → ${h||'…'}</b><br>Ingresos: <b>$${ing}</b> · Egresos: <b>$${egr}</b> · Neto: <b>$${ing-egr}</b><br>`+
-      Object.entries(porMedio).map(([k,v])=>`${k}: +$${v.ing} / −$${v.egr}`).join(' · ')+'</div>';
+  function compras(informe) {
+    const grupos=new Map();
+    informe.filas.forEach(f=>{const key=f[0];if(!grupos.has(key))grupos.set(key,[]);grupos.get(key).push(f);});
+    return [...grupos.values()].map(filas=>{
+      const f=filas[0];
+      return `<details class="rep-compra" open><summary>${esc(f[1])} · ${esc(f[2])} · $${esc(f[8])} · ${esc(f[3])}</summary>${tabla(['Producto','Cantidad','Precio unitario','Subtotal'],filas.map(i=>i.slice(4,8)))}${f[9]?`<p>Notas: ${esc(f[9])}</p>`:''}</details>`;
+    }).join('');
   }
-  function hist(){
-    const db = Store.get();
-    const selectedCli=$('rep-cli').value,selectedProv=$('rep-prov').value,selectedPP=$('rep-pp').value;
-    $('rep-cli').innerHTML = db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-    const ph = db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('') || '<option value="">(sin proveedores)</option>';
-    $('rep-prov').innerHTML = ph;
-    $('rep-pp').innerHTML = '<option value="">Todos</option><option value="__none__">Sin proveedor</option>' + db.proveedores.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
-    if(db.clientes.some(c=>c.id===selectedCli)) $('rep-cli').value=selectedCli;
-    if(db.proveedores.some(p=>p.id===selectedProv)) $('rep-prov').value=selectedProv;
-    if(['','__none__'].includes(selectedPP)||db.proveedores.some(p=>p.id===selectedPP)) $('rep-pp').value=selectedPP;
+  function mostrar(informe) {
+    actual=informe;
+    const contenido=opts().tipo==='historial'?compras(informe):tabla(informe.columnas,informe.filas);
+    $('rep-informe').innerHTML=`<h3>${esc(informe.titulo)}</h3><p>${esc(informe.subtitulo)}</p>${informe.resumen.map(s=>`<p>${esc(s)}</p>`).join('')}${contenido}${informe.filas.length?'':'<p>No hay datos para estos filtros.</p>'}`;
+    document.querySelectorAll('[data-rep-export]').forEach(b=>b.disabled=false);
   }
-  function hcli(){
-    const db = Store.get(); const id = $('rep-cli').value;
-    const cli = db.clientes.find(c=>c.id===id);
-    const v = db.ventas.filter(x=>x.clienteId===id);
-    const va = v.filter(x=>!x.anulada);
-    const enCuenta = va.filter(x=>x.pago==='cuenta').reduce((a,x)=>a+x.total,0);
-    $('rep-hist').innerHTML = `<h3>Compras del cliente (${va.length}) · en cuenta $${enCuenta} · deuda actual $${(cli&&cli.deuda)||0}</h3>` + (va.map(x=>
-      `<div class="venta">${dia(x.fecha)} · $${x.total} · ${x.items.map(i=>i.nombre+' x'+i.cant).join(', ')}</div>`).join('')||'<p class="hint">Sin compras.</p>');
+  async function ver() {
+    if(!$('rep-informe'))return;
+    const op=opts();
+    if(op.desde&&op.hasta&&op.desde>op.hasta){alert('La fecha desde debe ser anterior o igual a hasta.');return;}
+    mostrar((await datos).crearInforme(Store.get(),op));
   }
-  function hprov(){
-    const db = Store.get(); const id = $('rep-prov').value;
-    const p = db.pedidos.filter(x=>x.provId===id);
-    $('rep-hist').innerHTML = `<h3>Pedidos al proveedor (${p.length})</h3>` + (p.map(x=>
-      `<div class="venta">${dia(x.fecha)} · ${x.estado} · ${x.detalle}</div>`).join('')||'<p class="hint">Sin pedidos.</p>');
+  function opciones(id,entries,primera) {
+    const el=$(id);if(!el)return; const prev=el.value;
+    el.innerHTML=(primera?`<option value="">${esc(primera)}</option>`:'')+entries.map(e=>`<option value="${esc(e.id)}">${esc(e.nombre)}</option>`).join('');
+    if([...el.options].some(o=>o.value===prev))el.value=prev;
   }
-  function stock(){
-    const db = Store.get();
-    const r = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
-    const selected=$('rep-rubro').value;
-    $('rep-rubro').innerHTML = '<option value="">Stock: todos los rubros</option>'+r.map(x=>`<option>${x}</option>`).join('');
-    if(r.includes(selected)) $('rep-rubro').value=selected;
+  function filtros() {
+    const tipo=$('rep-tipo')?.value;
+    document.querySelectorAll('[data-rep-fechas]').forEach(el=>el.hidden=!['ventas','historial','caja','proveedores'].includes(tipo));
+    document.querySelectorAll('[data-rep-cliente]').forEach(el=>el.hidden=!['ventas','historial','clientes','precios'].includes(tipo));
+    if($('rep-lista-wrap'))$('rep-lista-wrap').hidden=tipo!=='precios';
+    if($('rep-historicas-wrap'))$('rep-historicas-wrap').hidden=tipo!=='ventas';
   }
-  function verStock(){
-    const db = Store.get(); const f = $('rep-rubro').value;
-    const list = db.productos.filter(p=>p.activo!==false && (!f||(p.categoria||'General')===f));
-    const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
-    $('rep-stock-out').innerHTML = `<div class="venta"><b>Stock ${f||'general'}</b>: ${list.length} productos · valorizado a costo <b>$${val}</b></div>`+
-      '<table><tbody>'+list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio}</td></tr>`).join('')+'</tbody></table>';
+  async function render() {
+    if($('rep-tipo')){
+      const db=Store.get(); const helpers=await datos;
+      opciones('rep-cli',db.clientes||[],'Todos los clientes');
+      opciones('rep-anterior-cli',db.clientes||[],'Elegir cliente');
+      opciones('rep-lista',helpers.listas(db));
+      opciones('rep-anterior-producto',(db.productos||[]).map(p=>({...p,nombre:p.nombre+(p.activo===false?' (oculto)':'')})),'Elegir producto');
+      filtros(); await ver();
+    }
+    renderVentas();
   }
-  function renderVentas(){
-    const db = Store.get();
-    const box = $('ventas'); if(!box) return; box.innerHTML='';
-    if(!db.ventas.length){ box.innerHTML='<p class="hint">Todavía no hay ventas.</p>'; return; }
-    const cli = id => (db.clientes.find(c=>c.id===id)||{}).nombre||'';
-    db.ventas.slice(0,50).forEach(v=>{
-      const d = document.createElement('div'); d.className='venta';
-      d.innerHTML = `<b>${new Date(v.fecha).toLocaleString('es-AR')}</b> · ${v.pago} · ${cli(v.clienteId)} · <b>$${v.total}</b>` +
-        (v.anulada ? ` · <span class="tag warn">anulada</span>` : '') + '<br>' +
-        v.items.map(i=>`${i.nombre} x${i.cant}`).join(', ') + ' ';
-      if(!v.anulada && v.id){
-        const b = document.createElement('button'); b.textContent='Anular';
-        b.onclick=async ()=>{ if(confirm(`Anular venta de $${v.total}? Vuelve el stock.`)){
-          try{ await Store.anularVenta(v.id); Stock.render(); Caja.refresh(); render(); }
-          catch(e){ alert(e.message); } } };
-        d.appendChild(b);
-      }
-      box.appendChild(d);
+  function renderVentas() {
+    const box=$('ventas');if(!box)return;const db=Store.get();box.replaceChildren();
+    const ventas=(db.ventas||[]).filter(v=>!v.historica).slice(0,50);
+    if(!ventas.length){box.textContent='Todavía no hay ventas operativas.';return;}
+    ventas.forEach(v=>{
+      const row=document.createElement('div');row.className='venta';
+      row.innerHTML=`<b>${esc(new Date(v.fecha).toLocaleString('es-AR'))}</b> · ${esc(v.pago)} · ${esc(db.clientes.find(c=>c.id===v.clienteId)?.nombre||'Mostrador')} · <b>$${esc(v.total)}</b>${v.anulada?' · anulada':''}<br>${(v.items||[]).map(i=>`${esc(i.nombre)} × ${esc(i.cant)}`).join(', ')}`;
+      if(!v.anulada&&v.id){const b=document.createElement('button');b.textContent='Anular';b.onclick=async()=>{if(confirm(`¿Anular venta de $${v.total}? Vuelve el stock.`)){try{await Store.anularVenta(v.id);Stock.render();Caja.refresh();await render();}catch(e){alert(e.message);}}};row.append(b);}
+      box.append(row);
     });
   }
-  function porProveedor(){
-    const db = Store.get(); const f = $('rep-pp').value;
-    const list = db.productos.filter(p=>p.activo!==false && (!f || (f==='__none__' ? !p.provId : p.provId===f)));
-    const nom = id => (db.proveedores.find(x=>x.id===id)||{}).nombre||'—';
-    const val = list.reduce((a,p)=>a+(p.costo??p.precio)*p.stock,0);
-    $('rep-pp-out').innerHTML = `<div class="venta"><b>Productos${f&&f!=='__none__'?' de '+nom(f):f==='__none__'?' sin proveedor':''}</b>: ${list.length} · valorizado a costo <b>$${val}</b></div>`+
-      '<table><thead><tr><th>Cód</th><th>Producto</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>Stock</th></tr></thead><tbody>'+
-      list.map(p=>`<tr><td>${p.codigo||'-'}</td><td>${p.nombre}</td><td>${nom(p.provId)}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.stock}</td></tr>`).join('')+'</tbody></table>';
+  function agregarLinea() {
+    const db=Store.get(),p=db.productos.find(p=>p.id===$('rep-anterior-producto').value);
+    if(!p){alert('Elegí un producto.');return;}
+    const existing=[...$('rep-anterior-lineas').children].find(row=>row.dataset.producto===p.id);if(existing){const n=existing.querySelector('[data-cant]');n.value=Number(n.value)+1;return;}
+    const row=document.createElement('div');row.className='rep-linea';row.dataset.producto=p.id;
+    row.innerHTML=`<span>${esc(p.nombre)}</span><label>Cantidad <input data-cant type="number" min="0.001" step="any" value="1" required></label><label>Precio unitario <input data-precio type="number" min="0" step="any" value="${esc(p.precio)}" required></label><button type="button">Quitar</button>`;
+    row.querySelector('button').onclick=()=>row.remove();$('rep-anterior-lineas').append(row);
   }
-  function render(){ hist(); stock(); renderVentas(); }
-  function init(){
-    render();
-    const hoy = new Date().toISOString().slice(0,10);
-    $('rep-desde').value = hoy; $('rep-hasta').value = hoy;
-    $('rep-caja').onclick=caja;
-    $('rep-hcli').onclick=hcli; $('rep-hprov').onclick=hprov;
-    $('rep-stock').onclick=verStock;
-    $('rep-verpp').onclick=porProveedor;
-    $('rep-printpp').onclick=()=>{ document.body.classList.add('print-cierre'); window.print(); };
-    caja();
+  async function guardarAnterior(event) {
+    event.preventDefault();const form=event.currentTarget,b=form.querySelector('[type=submit]');
+    const items=[...$('rep-anterior-lineas').children].map(row=>({id:row.dataset.producto,nombre:Store.get().productos.find(p=>p.id===row.dataset.producto)?.nombre||'',cant:Number(row.querySelector('[data-cant]').value),precio:Number(row.querySelector('[data-precio]').value)}));
+    if(!$('rep-anterior-cli').value||!$('rep-anterior-fecha').value||!items.length||items.some(i=>!Number.isFinite(i.cant)||i.cant<=0||!Number.isFinite(i.precio)||i.precio<0)){alert('Completá cliente, fecha y al menos un producto con cantidad y precio válidos.');return;}
+    b.disabled=true;
+    try{await Store.registrarCompraHistorica({clienteId:$('rep-anterior-cli').value,fecha:$('rep-anterior-fecha').value,items,notas:$('rep-anterior-notas').value});$('rep-cli').value=$('rep-anterior-cli').value;$('rep-tipo').value='historial';$('rep-desde').value='';$('rep-hasta').value='';$('rep-anterior-lineas').replaceChildren();$('rep-anterior-notas').value='';$('rep-anterior-estado').textContent='Compra histórica registrada. No modificó caja, stock ni deuda.';filtros();await ver();}catch(e){alert(e.message);}finally{b.disabled=false;}
   }
-  return {init, render, renderVentas};
+  async function init() {
+    if(!$('rep-tipo')){renderVentas();return;}
+    $('rep-ver').onclick=ver;
+    ['rep-tipo','rep-desde','rep-hasta','rep-cli','rep-lista','rep-historicas'].forEach(id=>$(id).addEventListener('change',async()=>{
+      if(id==='rep-cli'){$('rep-lista').value=Store.get().clientes.find(c=>c.id===$('rep-cli').value)?.listaPrecioId||'mostrador';}
+      filtros(); await ver();
+    }));
+    document.querySelectorAll('[data-rep-export]').forEach(b=>b.onclick=async()=>{if(!actual)return;try{b.disabled=true;if(b.dataset.repExport==='imprimir')await ExportarInforme.imprimir(actual);else await ExportarInforme.exportar(b.dataset.repExport,actual);}catch(e){alert(e.message);}finally{b.disabled=false;}});
+    $('rep-anterior-agregar').onclick=agregarLinea;$('rep-anterior-form').onsubmit=guardarAnterior;
+    const hoy=(await datos).fechaArgentina(new Date());$('rep-desde').value=hoy;$('rep-hasta').value=hoy;$('rep-anterior-fecha').max=hoy;
+    await render();
+  }
+  async function verHistorial(clienteId) {
+    await render();
+    Panel.go('mod-reportes');
+    $('rep-tipo').value='historial';$('rep-cli').value=clienteId;
+    $('rep-desde').value='';$('rep-hasta').value='';
+    filtros();await ver();
+  }
+  return {init,render,renderVentas,verHistorial};
 })();

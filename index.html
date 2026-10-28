@@ -4,7 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=32">
+<link rel="stylesheet" href="css/style.css?v=34">
+<link rel="stylesheet" href="css/remito.css?v=34">
+<link rel="stylesheet" href="css/reportes.css?v=34">
+<link rel="stylesheet" href="css/listas-precios.css?v=34">
+<link rel="stylesheet" href="css/informes.css?v=34">
+<link rel="stylesheet" href="css/proveedor.css?v=34">
+
 </head>
 <body>
 <section id="negocio-acceso" role="dialog" aria-modal="true" aria-labelledby="negocio-acceso-titulo">
@@ -98,6 +104,7 @@
       <div class="cobro-bar">
         <button id="cobrar" class="primary big">Cobrar</button>
         <button id="vaciar">Vaciar</button>
+        <button id="actualizar-ticket" type="button">Actualizar precios del ticket</button>
       </div>
       <div class="row">
         <button id="linkmp">Link de pago</button>
@@ -190,24 +197,18 @@
     <details id="precios-login" hidden><summary>Ingresar clave de operador</summary>
       <form id="precios-login-form" class="row"><input id="precios-password" type="password" required autocomplete="current-password" placeholder="Clave de operador" aria-label="Clave de operador para precios"><button type="submit">Iniciar sesión y compartir precios</button></form>
     </details>
-    <p class="hint">Buscá un producto y cambiá su costo o margen. El precio de venta se calcula solo. Los cambios se guardan online al terminar cada edición.</p>
+    <p class="hint">Buscá un producto y cambiá su costo, margen o precio final. Al redondear la venta, se recalcula el margen. Los cambios se guardan online al terminar cada edición.</p>
+    <label>Lista de precios<select id="precio-lista"><option value="mostrador">Mostrador</option></select></label>
+    <details class="precios-opcion"><summary>Administrar y compartir listas</summary><div id="listas-gestion"></div></details>
     <label class="precios-buscar">Buscar producto<input id="precio-buscar" type="search" placeholder="Nombre o código del producto" autocomplete="off"></label>
-    <details class="precios-opcion" id="precios-carga"><summary>Cargar una lista CSV</summary>
-      <p class="hint">Elegí el archivo y la lista a actualizar. Revisá la vista previa y aplicá los costos. Los costos se guardan online al aplicar la lista.</p>
-      <p class="hint">Columnas: <code>codigo,nombre,presentacion,costo,margen</code>. Usá punto para los decimales.</p>
-    <div class="row">
-      <input type="file" id="csv" accept=".csv" aria-label="Archivo de lista de precios CSV">
-      <select id="csv-rubro" title="Lista de origen">
-        <option value="">Sin lista (primera coincidencia)</option>
-        <option value="Líquidos 5L">Lista 5 Lts</option>
-        <option value="Líquidos 1L">Lista 1 Lt</option>
-        <option value="Accesorios">Accesorios x Uni</option>
-        <option value="Pileta">Línea Pileta</option>
-      </select>
-      <button id="csv-ver">Revisar archivo</button>
-      <button id="csv-aplicar">Aplicar lista</button>
-    </div>
-    <div id="csv-prev"></div>
+    <details class="precios-opcion" id="precios-carga"><summary>Comparar lista del proveedor · Excel, CSV o PDF</summary>
+      <p>Elegí el archivo, revisá las columnas y compará. La carga no cambia precios. Aplicás sólo lo que elijas.</p>
+      <div class="row"><label>Archivo del proveedor<input id="prov-archivo" type="file" accept=".xlsx,.xls,.csv,.pdf"></label><label id="prov-hoja-wrap" hidden>Hoja de Excel<select id="prov-hoja"></select></label></div>
+      <p id="prov-estado" role="status">Formatos: Excel, CSV o PDF que contenga texto.</p>
+      <fieldset id="prov-mapeo" hidden><legend>Revisar columnas</legend><div class="row"><label>Fila de encabezado (0 si no tiene)<input id="prov-fila" type="number" min="0" value="1"></label><label>Código<select id="prov-col-codigo"></select></label><label>Producto / descripción<select id="prov-col-nombre"></select></label><label>Presentación<select id="prov-col-presentacion"></select></label><label>Costo del proveedor<select id="prov-col-costo"></select></label><button id="prov-comparar" type="button">Comparar sin modificar precios</button></div></fieldset>
+      <p class="hint">Rojo: sube el costo y se propone una venta con el margen actual. Verde: baja el costo y se mantiene la venta. Las coincidencias dudosas requieren elegir el producto.</p>
+      <p id="prov-resumen"></p><div class="row"><label>Mostrar<select id="prov-filtro"><option value="cambios">Sólo aumentos y bajas</option><option value="todos">Todas las filas</option><option value="revisar">Sin coincidencia o ambiguas</option><option value="igual">Costos iguales</option><option value="duplicada">Productos repetidos</option></select></label><label>Buscar en el archivo<input id="prov-buscar" type="search" placeholder="Nombre o código"></label></div>
+      <div id="prov-comparacion"></div><div class="row"><button id="prov-aplicar-seleccionadas" type="button" disabled>Aplicar seleccionados (0)</button><button id="prov-aplicar-todas" type="button" disabled>Aplicar todos los cambios coincidentes (0)</button></div>
     </details>
     <details class="precios-opcion" id="precios-avanzadas"><summary>Opciones avanzadas</summary>
       <p class="hint">Filtrar la lista o cambiar el margen de varios productos.</p>
@@ -238,7 +239,7 @@
 
   <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
-    <table><thead><tr><th>Nombre</th><th>Referencia</th><th>Tel</th><th>Dirección</th><th>Cumpleaños</th><th>Deuda</th><th>Cobrar / editar</th></tr></thead>
+    <table><thead><tr><th>Nombre</th><th>Referencia</th><th>Tel</th><th>Dirección</th><th>Cumpleaños</th><th>Lista de precios</th><th>Deuda</th><th>Historial / acciones</th></tr></thead>
     <tbody id="tabla-cli"></tbody></table>
   </section>
 
@@ -295,33 +296,35 @@
     <div id="movimientos"></div>
   </section>
 
-  <section id="mod-reportes">
-    <div class="row">
-      <input id="rep-desde" type="date"><input id="rep-hasta" type="date">
-      <button id="rep-caja" class="primary">Caja por período</button>
-    </div>
-    <div id="rep-caja-out"></div>
-    <div class="row">
-      <select id="rep-cli"></select>
-      <button id="rep-hcli">Historial cliente</button>
-      <select id="rep-prov"></select>
-      <button id="rep-hprov">Historial proveedor</button>
-    </div>
-    <div id="rep-hist"></div>
-    <div class="row">
-      <select id="rep-rubro"><option value="">Stock: todos los rubros</option></select>
-      <button id="rep-stock">Ver stock</button>
-    </div>
-    <div id="rep-stock-out"></div>
-    <div class="row">
-      <select id="rep-pp"><option value="">Productos: todos</option></select>
-      <button id="rep-verpp">Por proveedor</button>
-      <button id="rep-printpp">Imprimir</button>
-    </div>
-    <div id="rep-pp-out"></div>
-    <h3>Ventas (historial)</h3>
-    <div id="ventas"></div>
-  </section>
+<section id="mod-reportes">
+  <h2>Reportes</h2>
+  <div class="row rep-filtros">
+    <label>Tipo de informe<select id="rep-tipo"><option value="ventas">Ventas por período</option><option value="caja">Caja por período</option><option value="proveedores">Pedidos y pagos a proveedores</option><option value="stock">Stock actual</option><option value="clientes">Clientes · privado</option><option value="historial">Historial de compras</option><option value="precios">Lista de precios para compartir</option></select></label>
+    <label data-rep-fechas>Desde<input id="rep-desde" type="date"></label>
+    <label data-rep-fechas>Hasta (inclusive)<input id="rep-hasta" type="date"></label>
+    <label data-rep-cliente>Cliente<select id="rep-cli"></select></label>
+    <label id="rep-lista-wrap" hidden>Lista de precios<select id="rep-lista"></select></label>
+    <label id="rep-historicas-wrap"><span><input id="rep-historicas" type="checkbox"> Incluir compras históricas</span></label>
+    <button id="rep-ver" class="primary">Ver informe</button>
+  </div>
+  <div class="row" aria-label="Exportar el informe visible">
+    <button data-rep-export="pdf" disabled>PDF</button><button data-rep-export="xlsx" disabled>Excel</button><button data-rep-export="csv" disabled>CSV</button><button data-rep-export="imprimir" disabled>Imprimir informe</button>
+  </div>
+  <p class="hint">Se exporta únicamente el informe visible con los filtros elegidos. Las listas para compartir muestran sólo precios de venta.</p>
+  <div id="rep-informe" aria-live="polite"></div>
+  <details><summary>Registrar una compra anterior</summary>
+    <p>Se guarda en el historial del cliente como compra histórica. No modifica caja, stock ni deuda.</p>
+    <form id="rep-anterior-form">
+      <div class="row rep-filtros"><label>Cliente<select id="rep-anterior-cli" required></select></label><label>Fecha de la compra<input id="rep-anterior-fecha" type="date" required></label></div>
+      <div class="row rep-filtros"><label>Producto<select id="rep-anterior-producto"></select></label><button id="rep-anterior-agregar" type="button">Agregar producto</button></div>
+      <div id="rep-anterior-lineas"></div>
+      <label>Notas<textarea id="rep-anterior-notas" rows="2"></textarea></label>
+      <button type="submit" class="primary">Guardar compra histórica</button>
+      <p id="rep-anterior-estado" role="status"></p>
+    </form>
+  </details>
+  <details><summary>Últimas ventas operativas · anulación</summary><div id="ventas"></div></details>
+</section>
 
   <section id="mod-respaldo">
     <p class="hint">Los datos del negocio se guardan online. Podés descargar una copia JSON adicional. La restauración local está desactivada para no reemplazar datos compartidos.</p>
@@ -374,6 +377,7 @@
     <input id="e-tel" placeholder="Teléfono (WhatsApp)">
     <input id="e-ref" placeholder="Referencia (ej: hermano de Juan, casa del fondo)">
     <input id="e-extra" placeholder="Dirección / Notas">
+    <label id="e-lista-wrap">Lista de precios<select id="e-lista-precio"><option value="mostrador">Mostrador</option></select></label>
     <label class="lbl" id="e-nac-wrap">Fecha de nacimiento
       <input id="e-nac" type="date">
     </label>
@@ -384,22 +388,25 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=32"></script>
-<script src="js/store.js?v=32"></script>
-<script src="js/negocio-online.js?v=32"></script>
-<script src="js/pagos.js?v=32"></script>
-<script src="js/scan.js?v=32"></script>
-<script src="js/caja.js?v=32"></script>
-<script src="js/stock.js?v=32"></script>
-<script src="js/entidades.js?v=32"></script>
-<script src="js/cumple.js?v=32"></script>
-<script src="js/operacion.js?v=32"></script>
-<script src="js/turnos.js?v=32"></script>
-<script src="js/reportes.js?v=32"></script>
-<script src="js/app.js?v=32"></script>
-<script src="js/precios-online.js?v=32"></script>
+<script src="js/catalogo.js?v=34"></script>
+<script src="js/store.js?v=34"></script>
+<script src="js/negocio-online.js?v=34"></script>
+<script src="js/pagos.js?v=34"></script>
+<script src="js/scan.js?v=34"></script>
+<script src="js/caja.js?v=34"></script>
+<script src="js/stock.js?v=34"></script>
+<script src="js/entidades.js?v=34"></script>
+<script src="js/cumple.js?v=34"></script>
+<script src="js/exportar-informe.js?v=34"></script>
+<script src="js/listas-precios.js?v=34"></script>
+<script src="js/operacion.js?v=34"></script>
+<script src="js/turnos.js?v=34"></script>
+<script src="js/reportes.js?v=34"></script>
+<script src="js/app.js?v=34"></script>
+<script src="js/precios-online.js?v=34"></script>
 
-<script type="module" src="js/fotos.mjs?v=32"></script>
-<script type="module" src="js/remito.mjs?v=32"></script>
+<script type="module" src="js/fotos.mjs?v=34"></script>
+<script type="module" src="js/remito.mjs?v=34"></script>
+<script type="module" src="js/comparar-proveedor.mjs?v=34"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ Todos los equipos autenticados consultan y modifican una misma base: productos/p
 
 ## Precios y fotos
 
-Los costos/márgenes se guardan online al terminar de editar; el CSV se confirma con Aplicar lista. El botón Actualizar precios consulta el negocio. `/api/prices` antiguo responde 410 para evitar dos fuentes de verdad. `shared_prices` previo solo se lee para incorporar precios al crear la base central.
+Costo, margen y precio final se guardan online al terminar de editar. Listas nombradas con precios particulares e herencia de Mostrador; cada cliente puede tener una lista. El comparador local XLSX/XLS/CSV/PDF textual aplica sólo cambios confirmados y coincide por código/nombre y presentación; los duplicados y dudosos no se aplican automáticamente. Aumentos de costo mantienen margen real; bajas mantienen venta. El botón Actualizar precios consulta el negocio. `/api/prices` antiguo responde 410 para evitar dos fuentes de verdad. `shared_prices` previo solo se lee para incorporar precios al crear la base central.
 
 Las imágenes usan `product_photos` y `/api/photos`, JPEG hasta 150 KB, comprimido en el navegador a 480×480. Las referencias se guardan con los productos. Las fotos son públicas; las escrituras requieren sesión y revisión. Las recuperaciones de respaldos antiguos insertan solo imágenes ausentes y no restauran información financiera. Las bajas lógicas impiden que un respaldo viejo reponga una foto quitada.
 
@@ -29,7 +29,7 @@ Los enlaces y estados se comparten entre todos los operadores autenticados. El d
 
 ## Impresión
 
-Imprimir remito usa el diseño de la hoja REMITO aportada por el cliente, con logo original y teléfono. Se imprime el carrito actual o la última venta compartida si está vacío. A4, cantidades, descripciones, precios unitarios, total, todas las líneas y filas vacías en ventas cortas. No modifica ventas ni stock.
+Imprimir remito usa el diseño de la hoja REMITO aportada por el cliente, con logo original y teléfono. Se imprime el carrito actual o la última venta compartida si está vacío. A5 horizontal (210 × 148 mm), páginas explícitas con medición del contenido, cantidades, descripciones, precios unitarios y total final. Excluye ventas históricas/anuladas al buscar la última venta. No modifica ventas ni stock.
 
 ## Desarrollo y publicación
 
@@ -44,3 +44,7 @@ Build prepara `dist` con solo web/JS/CSS/datos públicos. Worker y secretos no v
 Cloudflare despliega la rama `codex/mercadopago-cloudflare` del repositorio del cliente. La página de GitHub `main` contiene únicamente el aviso de traslado y respaldo antiguo. No fusionar esa página de aviso encima de la aplicación de Workers.
 
 Guía de operación: [GUIA-COBROS.md](GUIA-COBROS.md).
+
+## Informes e historial
+
+Modelos puros en `js/reportes-datos.mjs`; exportación de la instantánea elegida mediante `js/exportar-informe.js` a PDF, XLSX, CSV o impresión. Listas comerciales excluyen datos internos. Historial por cliente y fechas; compras anteriores guardadas como históricas sin efectos de stock, deuda o caja. Los formatos grandes paginan en PDF. Dependencias locales y licencias en `js/vendor/README.md`.

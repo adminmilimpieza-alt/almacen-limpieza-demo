@@ -6,6 +6,8 @@ const Caja = (() => {
   let carrito = []; // {id,nombre,precio,cant,pres}
   const $ = id => document.getElementById(id);
   let ticketBloqueado=false;
+  let clienteAnterior='';
+  const precio = p => Store.precioParaCliente(p.id, $('f-cliente')?.value || null);
   const bloquearTicket=value=>{ticketBloqueado=value;if($('caja-controles'))$('caja-controles').disabled=value;};
   const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
   const variantes = code => Store.get().productos.filter(x=>(x.codigo||'')===code && x.activo!==false);
@@ -55,7 +57,7 @@ const Caja = (() => {
       const nm = document.createElement('span'); nm.className='pc-name'; nm.textContent = p.nombre;
       const meta = document.createElement('span'); meta.className='pc-meta';
       const cod = document.createElement('span'); cod.textContent = p.codigo||'—';
-      const price = document.createElement('span'); price.className='pc-price'; price.textContent = '$'+p.precio;
+      const price = document.createElement('span'); price.className='pc-price'; price.textContent = '$'+precio(p);
       meta.appendChild(cod); meta.appendChild(price);
       const st = document.createElement('span'); st.className='pc-stock';
       st.textContent = p.stock>0 ? 'Stock: '+p.stock : 'Sin stock';
@@ -84,7 +86,7 @@ const Caja = (() => {
       row.appendChild(info);
       vars.forEach(v=>{
         const b = document.createElement('button'); b.className='sug-btn';
-        b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+v.precio : 'Sin stock');
+        b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+precio(v) : 'Sin stock');
         b.disabled = v.stock<=0;
         b.onmousedown = e=>e.preventDefault();
         b.onclick = ()=>{ agregar(v); cerrarSugerencias(); const s=$('scan'); if(s){ s.value=''; s.focus(); } renderCatalogo(''); };
@@ -103,7 +105,7 @@ const Caja = (() => {
     if(enCarro+1 > p.stock){ alert('No hay más stock'); return; }
     const it = carrito.find(x=>x.id===p.id);
     if(it) it.cant++;
-    else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1, pres:pres(p), codigo:p.codigo});
+    else carrito.push({id:p.id, nombre:p.nombre, precio:precio(p), cant:1, pres:pres(p), codigo:p.codigo});
     optimizar(false);
     renderCarrito();
   }
@@ -121,14 +123,15 @@ const Caja = (() => {
       const tot1 = lin1.reduce((a,i)=>a+i.cant,0);
       if(tot1 < 5) return;
       const bid = Math.floor(tot1/5), resto = tot1%5;
-      if(v5.stock < bid) return;
-      const antes = tot1*v1.precio, ahora = bid*v5.precio + resto*v1.precio;
+      if(v5.stock < bid + carrito.filter(i=>i.id===v5.id).reduce((n,i)=>n+i.cant,0)) return;
+      const unitario1=lin1[0].precio, unitario5=carrito.find(i=>i.id===v5.id)?.precio??precio(v5);
+      const antes = lin1.reduce((total,i)=>total+i.cant*i.precio,0), ahora = bid*unitario5 + resto*unitario1;
       if(ahora >= antes) return;
       carrito = carrito.filter(i=>i.id!==v1.id);
-      if(resto>0) carrito.push({id:v1.id, nombre:v1.nombre, precio:v1.precio, cant:resto, pres:'1L', codigo:code});
+      if(resto>0) carrito.push({id:v1.id, nombre:v1.nombre, precio:unitario1, cant:resto, pres:'1L', codigo:code});
       const l5 = carrito.find(i=>i.id===v5.id);
       if(l5) l5.cant += bid;
-      else carrito.push({id:v5.id, nombre:v5.nombre, precio:v5.precio, cant:bid, pres:'5L', codigo:code});
+      else carrito.push({id:v5.id, nombre:v5.nombre, precio:unitario5, cant:bid, pres:'5L', codigo:code});
       ahorro += antes-ahora;
       avisos.push(`${nombreBase(v1)}: ${tot1}x1L → ${bid}x5L${resto?` + ${resto}x1L`:''}`);
     });
@@ -174,7 +177,7 @@ const Caja = (() => {
           if(enCarro+it.cant > alt.stock){ alert('Sin stock en '+pres(alt)); return; }
           const ex = carrito.find(x=>x.id===alt.id);
           if(ex){ ex.cant += it.cant; carrito.splice(idx,1); }
-          else { it.id=alt.id; it.nombre=alt.nombre; it.precio=alt.precio; it.pres=pres(alt); }
+          else { it.id=alt.id; it.nombre=alt.nombre; it.precio=precio(alt); it.pres=pres(alt); }
           optimizar(false); renderCarrito();
         };
         qty.appendChild(sw);
@@ -201,6 +204,7 @@ const Caja = (() => {
       return `<option value="${c.id}">${c.nombre}${ref}${cumple}</option>`;
     }).join('');
     if(db.clientes.some(c=>c.id===selected)) $('f-cliente').value=selected;
+    clienteAnterior=$('f-cliente').value;
   }
   function renderMovimientos(){
     const db = Store.get();
@@ -233,7 +237,7 @@ const Caja = (() => {
     if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
     const it = carrito.find(x=>x.id===p.id);
     if(it) it.cant++;
-    else carrito.push({id:p.id, nombre:p.nombre, precio:p.precio, cant:1, pres:pres(p), codigo:p.codigo});
+    else carrito.push({id:p.id, nombre:p.nombre, precio:precio(p), cant:1, pres:pres(p), codigo:p.codigo});
     optimizar(false);
     renderCarrito();
     flash(`Agregado: ${p.nombre} (${pres(p)})`);
@@ -243,6 +247,13 @@ const Caja = (() => {
   function init(){
     renderCarrito(); renderClientes(); renderMovimientos(); renderCatalogo('');
     const scan = $('scan');
+    $('f-cliente').addEventListener('change',()=>{
+      const select=$('f-cliente');
+      if(ticketBloqueado || (carrito.length && !confirm('¿Cambiar cliente y recalcular el ticket con su lista de precios?'))){select.value=clienteAnterior;return;}
+      clienteAnterior=select.value;
+      carrito.forEach(item=>{ const p=prod(item.id); if(p) item.precio=precio(p); });
+      optimizar(true); renderCarrito(); cerrarSugerencias(); renderCatalogo(scan.value);
+    });
     const intentar = v => {
       if(ticketBloqueado)return;
       const code = (v||'').trim(); if(!code) return;
@@ -261,6 +272,7 @@ const Caja = (() => {
     });
     setTimeout(()=>scan.focus(), 300);
     if(typeof ScanCam!=='undefined') ScanCam.init('scan', code=>{ scan.value=code; intentar(code); });
+    if($('actualizar-ticket'))$('actualizar-ticket').onclick=async()=>{if(ticketBloqueado)return;try{if(typeof OnlineBusiness!=='undefined')await OnlineBusiness.refresh(true);if(!carrito.length)return;if(!confirm('¿Actualizar los precios del ticket con la lista actual de este cliente?'))return;carrito.forEach(i=>{const p=prod(i.id);if(p)i.precio=precio(p);});renderCarrito();}catch(e){alert(e.message);}};
     $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
     $('t-print').onclick = ()=>{
       if(typeof Remito==='undefined'){alert('La impresión está cargando. Volvé a intentarlo en un momento.');return;}

@@ -9,7 +9,7 @@ function cajaFixture(cobrar){
   const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);};
   const db={productos:[{id:'p',nombre:'Producto',codigo:'1',categoria:'Unidad',precio:50,stock:5}],clientes:[],movimientos:[]};
   const alerts=[];
-  const ctx=vm.createContext({document:{getElementById:get,createElement:element,addEventListener(){}},Store:{get:()=>db,cobrar},Stock:{render(){}},Reportes:{render(){}},alert:x=>alerts.push(x),setTimeout(){},clearTimeout(){}});
+  const ctx=vm.createContext({document:{getElementById:get,createElement:element,addEventListener(){}},Store:{get:()=>db,cobrar,precioParaCliente:id=>db.productos.find(p=>p.id===id)?.precio||0},Stock:{render(){}},Reportes:{render(){}},alert:x=>alerts.push(x),setTimeout(){},clearTimeout(){}});
   vm.runInContext(fs.readFileSync(new URL('../js/caja.js',import.meta.url),'utf8')+';globalThis.caja=Caja;',ctx);
   ctx.caja.init();
   get('catalogo').children[0].onclick();

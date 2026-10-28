@@ -1,0 +1,14 @@
+#informe-print{display:none}
+@media print{
+ @page informe{size:A4 portrait;margin:12mm}
+ @page informe-paisaje{size:A4 landscape;margin:12mm}
+ body.print-informe>*:not(#informe-print){display:none!important}
+ body.print-informe #informe-print{display:block!important;page:informe;font:9pt Arial,sans-serif;color:#000}
+ body.print-informe #informe-print[data-paisaje=true]{page:informe-paisaje}
+ #informe-print header{display:block!important;position:static;background:#fff;border:0;backdrop-filter:none;padding:0}
+ #informe-print h1{font-size:14pt}#informe-print h2{font-size:12pt}
+ #informe-print table{width:100%;border-collapse:collapse;font-size:9pt}
+ #informe-print th,#informe-print td{position:static;border:1px solid #999;padding:4px;text-align:left;overflow-wrap:anywhere}
+ #informe-print thead{display:table-header-group}
+ #informe-print tr{break-inside:avoid}
+}
