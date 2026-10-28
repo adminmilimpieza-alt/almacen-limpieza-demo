@@ -18,6 +18,10 @@ En **Módulos → Precios**, buscar por nombre o código y editar costo, margen 
 ### Comparar con el proveedor
 Abrir **Comparar lista del proveedor**, elegir Excel (.xlsx/.xls), CSV o PDF con texto. El sistema sugiere hoja, encabezado y columnas; revisar especialmente **Costo del proveedor**, después pulsar **Comparar sin modificar precios**. Rojo: aumentó; verde: bajó; igual: sin cambio. Los desconocidos, duplicados o dudosos requieren revisión o asignación manual. Nunca se modifica nada por cargar el archivo.
 
+La vista inicial **Sólo nuestros productos** oculta los artículos ajenos al catálogo. Se puede filtrar sólo aumentos, bajas o iguales. **Actualizar costo** aplica una fila; la tabla muestra la ganancia actual y resultante.
+
+Para listas UNIBLANC **X Lt. / K**, se detecta **Por litro o kilo**: el precio del proveedor se multiplica por los litros o kilos de cada presentación propia. Ejemplo: $650/litro equivale a $650 en 1 litro y $3.250 en 5 litros. La botella se maneja aparte y no se suma al costo del líquido; en Excel se toma Costo/Lt., no Costo/Botella. Revisar la base de costo antes de comparar. Si la presentación es desconocida, el precio es cero o hay duplicados, la fila queda para revisión sin aplicar automáticamente.
+
 Aplicar un cambio, los seleccionados o todos los coincidentes requiere confirmación. Si el costo sube, la venta mantiene su margen real y sube proporcionalmente (también los precios particulares); si baja, mantiene la venta y mejora el margen. Se pueden redondear los precios después. Los PDF escaneados como imagen necesitan una versión Excel o con texto seleccionable.
 
 ### Compartir listas y obtener informes
