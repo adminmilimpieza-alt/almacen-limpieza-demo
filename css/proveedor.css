@@ -12,3 +12,6 @@
 #prov-comparacion .prov-duplicada,#prov-comparacion .prov-ambigua{background:#fff8df}
 #prov-comparacion button{white-space:normal;min-width:100px}
 #prov-aplicar-todas{border-color:var(--brand);font-weight:600}
+
+#prov-comparacion .prov-descartada{background:#f2f2f2;color:#555}
+#prov-comparacion [data-omitir],#prov-comparacion [data-incluir]{display:block;margin-top:6px}

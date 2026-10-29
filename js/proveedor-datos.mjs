@@ -55,3 +55,6 @@ export function filasPDF(pages){
  let header=null,best=-1;for(const line of lines.slice(0,50)){const c=detectarColumnas(line.map(x=>x.str)),score=(c.codigo>=0?3:0)+(c.nombre>=0?3:0)+(c.costo>=0?5:0);if(score>best){best=score;header=line;}}
  if(!header)return [];const starts=header.map(i=>i.transform[4]);return lines.map(items=>{const row=starts.map(()=> '');for(const item of items){let col=0;for(let j=0;j<starts.length;j++)if(item.transform[4]>=starts[j]-4)col=j;row[col]+=(row[col]?' ':'')+item.str;}return row;});
 }
+
+export const claveCambio=r=>String(r.sourceIndex??r.index)+':'+String(r.id||'');
+export const cambiosPendientes=(rows,omitidos=new Set())=>rows.filter(r=>['sube','baja'].includes(r.estado)&&!omitidos.has(claveCambio(r)));
