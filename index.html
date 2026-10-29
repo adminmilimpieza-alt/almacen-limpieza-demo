@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=36">
-<link rel="stylesheet" href="css/remito.css?v=36">
-<link rel="stylesheet" href="css/reportes.css?v=36">
-<link rel="stylesheet" href="css/listas-precios.css?v=36">
-<link rel="stylesheet" href="css/informes.css?v=36">
-<link rel="stylesheet" href="css/proveedor.css?v=36">
+<link rel="stylesheet" href="css/style.css?v=37">
+<link rel="stylesheet" href="css/remito.css?v=37">
+<link rel="stylesheet" href="css/reportes.css?v=37">
+<link rel="stylesheet" href="css/listas-precios.css?v=37">
+<link rel="stylesheet" href="css/informes.css?v=37">
+<link rel="stylesheet" href="css/proveedor.css?v=37">
 
 </head>
 <body>
@@ -206,7 +206,7 @@
       <div class="row"><label>Archivo del proveedor<input id="prov-archivo" type="file" accept=".xlsx,.xls,.csv,.pdf"></label><label id="prov-hoja-wrap" hidden>Hoja de Excel<select id="prov-hoja"></select></label></div>
       <p id="prov-estado" role="status">Formatos: Excel, CSV o PDF que contenga texto.</p>
       <fieldset id="prov-mapeo" hidden><legend>Revisar columnas</legend><div class="row"><label>Fila de encabezado (0 si no tiene)<input id="prov-fila" type="number" min="0" value="1"></label><label>Código<select id="prov-col-codigo"></select></label><label>Producto / descripción<select id="prov-col-nombre"></select></label><label>Presentación<select id="prov-col-presentacion"></select></label><label>Costo del proveedor<select id="prov-col-costo"></select></label><label>El precio del proveedor es<select id="prov-base-costo"><option value="unidad">Por presentación / unidad</option><option value="litro-kg">Por litro o kilo · botella aparte</option></select></label><button id="prov-comparar" type="button">Comparar sin modificar precios</button></div></fieldset>
-      <p class="hint">Rojo: sube el costo y se propone una venta con el margen actual. Verde: baja el costo y se mantiene la venta. Las coincidencias dudosas requieren elegir el producto.</p>
+      <p class="hint">Rojo: sube el costo y se propone una venta con el margen actual. Verde: baja el costo y se mantiene la venta. Las coincidencias dudosas requieren elegir el producto. Si aparece pack o x12, confirmá si el precio ya es unitario o si corresponde dividir el total del pack.</p>
       <p id="prov-resumen"></p><div class="row"><label>Mostrar<select id="prov-filtro"><option value="coincidentes">Sólo nuestros productos</option><option value="cambios">Sólo aumentos y bajas</option><option value="sube">Sólo aumentos</option><option value="baja">Sólo bajas</option><option value="todos">Todas las filas</option><option value="revisar">Sin coincidencia o ambiguas</option><option value="igual">Costos iguales</option><option value="duplicada">Productos repetidos</option></select></label><label>Buscar en el archivo<input id="prov-buscar" type="search" placeholder="Nombre o código"></label></div>
       <div id="prov-comparacion"></div><div class="row"><button id="prov-aplicar-seleccionadas" type="button" disabled>Aplicar seleccionados (0)</button><button id="prov-aplicar-todas" type="button" disabled>Aplicar todos los cambios coincidentes (0)</button></div>
     </details>
@@ -388,25 +388,25 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=36"></script>
-<script src="js/store.js?v=36"></script>
-<script src="js/negocio-online.js?v=36"></script>
-<script src="js/pagos.js?v=36"></script>
-<script src="js/scan.js?v=36"></script>
-<script src="js/caja.js?v=36"></script>
-<script src="js/stock.js?v=36"></script>
-<script src="js/entidades.js?v=36"></script>
-<script src="js/cumple.js?v=36"></script>
-<script src="js/exportar-informe.js?v=36"></script>
-<script src="js/listas-precios.js?v=36"></script>
-<script src="js/operacion.js?v=36"></script>
-<script src="js/turnos.js?v=36"></script>
-<script src="js/reportes.js?v=36"></script>
-<script src="js/app.js?v=36"></script>
-<script src="js/precios-online.js?v=36"></script>
+<script src="js/catalogo.js?v=37"></script>
+<script src="js/store.js?v=37"></script>
+<script src="js/negocio-online.js?v=37"></script>
+<script src="js/pagos.js?v=37"></script>
+<script src="js/scan.js?v=37"></script>
+<script src="js/caja.js?v=37"></script>
+<script src="js/stock.js?v=37"></script>
+<script src="js/entidades.js?v=37"></script>
+<script src="js/cumple.js?v=37"></script>
+<script src="js/exportar-informe.js?v=37"></script>
+<script src="js/listas-precios.js?v=37"></script>
+<script src="js/operacion.js?v=37"></script>
+<script src="js/turnos.js?v=37"></script>
+<script src="js/reportes.js?v=37"></script>
+<script src="js/app.js?v=37"></script>
+<script src="js/precios-online.js?v=37"></script>
 
-<script type="module" src="js/fotos.mjs?v=36"></script>
-<script type="module" src="js/remito.mjs?v=36"></script>
-<script type="module" src="js/comparar-proveedor.mjs?v=36"></script>
+<script type="module" src="js/fotos.mjs?v=37"></script>
+<script type="module" src="js/remito.mjs?v=37"></script>
+<script type="module" src="js/comparar-proveedor.mjs?v=37"></script>
 </body>
 </html>

@@ -22,6 +22,14 @@ La vista inicial **Sólo nuestros productos** oculta los artículos ajenos al ca
 
 Para listas UNIBLANC **X Lt. / K**, se detecta **Por litro o kilo**: el precio del proveedor se multiplica por los litros o kilos de cada presentación propia. Ejemplo: $650/litro equivale a $650 en 1 litro y $3.250 en 5 litros. La botella se maneja aparte y no se suma al costo del líquido; en Excel se toma Costo/Lt., no Costo/Botella. Revisar la base de costo antes de comparar. Si la presentación es desconocida, el precio es cero o hay duplicados, la fila queda para revisión sin aplicar automáticamente.
 
+### Precio por pack o por unidad
+Si el nombre menciona pack, caja o X12 UNID, la fila queda pendiente de **Confirmar cotización**. En **Precio por unidad / pack**, elegir:
+
+- **Ya es por la unidad que vendo**: conserva el importe del archivo, aunque el nombre mencione un pack.
+- **Es el precio total del pack; vendo por unidad**: ingresar unidades por pack (por ejemplo 12). Divide el importe y muestra el costo unitario y la venta resultante. Ejemplo: $21.240 ÷ 12 = $1.770 por unidad.
+
+La sugerencia del nombre se revisa; nunca divide por sí sola. Si el archivo no menciona pack, se puede abrir el mismo control y elegirlo manualmente. Cantidades faltantes o inválidas bloquean la aplicación. Se puede elegir **No aplicar** en una fila pendiente. Esta elección es propia de la comparación actual, y el costo confirmado sí se guarda online al aplicarlo. Las conversiones de granel por litro/kg se mantienen separadas.
+
 Aplicar un cambio, los seleccionados o todos los coincidentes requiere confirmación. Si el costo sube, la venta mantiene su margen real y sube proporcionalmente (también los precios particulares); si baja, mantiene la venta y mejora el margen. Se pueden redondear los precios después. Los PDF escaneados como imagen necesitan una versión Excel o con texto seleccionable.
 
 ### Compartir listas y obtener informes

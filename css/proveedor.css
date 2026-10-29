@@ -15,3 +15,8 @@
 
 #prov-comparacion .prov-descartada{background:#f2f2f2;color:#555}
 #prov-comparacion [data-omitir],#prov-comparacion [data-incluir]{display:block;margin-top:6px}
+
+#prov-comparacion .prov-revisar-pack{background:#fff8df}
+#prov-comparacion .prov-cotizacion{margin-top:8px;font-size:12px}
+#prov-comparacion .prov-cotizacion label{display:flex;flex-direction:column;margin-top:6px}
+#prov-comparacion [data-pack]{max-width:110px}

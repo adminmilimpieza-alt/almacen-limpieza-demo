@@ -7,7 +7,12 @@ const volumen=/\b(\d+(?:[.,]\d+)?)\s*(ml|litros?|lts?\.?|l|kgrs?|kgs?|grs?|g)\b/
 function presentacion(value){const m=String(value??'').match(volumen);if(!m)return '';const n=Number(m[1].replace(',','.')),u=m[2].toLowerCase();return /^(ml|l)/.test(u)?`${Math.round(n*(u==='ml'?1:1000)*1000)/1000}ml`:`${Math.round(n*(/^kg/.test(u)?1000:1)*1000)/1000}g`;}
 const familia=name=>normal(String(name??'').replace(volumen,''));
 export function extraerFilas(rows,headerIndex,columns){let previous=null;const out=[];for(let i=headerIndex+1;i<rows.length;i++){const r=rows[i],cost=numeroCosto(r[columns.costo]),nombre=String(r[columns.nombre]??'').trim();if(cost==null||!nombre)continue;let codigo=columns.codigo>=0?String(r[columns.codigo]??'').trim():'',inferido=false;let pres=columns.presentacion>=0?String(r[columns.presentacion]??''):'';if(/^\d+(?:[.,]\d+)?$/.test(pres)&&/cant.*l$/.test(normal(rows[headerIndex]?.[columns.presentacion]).replace(/ /g,'')))pres+=' l';if(!codigo&&previous?.codigo&&familia(nombre)===familia(previous.nombre)&&(presentacion(nombre)||presentacion(pres))){codigo=previous.codigo;inferido=true;}const row={codigo,nombre,presentacion:pres,costo:cost,fila:i+1,codigoInferido:inferido,baseCosto:/costoporlitrokg/.test(normal(rows[headerIndex]?.[columns.costo]).replace(/ /g,''))?'litro-kg':'unidad'};out.push(row);previous=row;}return out;}
-export function compararFilas(rows,products,asignaciones={}){
+export function unidadesPack(value){
+ const text=normal(value),values=[];
+ for(const re of [/\bx\s*(\d+)\s*(?:unidades|unid|uni|und|u)\b/g,/\b(?:pack|caja|bulto|paquete)\s*(?:x|de)?\s*(\d+)\b/g])for(const m of text.matchAll(re)){const n=Number(m[1]);if(Number.isInteger(n)&&n>1&&n<=100000)values.push(n);}
+ return values.at(-1)??null;
+}
+export function compararFilas(rows,products,asignaciones={},conversiones={}){
  const expanded=rows.flatMap((source,sourceIndex)=>{
   if(source.baseCosto!=='litro-kg')return [{source,sourceIndex}];
   const code=String(source.codigo||'').trim().toUpperCase();
@@ -17,12 +22,18 @@ export function compararFilas(rows,products,asignaciones={}){
  const out=expanded.map(({source,sourceIndex},index)=>{
   const chosen=asignaciones[index]||source.destinoId,code=String(source.codigo||'').trim().toUpperCase(),pres=presentacion(source.presentacion)||presentacion(source.nombre);
   let candidatos=code?products.filter(p=>String(p.codigo||'').trim().toUpperCase()===code):[],motivo='Código';
-  if(pres&&candidatos.length)candidatos=candidatos.filter(p=>presentacion(p.presentacion||p.nombre)===pres);
-  if(!candidatos.length){candidatos=products.filter(p=>normal(p.nombre)===normal(source.nombre)&&(!pres||presentacion(p.presentacion||p.nombre)===pres));motivo='Nombre exacto';}
+  if(pres&&candidatos.length)candidatos=candidatos.filter(p=>(presentacion(p.presentacion)||presentacion(p.nombre))===pres);
+  if(!candidatos.length){candidatos=products.filter(p=>normal(p.nombre)===normal(source.nombre)&&(!pres||(presentacion(p.presentacion)||presentacion(p.nombre))===pres));motivo='Nombre exacto';}
   if(chosen){candidatos=products.filter(p=>p.id===chosen);motivo=source.destinoId&&!asignaciones[index]?'Código · costo por litro/kg':'Elegido manualmente';}
   const p=candidatos.length===1?candidatos[0]:null;
   if(!p)return {source,sourceIndex,index,id:null,estado:candidatos.length?'ambigua':'no-encontrado',candidatos:candidatos.map(p=>p.id),motivo};
-  let costoNuevo=source.costo,factor=1;
+  const decision=conversiones[String(sourceIndex)+':'+p.id]||{},unidadesSugeridas=unidadesPack(source.nombre+' '+(source.presentacion||''));
+  let costoNuevo=source.costo,factor=1,divisorPack=1;
+  if(source.baseCosto!=='litro-kg'){
+   const n=Number(decision.unidades);
+   if((unidadesSugeridas&&!['unidad','pack'].includes(decision.modo))||(decision.modo==='pack'&&(!Number.isInteger(n)||n<2||n>100000)))return {source,sourceIndex,index,id:p.id,producto:p,estado:'revisar-pack',candidatos:[p.id],motivo,unidadesSugeridas,costoAnterior:p.costo,precioAnterior:p.precio};
+   if(decision.modo==='pack'){divisorPack=n;costoNuevo=Math.round(source.costo/n*100)/100;}
+  }
   if(source.baseCosto==='litro-kg'){
    const size=presentacion(p.presentacion)||presentacion(p.nombre);
    if(!size||Number(size.replace(/ml|g/g,''))<=0)return {source,sourceIndex,index,id:p.id,producto:p,estado:'sin-presentacion',candidatos:[p.id],motivo:'Revisar litros o kilos de la presentación'};
@@ -30,7 +41,7 @@ export function compararFilas(rows,products,asignaciones={}){
    costoNuevo=Math.round(source.costo*factor*100)/100;
   }
   const dif=costoNuevo-Number(p.costo),estado=source.costo<=0?'sin-precio':Math.abs(dif)<.005?'igual':dif>0?'sube':'baja',precioNuevo=dif>0?Math.round((Number(p.costo)>0?p.precio*costoNuevo/p.costo:costoNuevo*(1+(Number(p.margen)||0)/100))*100)/100:p.precio;
-  return {source,sourceIndex,index,id:p.id,producto:p,estado,candidatos:[p.id],costoAnterior:p.costo,costoNuevo,diferencia:dif,precioAnterior:p.precio,precioNuevo,margenAnterior:p.costo>0?(p.precio/p.costo-1)*100:null,margenNuevo:costoNuevo>0?(precioNuevo/costoNuevo-1)*100:null,motivo,factor};
+  return {source,sourceIndex,index,id:p.id,producto:p,estado,candidatos:[p.id],costoAnterior:p.costo,costoNuevo,diferencia:dif,precioAnterior:p.precio,precioNuevo,margenAnterior:p.costo>0?(p.precio/p.costo-1)*100:null,margenNuevo:costoNuevo>0?(precioNuevo/costoNuevo-1)*100:null,motivo,factor,divisorPack,unidadesSugeridas,modoCotizacion:decision.modo||'unidad'};
  });
  const counts=new Map();out.forEach(r=>{if(r.id)counts.set(r.id,(counts.get(r.id)||0)+1);});out.forEach(r=>{if(r.id&&counts.get(r.id)>1)r.estado='duplicada';});return out;
 }
