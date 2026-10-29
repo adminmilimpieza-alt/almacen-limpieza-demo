@@ -139,11 +139,7 @@ async function route(request,env){
 export default {async fetch(request,env){
   try{
     if(new URL(request.url).pathname.startsWith('/api/')) return await route(request,env);
-    if(!['GET','HEAD'].includes(request.method))return new Response('Método no permitido.',{status:405,headers:{Allow:'GET, HEAD'}});
-    // La web interna no recibe cookies de operador ni parámetros del checkout.
-    const assetUrl=new URL(request.url);assetUrl.search='';
-    const assetHeaders=new Headers();for(const name of ['Accept','If-None-Match','If-Modified-Since','Range'])if(request.headers.has(name))assetHeaders.set(name,request.headers.get(name));
-    const response=await env.ASSETS.fetch(new Request(assetUrl,{method:request.method,headers:assetHeaders}));
+    const response=await env.ASSETS.fetch(request);
     const headers=new Headers(response.headers);
     if(response.headers.get('Content-Type')?.includes('text/html'))headers.set('Cache-Control','no-store');
     headers.set('X-Content-Type-Options','nosniff'); headers.set('Referrer-Policy','same-origin'); headers.set('X-Frame-Options','DENY');

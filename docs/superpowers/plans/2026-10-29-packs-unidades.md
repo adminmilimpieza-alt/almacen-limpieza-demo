@@ -9,6 +9,6 @@ El usuario confirma punto 3: distinguir cotización del pack y por unidad. El no
 - 116 pruebas pasan. Navegador local: filas pendientes no aplicables, pack21240/12→1770, precio ya unitario1890 no se divide. API SQLite aislada confirma costo1770/venta2301 y stock sin cambios.
 - Publicación pendiente de verificar. El intento anterior del commit21c123b falló en assets-upload-session con error interno10013 de Cloudflare; no es un fallo de pruebas ni del build.
 
-## Alternativa de publicación tras error persistente del servicio histórico
+## Publicación
 
-Separar archivos en Worker privado `milimpieza-web` (FILES), sin D1, secretos, workers.dev ni previews. Worker principal conserva URL/DB/secretos y usa Service Binding ASSETS. Reenvía sólo ruta/método/cabeceras de archivos: sin cookies, autorización ni parámetros de checkout. Se despliega archivos primero y backend después con `npm run deploy`; si falla archivos, no se cambia backend. Pruebas de privacidad, API y método agregadas:119 pasan.
+Mantener un único Worker con ASSETS, DB y secretos existentes. La alternativa de servicio privado no es compatible con Workers Builds: sobrescribe nombres explícitos usando el nombre vinculado y no creó el servicio esperado. Se revierte íntegramente. La carga de assets dejó de devolver10013 durante ese intento, por lo que se restaura el despliegue original con las mejoras de packs. No se modificó contenido de D1.

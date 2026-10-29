@@ -48,11 +48,3 @@ Guía de operación: [GUIA-COBROS.md](GUIA-COBROS.md).
 ## Informes e historial
 
 Modelos puros en `js/reportes-datos.mjs`; exportación de la instantánea elegida mediante `js/exportar-informe.js` a PDF, XLSX, CSV o impresión. Listas comerciales excluyen datos internos. Historial por cliente y fechas; compras anteriores guardadas como históricas sin efectos de stock, deuda o caja. Los formatos grandes paginan en PDF. Dependencias locales y licencias en `js/vendor/README.md`.
-
-## Archivos web en servicio interno
-
-Para evitar el error10013 de assets-upload-session del Worker histórico, `milimpieza-web` sirve `dist` por un Service Binding privado `ASSETS` al Worker principal `milimpieza`. Su configuración no incluye D1 ni secretos, y desactiva workers.dev y preview URLs. La API y los secretos permanecen en el principal; las solicitudes de archivos se reenvían sin cookies, autorización ni parámetros del checkout.
-
-`npm run deploy` construye, publica primero `wrangler.web.jsonc` y sólo después `wrangler.jsonc`. En Cloudflare Builds el comando de deploy debe ser `npm run deploy`; el de build sigue siendo `npm ci && npm test && npm run build`. La URL pública permanece igual. Para desarrollo local, `npm run dev` inicia ambas configuraciones.
-
-Referencia oficial: https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/http/

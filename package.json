@@ -1,14 +1,5 @@
 {
-  "name": "milimpieza",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "build": "node tools/build.mjs",
-    "deploy": "npm run build && wrangler deploy --config wrangler.web.jsonc --name milimpieza-web && wrangler deploy --config wrangler.jsonc --name milimpieza",
-    "dev": "npm run build && wrangler dev --config wrangler.jsonc --config wrangler.web.jsonc"
-  },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
-  }
+  "name": "milimpieza", "private": true, "type": "module",
+  "scripts": {"test":"node --test tests/*.test.mjs", "build":"node tools/build.mjs", "deploy":"npm run build && wrangler deploy", "dev":"npm run build && wrangler dev"},
+  "devDependencies": {"wrangler":"^4.0.0"}
 }
