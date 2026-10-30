@@ -658,12 +658,12 @@ function crearStore(localStorage, catalogoInput){
 // Browser and Worker use the same business rules. Only the storage adapter differs.
 globalThis.MiLimpiezaStoreFactory=crearStore;
 const LocalStore=crearStore(globalThis.localStorage,typeof CATALOGO!=='undefined'?CATALOGO:undefined);
-const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista']);
+const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo']);
 const Store=new Proxy(LocalStore,{get(target,key){
   const online=globalThis.OnlineBusiness;
   if(online?.activo){
     if(key==='get')return ()=>online.get();
-    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto'].includes(key))return (...args)=>online.read(key,args);
+    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto','clasificarImportacion'].includes(key))return (...args)=>online.read(key,args);
     if(key==='actualizarFotos')return patches=>online.applyPhotos(patches);
     if(key==='export')return ()=>JSON.stringify(online.get(),null,2);
     if(onlineMutations.has(key))return (...args)=>online.mutate(key,args);
