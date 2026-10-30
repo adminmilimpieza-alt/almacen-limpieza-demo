@@ -25,7 +25,7 @@ function crearStore(localStorage, catalogoInput){
       id:'p'+(i+1), codigo:r.codigo||'', nombre:r.nombre||'', detalle:r.detalle||'',
       categoria:r.categoria||'Accesorios', presentacion:r.presentacion||'', provId:r.provId||'',
       costo:Number(r.costo)||0, precio:Number(r.precio)||0,
-      margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'',
+      margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'', clave:r.clave||'',
       stock:(r.stock==null?10:r.stock), activo:(r.activo!==false), foto:''
     })),
     ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
@@ -138,7 +138,7 @@ function crearStore(localStorage, catalogoInput){
         categoria:r.categoria||'Accesorios', presentacion:r.presentacion||'',
         provId:r.provId||'', proveedorNombre:r.prov||(prev?prev.proveedorNombre:''),
         costo:Number(r.costo)||0, precio:Number(r.precio)||0,
-        margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'',
+        margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'', clave:r.clave||'',
         stock:Number(r.stock)||0,
         activo: prev? (prev.activo!==false) : (r.activo!==false),
         foto: (prev?.fotoOnlineRevision||prev?.fotoPendiente) ? (prev.foto||'') : (prev ? (prev.foto||r.foto||'') : (r.foto||'')),
@@ -266,6 +266,47 @@ function crearStore(localStorage, catalogoInput){
     return out;
   }
   const margenReal=(precio,costo)=>costo>0?Math.round((precio/costo-1)*1e12)/1e10:null;
+  // Importación de la lista completa del proveedor: cómo se reconoce un producto.
+  // Primero por código+presentación; si no coincide, por código cuando es único en
+  // ambos lados (la planilla cambió cómo escribe la presentación, no el producto).
+  const normImportacion=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const claveImportacion=p=>(normImportacion(p.codigo)||normImportacion(p.nombre))+'|'+normImportacion(p.presentacion);
+  // La semilla trae su clave para distinguir presentaciones con el mismo código.
+  const claveDe=p=>String(p.clave||claveImportacion(p));
+  const tamanoImportacion=p=>{const m=/^(\d+(?:X\d+)?)/.exec(normImportacion(p.presentacion));return m?m[1]:'';};
+  function emparejarImportacion(db,filas){
+    const cuenta=(mapa,valor)=>{const k=normImportacion(valor);if(k)mapa.set(k,(mapa.get(k)||0)+1);};
+    const porFila=new Map(),porCatalogo=new Map(),porTamanoFila=new Map(),porTamanoCatalogo=new Map();
+    filas.forEach(f=>cuenta(porFila,f.codigo));
+    db.productos.forEach(p=>cuenta(porCatalogo,p.codigo));
+    const tamanoClave=p=>{const c=normImportacion(p.codigo),t=tamanoImportacion(p);return c&&t?c+'|'+t:'';};
+    filas.forEach(f=>{const k=tamanoClave(f);if(k)porTamanoFila.set(k,(porTamanoFila.get(k)||0)+1);});
+    db.productos.forEach(p=>{const k=tamanoClave(p);if(k)porTamanoCatalogo.set(k,(porTamanoCatalogo.get(k)||0)+1);});
+    const porClave=new Map(),porCodigo=new Map(),porTamano=new Map(),nombreProv=id=>(db.proveedores.find(p=>p.id===id)||{}).nombre||'',usados=new Set();
+    for(const p of db.productos){
+      const k=claveDe(p);if(!porClave.has(k))porClave.set(k,p);
+      const c=normImportacion(p.codigo);if(c&&porCatalogo.get(c)===1)porCodigo.set(c,p);
+      const t=tamanoClave(p);if(t&&porTamanoCatalogo.get(t)===1)porTamano.set(t,p);
+    }
+    return filas.map(fila=>{
+      const clave=claveDe(fila);
+      let actual=porClave.get(clave)||null;
+      if(actual&&usados.has(actual.id))actual=null;
+      // Código único en ambos lados: cambió cómo se escribe la presentación.
+      if(!actual){const c=normImportacion(fila.codigo);const candidato=c&&porFila.get(c)===1?porCodigo.get(c):null;if(candidato&&!usados.has(candidato.id))actual=candidato;}
+      // Mismo código y misma cantidad (1 Lt / 1 Kg): cambió la unidad, no el producto.
+      if(!actual){const t=tamanoClave(fila);const candidato=t&&porTamanoFila.get(t)===1?porTamano.get(t):null;if(candidato&&!usados.has(candidato.id))actual=candidato;}
+      if(actual)usados.add(actual.id);
+      const precio=Number(fila.precio);
+      if(!actual)return {fila,actual:null,estado:Number(fila.costo)>0?'nuevo':'sin-costo'};
+      const costo=Number(fila.costo)>0?Number(fila.costo):Number(actual.costo)||0;
+      const margen=fila.margen==null?margenReal(precio,costo):Number(fila.margen);
+      const cambia=Number(actual.precio)!==precio||Number(actual.costo)!==costo||(actual.margen??null)!==(margen??null)||actual.activo===false||
+        claveDe(actual)!==clave||actual.categoria!==(fila.categoria||actual.categoria)||
+        normImportacion(nombreProv(actual.provId))!==normImportacion(fila.provNombre);
+      return {fila,actual,estado:cambia?'actualiza':'igual'};
+    });
+  }
   const listaDefault='mostrador';
   function listas(db){return [{id:listaDefault,nombre:'Mostrador',precios:{}},...(db.listasPrecios||[]).filter(l=>l.id!==listaDefault)];}
   function precioLista(db,id,listaId){const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');const list=listas(db).find(l=>l.id===(listaId||listaDefault));if(!list)throw new Error('Lista de precios no encontrada.');return Number(list.precios?.[id]??p.precio);}
@@ -335,6 +376,50 @@ function crearStore(localStorage, catalogoInput){
     asignarProveedor(ids,provId){
       const db=load();if(!db.proveedores.some(p=>p.id===provId))throw new Error('Proveedor no encontrado.');
       const set=new Set(ids);db.productos.forEach(p=>{if(set.has(p.id))p.provId=provId;});save(db);
+    },
+    // Carga la lista completa del proveedor: crea lo nuevo, actualiza costo/margen/
+    // proveedor de lo que ya existe y oculta (no borra) lo que salió de la lista.
+    // Nunca toca stock, fotos ni ventas: el stock se cuenta y las fotos se suben aparte.
+    importarCatalogo(input){
+      const db=load(),filas=input?.filas;
+      if(!Array.isArray(filas)||!filas.length||filas.length>2000)throw new Error('La lista debe tener entre 1 y 2000 productos.');
+      const proveedores=new Map(db.proveedores.map(p=>[normImportacion(p.nombre),p])),nuevosProv=[];
+      const provId=nombre=>{const k=normImportacion(nombre);let p=proveedores.get(k);if(!p){p={id:newId('pv'),nombre:String(nombre).trim().slice(0,80),tel:'',notas:''};db.proveedores.push(p);proveedores.set(k,p);nuevosProv.push(p.nombre);}return p.id;};
+      let creados=0,actualizados=0,iguales=0,sinCosto=0;const enLista=new Set();
+      for(const {fila:f,actual,estado} of emparejarImportacion(db,filas)){
+        if(!actual){
+          if(estado==='sin-costo'){sinCosto++;continue;}
+          const nuevo={id:newId('p'),codigo:String(f.codigo||'').slice(0,40),nombre:String(f.nombre).slice(0,180),detalle:String(f.detalle||'').slice(0,300),categoria:f.categoria||'Accesorios',presentacion:String(f.presentacion||'').slice(0,40),provId:provId(f.provNombre),costo:Number(f.costo),precio:Number(f.precio),margen:f.margen==null?null:Number(f.margen),alerta:String(f.aviso||'').slice(0,200),stock:0,activo:true,foto:''};
+          if(String(f.clave||'')&&String(f.clave)!==claveImportacion(f))nuevo.clave=String(f.clave).slice(0,240);
+          db.productos.push(nuevo);enLista.add(claveDe(nuevo));creados++;
+          continue;
+        }
+        const precioAnterior=Number(actual.precio)||0,id=provId(f.provNombre);
+        actual.costo=Number(f.costo)>0?Number(f.costo):Number(actual.costo)||0;
+        actual.precio=Number(f.precio);
+        actual.margen=f.margen==null?margenReal(actual.precio,actual.costo):Number(f.margen);
+        actual.provId=id;actual.categoria=f.categoria||actual.categoria||'Accesorios';actual.activo=true;
+        if(!actual.codigo&&f.codigo)actual.codigo=String(f.codigo).slice(0,40);
+        // Si el código es único en ambos lados, cambió la presentación escrita y no el producto.
+        if(f.presentacion&&claveDe(actual)!==claveDe(f))actual.presentacion=String(f.presentacion).slice(0,40);
+        if(precioAnterior>0&&actual.precio!==precioAnterior)for(const lista of db.listasPrecios||[])if(Object.hasOwn(lista.precios||{},actual.id))lista.precios[actual.id]=redondear2(lista.precios[actual.id]*actual.precio/precioAnterior);
+        if(String(f.clave||'')&&String(f.clave)!==claveImportacion(f))actual.clave=String(f.clave).slice(0,240);
+        else delete actual.clave;
+        enLista.add(claveDe(actual));
+        estado==='igual'?iguales++:actualizados++;
+      }
+      let ocultados=0;
+      if(input.ocultarFaltantes!==false)for(const p of db.productos)if(p.activo!==false&&!enLista.has(claveDe(p))){p.activo=false;ocultados++;}
+      save(db);
+      return {creados,actualizados,iguales,ocultados,sinCosto,proveedores:nuevosProv};
+    },
+    // Vista previa: qué se crea, qué se actualiza y qué sale de la lista.
+    clasificarImportacion(filas){
+      if(!Array.isArray(filas)||!filas.length||filas.length>2000)throw new Error('La lista debe tener entre 1 y 2000 productos.');
+      const db=load(),resultado=emparejarImportacion(db,filas);
+      const enLista=new Set(resultado.filter(r=>r.actual).map(r=>claveDe(r.actual)));
+      const salen=db.productos.filter(p=>p.activo!==false&&!enLista.has(claveDe(p)));
+      return {resultado,salen};
     },
     upsertProducto(p){ const db=load(); const i=db.productos.findIndex(x=>x.id===p.id);
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },

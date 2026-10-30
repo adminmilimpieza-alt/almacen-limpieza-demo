@@ -2,7 +2,7 @@ import '../js/store.js';
 import catalogo from '../data/catalogo.json' with {type:'json'};
 import {authenticated} from './security.mjs';
 const cols=['productos','clientes','proveedores','ventas','movimientos','pedidos','turnos','listasPrecios'];
-const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista']);
+const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo']);
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const json=data=>Response.json(data,{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validId=id=>typeof id==='string'&&/^[\w-]{1,100}$/.test(id)&&!['__proto__','prototype','constructor'].includes(id);
@@ -63,6 +63,21 @@ function validateOperation(op,args,state){
  if(op==='registrarCompraHistorica'){const h=args[0];if(!h||!stateClient(state,h.clienteId)||typeof h.fecha!=='string')throw fail('Compra histórica inválida.');items(h.items,state,false);}
  if(op==='asignarProveedor'&&(!Array.isArray(args[0])||args[0].some(id=>!state.productos.some(p=>p.id===id))||!state.proveedores.some(p=>p.id===args[1])))throw fail('Proveedor o productos inválidos.');
  if(op==='aplicarMargen'&&!['propio',''].includes(args[0])&&!number(args[0]))throw fail('Margen inválido.');
+ if(op==='importarCatalogo'){
+  const filas=args[0]?.filas;
+  if(!Array.isArray(filas)||!filas.length||filas.length>2000)throw fail('La lista debe tener entre 1 y 2000 productos.');
+  for(const fila of filas){
+   if(!fila||typeof fila!=='object'||Array.isArray(fila))throw fail('Producto de la lista inválido.');
+   if(typeof fila.provNombre!=='string'||!fila.provNombre.trim()||fila.provNombre.length>80)throw fail('Falta el proveedor de un producto.');
+   if(typeof fila.nombre!=='string'||!fila.nombre.trim()||fila.nombre.length>180)throw fail('Nombre de producto inválido.');
+   if(!number(fila.precio)||fila.precio<=0)throw fail('Costo o venta inválidos en la lista.');
+   if(fila.costo!=null&&(!number(fila.costo)||fila.costo<=0))throw fail('Costo o venta inválidos en la lista.');
+   if(fila.margen!=null&&!margin(fila.margen))throw fail('Margen inválido en la lista.');
+   if(fila.categoria!=null&&!['Accesorios','Líquidos 1L','Líquidos 5L','Pileta'].includes(fila.categoria))throw fail('Categoría inválida en la lista.');
+   if(fila.clave!=null&&(typeof fila.clave!=='string'||fila.clave.length>240))throw fail('Identificación de producto inválida.');
+  }
+  if(args[0].ocultarFaltantes!=null&&typeof args[0].ocultarFaltantes!=='boolean')throw fail('Opción de ocultar inválida.');
+ }
  if(op==='anularVenta'){const sale=state.ventas.find(v=>v.id===args[0]);if(sale?.pago==='cuenta'&&(state.clientes.find(c=>c.id===sale.clienteId)?.deuda||0)<sale.total)throw fail('La cuenta ya tiene pagos aplicados. Revisá la deuda antes de anular esta venta.');}
  if(op==='cobrar'){items(args[0],state,true,args[2]||'c1');if(!['efectivo','banco','mercadopago','cuenta'].includes(args[1])||!state.clientes.some(c=>c.id===(args[2]||'c1')))throw fail('Pago o cliente inválido.');}
  if(op==='abrirTurno'&&!number(args[0]))throw fail('Saldo inválido.');

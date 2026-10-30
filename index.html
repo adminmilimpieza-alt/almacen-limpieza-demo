@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=37">
-<link rel="stylesheet" href="css/remito.css?v=37">
-<link rel="stylesheet" href="css/reportes.css?v=37">
-<link rel="stylesheet" href="css/listas-precios.css?v=37">
-<link rel="stylesheet" href="css/informes.css?v=37">
-<link rel="stylesheet" href="css/proveedor.css?v=37">
+<link rel="stylesheet" href="css/style.css?v=38">
+<link rel="stylesheet" href="css/remito.css?v=38">
+<link rel="stylesheet" href="css/reportes.css?v=38">
+<link rel="stylesheet" href="css/listas-precios.css?v=38">
+<link rel="stylesheet" href="css/informes.css?v=38">
+<link rel="stylesheet" href="css/proveedor.css?v=38">
 
 </head>
 <body>
@@ -210,6 +210,15 @@
       <p id="prov-resumen"></p><div class="row"><label>Mostrar<select id="prov-filtro"><option value="coincidentes">Sólo nuestros productos</option><option value="cambios">Sólo aumentos y bajas</option><option value="sube">Sólo aumentos</option><option value="baja">Sólo bajas</option><option value="todos">Todas las filas</option><option value="revisar">Sin coincidencia o ambiguas</option><option value="igual">Costos iguales</option><option value="duplicada">Productos repetidos</option></select></label><label>Buscar en el archivo<input id="prov-buscar" type="search" placeholder="Nombre o código"></label></div>
       <div id="prov-comparacion"></div><div class="row"><button id="prov-aplicar-seleccionadas" type="button" disabled>Aplicar seleccionados (0)</button><button id="prov-aplicar-todas" type="button" disabled>Aplicar todos los cambios coincidentes (0)</button></div>
     </details>
+    <details class="precios-opcion" id="precios-catalogo"><summary>Importar la lista completa del proveedor · Excel</summary>
+      <p>Reemplaza el catálogo con la última lista: agrega lo nuevo, actualiza costo, margen y proveedor, y oculta lo que salió de la lista. No toca stock, fotos ni ventas. Primero muestra el resumen: recién se aplica cuando confirmás.</p>
+      <div class="row"><label>Lista completa en Excel<input id="cat-archivo" type="file" accept=".xlsx,.xls"></label><button id="cat-leer" type="button" disabled>Leer la lista</button></div>
+      <p id="cat-estado" role="status">Usá la planilla del proveedor con una sección por proveedor.</p>
+      <div id="cat-resumen"></div>
+      <div id="cat-tabla"></div>
+      <div class="row"><label><input id="cat-ocultar" type="checkbox" checked> Ocultar los productos que ya no están en la lista (no se borran)</label></div>
+      <div class="row"><button id="cat-aplicar" class="primary" type="button" disabled>Importar la lista al negocio</button></div>
+    </details>
     <details class="precios-opcion" id="precios-avanzadas"><summary>Opciones avanzadas</summary>
       <p class="hint">Filtrar la lista o cambiar el margen de varios productos.</p>
       <div class="row">
@@ -388,25 +397,26 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=37"></script>
-<script src="js/store.js?v=37"></script>
-<script src="js/negocio-online.js?v=37"></script>
-<script src="js/pagos.js?v=37"></script>
-<script src="js/scan.js?v=37"></script>
-<script src="js/caja.js?v=37"></script>
-<script src="js/stock.js?v=37"></script>
-<script src="js/entidades.js?v=37"></script>
-<script src="js/cumple.js?v=37"></script>
-<script src="js/exportar-informe.js?v=37"></script>
-<script src="js/listas-precios.js?v=37"></script>
-<script src="js/operacion.js?v=37"></script>
-<script src="js/turnos.js?v=37"></script>
-<script src="js/reportes.js?v=37"></script>
-<script src="js/app.js?v=37"></script>
-<script src="js/precios-online.js?v=37"></script>
+<script src="js/catalogo.js?v=38"></script>
+<script src="js/store.js?v=38"></script>
+<script src="js/negocio-online.js?v=38"></script>
+<script src="js/pagos.js?v=38"></script>
+<script src="js/scan.js?v=38"></script>
+<script src="js/caja.js?v=38"></script>
+<script src="js/stock.js?v=38"></script>
+<script src="js/entidades.js?v=38"></script>
+<script src="js/cumple.js?v=38"></script>
+<script src="js/exportar-informe.js?v=38"></script>
+<script src="js/listas-precios.js?v=38"></script>
+<script src="js/operacion.js?v=38"></script>
+<script src="js/turnos.js?v=38"></script>
+<script src="js/reportes.js?v=38"></script>
+<script src="js/app.js?v=38"></script>
+<script src="js/precios-online.js?v=38"></script>
 
-<script type="module" src="js/fotos.mjs?v=37"></script>
-<script type="module" src="js/remito.mjs?v=37"></script>
-<script type="module" src="js/comparar-proveedor.mjs?v=37"></script>
+<script type="module" src="js/fotos.mjs?v=38"></script>
+<script type="module" src="js/remito.mjs?v=38"></script>
+<script type="module" src="js/comparar-proveedor.mjs?v=38"></script>
+<script type="module" src="js/importar-lista.mjs?v=38"></script>
 </body>
 </html>

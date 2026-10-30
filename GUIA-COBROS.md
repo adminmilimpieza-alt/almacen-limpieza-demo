@@ -15,6 +15,18 @@ En **Módulos → Precios**, buscar por nombre o código y editar costo, margen 
 
 **Lista de precios** permite elegir Mostrador (predeterminada), Revendedores o una lista propia. En **Administrar y compartir listas**, escribir un nombre y pulsar **Nueva lista**. Los productos sin precio particular heredan Mostrador; editar su precio o margen crea un precio propio y **Usar Mostrador** lo restablece. En **Clientes**, asignar la lista al cliente. Caja usa esa lista al elegirlo; si se cambia el cliente con un ticket armado, pide confirmar la actualización de los precios. Las ventas anteriores conservan sus importes.
 
+### Importar la lista completa del proveedor
+Para reemplazar el catálogo con la última planilla del proveedor: **Precios → Importar la lista completa del proveedor · Excel**. Elegir el archivo y pulsar **Leer la lista**. El sistema lee cada sección (`Proveedor: UNIBLANC`, `GEMORA`, `ACUAMAR`, `PURA QUIMICA`, `DON EMILIO`), arma el nombre y la presentación de cada producto y muestra el resumen antes de tocar nada: nuevos, con cambios, sin cambios, sin costo en la lista y los que salen.
+
+Al confirmar **Importar la lista al negocio**, el servidor agrega lo nuevo, actualiza costo, margen, proveedor y categoría de lo que ya existe y **oculta** (no borra) lo que salió de la lista. Nunca modifica stock, fotos ni ventas: el stock se cuenta y las fotos se suben aparte. La operación queda registrada una sola vez, aunque se reintente.
+
+- Los precios y la venta son los de la planilla. El envase (columna Costo/Botella) ya está incluido en la venta: se guarda el costo equivalente (venta ÷ (1 + margen)) para que la app reproduzca ese precio, y queda aclarado en la alerta del producto.
+- Si la planilla trae la venta pero no el costo, se conserva el costo ya cargado y se actualiza la venta. Si el producto es nuevo y no tiene costo, se saltea y se informa para cargarlo a mano.
+- Si cambia sólo la forma de escribir la presentación (1 Lt / 1 Kg) y el código es el mismo, se actualiza el producto existente en lugar de crear otro.
+- Los productos ocultos se pueden volver a mostrar desde Stock; no se pierden.
+
+Después de importar, revisar los avisos, cargar el stock real y subir las fotos de los productos nuevos.
+
 ### Comparar con el proveedor
 Abrir **Comparar lista del proveedor**, elegir Excel (.xlsx/.xls), CSV o PDF con texto. El sistema sugiere hoja, encabezado y columnas; revisar especialmente **Costo del proveedor**, después pulsar **Comparar sin modificar precios**. Rojo: aumentó; verde: bajó; igual: sin cambio. Los desconocidos, duplicados o dudosos requieren revisión o asignación manual. Nunca se modifica nada por cargar el archivo.
 

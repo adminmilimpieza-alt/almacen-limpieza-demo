@@ -15,7 +15,7 @@ Todos los equipos autenticados consultan y modifican una misma base: productos/p
 
 ## Precios y fotos
 
-Costo, margen y precio final se guardan online al terminar de editar. Listas nombradas con precios particulares e herencia de Mostrador; cada cliente puede tener una lista. El comparador local XLSX/XLS/CSV/PDF textual aplica sólo cambios confirmados y coincide por código/nombre y presentación; los duplicados y dudosos no se aplican automáticamente. Aumentos de costo mantienen margen real; bajas mantienen venta. El botón Actualizar precios consulta el negocio. `/api/prices` antiguo responde 410 para evitar dos fuentes de verdad. `shared_prices` previo solo se lee para incorporar precios al crear la base central.
+Costo, margen y precio final se guardan online al terminar de editar. Listas nombradas con precios particulares e herencia de Mostrador; cada cliente puede tener una lista. La lista completa del proveedor se carga desde **Precios → Importar la lista completa del proveedor**: muestra el resumen (nuevos, cambios, salen de la lista) y recién al confirmar crea, actualiza y oculta productos, sin tocar stock, fotos ni ventas. El comparador local XLSX/XLS/CSV/PDF textual aplica sólo cambios confirmados y coincide por código/nombre y presentación; los duplicados y dudosos no se aplican automáticamente. Aumentos de costo mantienen margen real; bajas mantienen venta. El botón Actualizar precios consulta el negocio. `/api/prices` antiguo responde 410 para evitar dos fuentes de verdad. `shared_prices` previo solo se lee para incorporar precios al crear la base central.
 
 Las imágenes usan `product_photos` y `/api/photos`, JPEG hasta 150 KB, comprimido en el navegador a 480×480. Las referencias se guardan con los productos. Las fotos son públicas; las escrituras requieren sesión y revisión. Las recuperaciones de respaldos antiguos insertan solo imágenes ausentes y no restauran información financiera. Las bajas lógicas impiden que un respaldo viejo reponga una foto quitada.
 
@@ -39,7 +39,7 @@ npm run build
 npm run dev
 ```
 
-Build prepara `dist` con solo web/JS/CSS/datos públicos. Worker y secretos no van en los activos. `wrangler.jsonc` vincula `milimpieza-cobros`; aplicar `migrations/0001.sql` y `0002.sql` al crear una instalación nueva para cobros/fotos. Las tablas centrales se crean tras acceso autenticado. Usar `.dev.vars` ignorado para credenciales falsas locales. Las utilidades históricas de importar catálogo siguen siendo útiles para generar la semilla, no para sincronizar una caja en operación.
+Build prepara `dist` con solo web/JS/CSS/datos públicos. Worker y secretos no van en los activos. `wrangler.jsonc` vincula `milimpieza-cobros`; aplicar `migrations/0001.sql` y `0002.sql` al crear una instalación nueva para cobros/fotos. Las tablas centrales se crean tras acceso autenticado. Usar `.dev.vars` ignorado para credenciales falsas locales. `tools/importar-precios.py` regenera la semilla (`data/catalogo.json` y `js/catalogo.js`) desde la planilla; una caja en operación se actualiza desde la app con **Precios → Importar la lista completa del proveedor**.
 
 Cloudflare despliega la rama `codex/mercadopago-cloudflare` del repositorio del cliente. La página de GitHub `main` contiene únicamente el aviso de traslado y respaldo antiguo. No fusionar esa página de aviso encima de la aplicación de Workers.
 
