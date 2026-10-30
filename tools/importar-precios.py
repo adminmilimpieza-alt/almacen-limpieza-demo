@@ -66,24 +66,30 @@ def presentacion(detalle, cant):
     completo = detalle or ""
     # El tamaño del envase va antes que las dosis o rindes que la planilla pone entre paréntesis.
     fuera = re.sub(r"\([^)]*\)", " ", completo)
-    for patron, valor in PRESENTACIONES:
-        if re.search(patron, fuera, re.I):
-            return valor
+
+    def buscar(texto):
+        for patron, valor in PRESENTACIONES:
+            if re.search(patron, texto, re.I):
+                return valor
+        return None
+
+    por_texto = buscar(fuera) or buscar(completo)
+    por_cant = None
     if isinstance(cant, (int, float)) and cant > 0:
         if cant == 1:
-            return "1 Lt"
-        if cant == 5:
-            return "5 Lts"
-        if cant == 10:
-            return "10 Lts"
-        if cant == 0.5:
-            return "500 grs"
-        if float(cant).is_integer():
-            return f"{int(cant)} x Unid"
-    for patron, valor in PRESENTACIONES:
-        if re.search(patron, completo, re.I):
-            return valor
-    return "x Unid"
+            por_cant = "1 Lt"
+        elif cant == 5:
+            por_cant = "5 Lts"
+        elif cant == 10:
+            por_cant = "10 Lts"
+        elif cant == 0.5:
+            por_cant = "500 grs"
+        elif float(cant).is_integer():
+            por_cant = f"{int(cant)} x Unid"
+    # Si la planilla copió el tamaño de otra presentación, manda la columna Cant./Lt.
+    if por_texto and por_cant and re.search(r"LTS?$", por_texto, re.I) and por_cant != por_texto:
+        return por_cant
+    return por_texto or por_cant or "x Unid"
 
 
 def nombre_corto(detalle, pres):
@@ -91,8 +97,13 @@ def nombre_corto(detalle, pres):
     parentesis = base.find("(")
     if parentesis > 12:
         base = base[:parentesis]
-    elif ". " in base:
-        base = base.split(". ")[0]
+    else:
+        corte = base.find(". ")
+        if corte > 12:
+            resto = base[corte + 2:].strip()
+            # Cortar sólo si sigue una explicación ("Para recuperar el agua"), no una variante ("- Dove").
+            if re.match(r"^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]", resto) and len(resto.split()) >= 3:
+                base = base[:corte]
     base = re.sub(r"[.;,]+$", "", limpia(base))
     final = re.search(r"(\d+)\s*(LTS?|LT|KGR|GR|CC|ML)\s*$", base, re.I)
     if final and pres != "x Unid":

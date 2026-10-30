@@ -24,16 +24,19 @@ export function presentacionDe(detalle,cant){
  const completo=String(detalle??'');
  // El tamaño del envase va antes que las dosis o rindes que la planilla pone entre paréntesis.
  const fuera=completo.replace(/\([^)]*\)/g,' ');
- for(const [patron,valor] of PRESENTACIONES) if(patron.test(fuera)) return valor;
+ const buscar=t=>{for(const [patron,valor] of PRESENTACIONES) if(patron.test(t)) return valor;return null;};
+ const porTexto=buscar(fuera)||buscar(completo);
+ let porCant=null;
  if(typeof cant==='number'&&cant>0){
-  if(cant===1) return '1 Lt';
-  if(cant===5) return '5 Lts';
-  if(cant===10) return '10 Lts';
-  if(cant===0.5) return '500 grs';
-  if(Number.isInteger(cant)) return cant+' x Unid';
+  if(cant===1) porCant='1 Lt';
+  else if(cant===5) porCant='5 Lts';
+  else if(cant===10) porCant='10 Lts';
+  else if(cant===0.5) porCant='500 grs';
+  else if(Number.isInteger(cant)) porCant=cant+' x Unid';
  }
- for(const [patron,valor] of PRESENTACIONES) if(patron.test(completo)) return valor;
- return 'x Unid';
+ // Si la planilla copió el tamaño de otra presentación, manda la columna Cant./Lt.
+ if(porTexto&&porCant&&/LTS?$/i.test(porTexto)&&porCant!==porTexto) return porCant;
+ return porTexto||porCant||'x Unid';
 }
 
 export function claveProducto(fila){
@@ -66,7 +69,14 @@ export function nombreCorto(detalle,presentacion){
  let base=texto(detalle);
  const parentesis=base.indexOf('(');
  if(parentesis>12) base=base.slice(0,parentesis);
- else if(base.includes('. ')) base=base.split('. ')[0];
+ else{
+  const corte=base.indexOf('. ');
+  if(corte>12){
+   const resto=base.slice(corte+2).trim();
+   // Cortar sólo si sigue una explicación ("Para recuperar el agua"), no una variante del producto ("- Dove").
+   if(/^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(resto)&&resto.split(/\s+/).length>=3) base=base.slice(0,corte);
+  }
+ }
  base=texto(base).replace(/[.;,]+$/,'');
  const final=/(\d+)\s*(LTS?|LT|KGR|GR|CC|ML)\s*$/i.exec(base);
  if(final&&presentacion&&presentacion!=='x Unid'){

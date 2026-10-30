@@ -363,7 +363,7 @@ const CATALOGO = {
   },
   {
    "codigo": "462",
-   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF",
+   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF. 1 Lt. - Coco/Vainilla",
    "detalle": "JABON LIQUIDO TOCADOR C/ DESINF. 1 Lt. - Coco/Vainilla",
    "presentacion": "1 Lt",
    "categoria": "Líquidos 1L",
@@ -379,7 +379,7 @@ const CATALOGO = {
   },
   {
    "codigo": "462",
-   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF",
+   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF. 5 Lts. - Coco/Vainilla",
    "detalle": "JABON LIQUIDO TOCADOR C/ DESINF. 5 Lts. - Coco/Vainilla",
    "presentacion": "5 Lts",
    "categoria": "Líquidos 5L",
@@ -395,7 +395,7 @@ const CATALOGO = {
   },
   {
    "codigo": "463",
-   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF",
+   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF. 1 Lt. - Dove",
    "detalle": "JABON LIQUIDO TOCADOR C/ DESINF. 1 Lt. - Dove",
    "presentacion": "1 Lt",
    "categoria": "Líquidos 1L",
@@ -411,7 +411,7 @@ const CATALOGO = {
   },
   {
    "codigo": "463",
-   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF",
+   "nombre": "JABON LIQUIDO TOCADOR C/ DESINF. 5 Lts. - Dove",
    "detalle": "JABON LIQUIDO TOCADOR C/ DESINF. 5 Lts. - Dove",
    "presentacion": "5 Lts",
    "categoria": "Líquidos 5L",
@@ -523,7 +523,7 @@ const CATALOGO = {
   },
   {
    "codigo": "690",
-   "nombre": "LIQUIDO P/ LAMPAZOS PERF",
+   "nombre": "LIQUIDO P/ LAMPAZOS PERF. Y SILICONADO AZUL 1 Lt",
    "detalle": "LIQUIDO P/ LAMPAZOS PERF. Y SILICONADO AZUL 1 Lt.",
    "presentacion": "1 Lt",
    "categoria": "Líquidos 1L",
@@ -539,7 +539,7 @@ const CATALOGO = {
   },
   {
    "codigo": "690",
-   "nombre": "LIQUIDO P/ LAMPAZOS PERF",
+   "nombre": "LIQUIDO P/ LAMPAZOS PERF. Y SILICONADO AZUL 5 Lts",
    "detalle": "LIQUIDO P/ LAMPAZOS PERF. Y SILICONADO AZUL 5 Lts.",
    "presentacion": "5 Lts",
    "categoria": "Líquidos 5L",
@@ -779,16 +779,16 @@ const CATALOGO = {
   },
   {
    "codigo": "3820",
-   "nombre": "JABON LIQ. \"TIPO ARIEL CON SUAVIZANTE\" 5 Lt",
+   "nombre": "JABON LIQ. \"TIPO ARIEL CON SUAVIZANTE\" 1 Lt",
    "detalle": "JABON LIQ. \"TIPO ARIEL CON SUAVIZANTE\" 5 Lt. (10% MATERIA ACTIVA + QUITAMANCHAS + BLANQUEADOR + SUAVIZANTE)",
-   "presentacion": "5 Lts",
-   "categoria": "Líquidos 5L",
+   "presentacion": "1 Lt",
+   "categoria": "Líquidos 1L",
    "prov": "UNIBLANC",
    "provId": "pv5",
    "costo": 1226.25,
    "precio": 1962.0,
    "margen": 60.0,
-   "clave": "3820|5LTS",
+   "clave": "3820|1LT",
    "alerta": "La venta de la lista incluye $250 de envase; se guarda el costo equivalente para que la app calcule ese precio.",
    "stock": 10,
    "activo": true
@@ -804,8 +804,8 @@ const CATALOGO = {
    "costo": 5350.0,
    "precio": 8560.0,
    "margen": 60.0,
-   "clave": "3820|5LTS|JABONLIQTIPOARIELCONSUAVIZANTE5LTS",
-   "alerta": "Código y presentación repetidos (fila 51); se distingue por nombre.",
+   "clave": "3820|5LTS",
+   "alerta": null,
    "stock": 10,
    "activo": true
   },
@@ -1051,7 +1051,7 @@ const CATALOGO = {
   },
   {
    "codigo": "13287",
-   "nombre": "SUAVIZANTE PARA ROPA *ULTRA PERFUMADO* 5 Lts",
+   "nombre": "SUAVIZANTE PARA ROPA *ULTRA PERFUMADO* 5 Lts. ULTRA PERFUMADO CON MICROCAPSULAS",
    "detalle": "SUAVIZANTE PARA ROPA *ULTRA PERFUMADO* 5 Lts. ULTRA PERFUMADO CON MICROCAPSULAS",
    "presentacion": "5 Lts",
    "categoria": "Líquidos 5L",
@@ -1387,7 +1387,7 @@ const CATALOGO = {
   },
   {
    "codigo": "622",
-   "nombre": "BOTELLA 1Lt",
+   "nombre": "BOTELLA 1Lt. Tipo Lavandina",
    "detalle": "BOTELLA 1Lt. Tipo Lavandina",
    "presentacion": "1 Lt",
    "categoria": "Accesorios",
@@ -1787,7 +1787,7 @@ const CATALOGO = {
   },
   {
    "codigo": "APPMTL0009",
-   "nombre": "MANGO TELESCOPICO 3,60 mts",
+   "nombre": "MANGO TELESCOPICO 3,60 mts. PO",
    "detalle": "MANGO TELESCOPICO 3,60 mts. PO",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
@@ -2587,7 +2587,7 @@ const CATALOGO = {
   },
   {
    "codigo": "7794321006119",
-   "nombre": "GUANTE TASCK Trad",
+   "nombre": "GUANTE TASCK Trad. Amar L/9",
    "detalle": "GUANTE TASCK Trad. Amar L/9",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
@@ -2603,7 +2603,7 @@ const CATALOGO = {
   },
   {
    "codigo": "7794321006102",
-   "nombre": "GUANTE TASCK Trad",
+   "nombre": "GUANTE TASCK Trad. Amar M/8",
    "detalle": "GUANTE TASCK Trad. Amar M/8",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
@@ -2619,7 +2619,7 @@ const CATALOGO = {
   },
   {
    "codigo": "7798159881351",
-   "nombre": "GUANTE YOU Amar",
+   "nombre": "GUANTE YOU Amar. S",
    "detalle": "GUANTE YOU Amar. S",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
@@ -4091,7 +4091,7 @@ const CATALOGO = {
   },
   {
    "codigo": "7790773008435",
-   "nombre": "Q-SOFT TOALLA DESMAQUILLANTE AGUA MIC",
+   "nombre": "Q-SOFT TOALLA DESMAQUILLANTE AGUA MIC. 25UN",
    "detalle": "Q-SOFT TOALLA DESMAQUILLANTE AGUA MIC. 25UN",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
@@ -4123,7 +4123,7 @@ const CATALOGO = {
   },
   {
    "codigo": "7790773008473",
-   "nombre": "Q-SOFT TOALLA DESMAQUILLANTE EXFO",
+   "nombre": "Q-SOFT TOALLA DESMAQUILLANTE EXFO. 25UN",
    "detalle": "Q-SOFT TOALLA DESMAQUILLANTE EXFO. 25UN",
    "presentacion": "x Unid",
    "categoria": "Accesorios",
