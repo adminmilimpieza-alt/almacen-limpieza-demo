@@ -63,3 +63,6 @@ No continuar cobrando mientras el sistema no confirme conexión. Si se informa q
 
 ## Respaldos y piloto
 Los datos se guardan en Cloudflare. **Módulos → Respaldo → Descargar respaldo** permite guardar una copia adicional del negocio. La restauración local y el reinicio están desactivados para no reemplazar datos compartidos. El piloto online inicia desde el catálogo publicado, conserva fotos/precios que ya estaban en el servidor y no mezcla automáticamente bases antiguas de navegadores. Las copias locales anteriores de Workers se conservan separadas y GitHub Pages ofrece descargar su respaldo antes de ir a Workers.
+
+### Bonificación por forma de pago
+Desde esta versión, las ventas nuevas en efectivo o Banco / Transferencia tienen una bonificación automática del 10% sobre el subtotal completo. La caja muestra el subtotal, la bonificación y el importe final al elegir el medio de pago. El remito y la venta guardada conservan esos importes. Mercado Pago y cuenta corriente no reciben esta bonificación. Cobrar una deuda anterior no vuelve a aplicar descuentos y las ventas anteriores mantienen sus valores originales.

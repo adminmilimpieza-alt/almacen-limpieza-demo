@@ -1,13 +1,16 @@
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=value=>Number(value).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
-export function prepararRemito(db,carrito=[],clienteId){
+export function prepararRemito(db,carrito=[],clienteId,pago){
  const venta=carrito.length?null:db.ventas?.find(v=>!v.historica&&!v.anulada);
  const source=carrito.length?carrito:venta?.items;
  if(!source?.length)throw new Error('Armá un ticket o registrá una venta antes de imprimir el remito.');
  const items=source.map(i=>({...i}));
  if(items.some(i=>!Number.isFinite(Number(i.precio))||Number(i.precio)<0||!Number.isFinite(Number(i.cant))||Number(i.cant)<=0))throw new Error('El ticket tiene cantidades o precios inválidos.');
  const cliente={...(venta?.clienteSnapshot||db.clientes?.find(c=>c.id===(venta?.clienteId||clienteId))||{nombre:'Mostrador',extra:''})};
- return {fecha:venta?.fecha||new Date().toISOString(),cliente,items,total:venta?.total??items.reduce((sum,i)=>sum+Number(i.precio)*Number(i.cant),0)};
+ const subtotal=venta?.subtotal??Math.round(items.reduce((sum,i)=>sum+Number(i.precio)*Number(i.cant),0)*100)/100;
+ const descuentoPorcentaje=venta?(venta.descuentoPorcentaje||0):(['efectivo','banco'].includes(pago)?10:0);
+ const descuento=venta?(venta.descuento||0):Math.round(subtotal*descuentoPorcentaje)/100;
+ return {fecha:venta?.fecha||new Date().toISOString(),cliente,items,subtotal,descuento,descuentoPorcentaje,total:venta?.total??Math.round((subtotal-descuento)*100)/100};
 }
 // A row unit reserves 5 mm; descriptions are split before layout so even a
 // single exceptionally long product can continue on the next physical sheet.
@@ -31,14 +34,14 @@ export function htmlRemito(remito,capacidad=16){
  const paginas=paginasRemito(remito,capacidad);
  return paginas.map((pagina,n)=>{
   const rows=pagina.filas.map(({item:i,index,texto,continuacion})=>`<tr ${continuacion?'class="remito-continuacion"':`data-item="${index}"`}><td class="remito-cantidad">${continuacion?'<small>continuación</small>':escape(Number(i.cant).toLocaleString('es-AR',{maximumFractionDigits:3}))}</td><td class="remito-descripcion">${escape(texto)}</td><td class="remito-importe">${continuacion?'':money(i.precio)}</td><td class="remito-importe">${continuacion?'':money(Number(i.precio)*Number(i.cant))}</td></tr>`).join('');
-  return `<div class="remito-hoja"><div class="remito-cabecera"><div class="remito-marca"><img src="data/remito-logo.jpg" alt="Mi Limpieza"><div><strong>REMITO</strong><span>Cel. 3534098633</span><span>Hoja ${n+1}/${paginas.length}</span></div></div><dl><div><dt>Fecha:</dt><dd>${escape(fecha)}</dd></div><div><dt>Nombre:</dt><dd>${escape(remito.cliente.nombre)}</dd></div><div><dt>Dirección:</dt><dd>${escape(remito.cliente.extra||'')}</dd></div></dl></div><table class="remito-detalle"><colgroup><col style="width:10%"><col style="width:56%"><col style="width:17%"><col style="width:17%"></colgroup><thead><tr><th>Cantidad</th><th>Descripción</th><th>Unitario</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="remito-pie"><div><span>SUBTOTAL DE ESTA HOJA</span><strong>$ ${money(pagina.subtotal)}</strong></div>${n===paginas.length-1?`<div class="remito-total"><span>TOTAL FINAL</span><strong>$ ${money(remito.total)}</strong></div>`:'<p>Continúa en la siguiente hoja. Este subtotal no es el total final.</p>'}</div></div>`;
+  return `<div class="remito-hoja"><div class="remito-cabecera"><div class="remito-marca"><img src="data/remito-logo.jpg" alt="Mi Limpieza"><div><strong>REMITO</strong><span>Cel. 3534098633</span><span>Hoja ${n+1}/${paginas.length}</span></div></div><dl><div><dt>Fecha:</dt><dd>${escape(fecha)}</dd></div><div><dt>Nombre:</dt><dd>${escape(remito.cliente.nombre)}</dd></div><div><dt>Dirección:</dt><dd>${escape(remito.cliente.extra||'')}</dd></div></dl></div><table class="remito-detalle"><colgroup><col style="width:10%"><col style="width:56%"><col style="width:17%"><col style="width:17%"></colgroup><thead><tr><th>Cantidad</th><th>Descripción</th><th>Unitario</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="remito-pie"><div><span>SUBTOTAL DE ESTA HOJA</span><strong>$ ${money(pagina.subtotal)}</strong></div>${n===paginas.length-1?`${remito.descuento>0?`<div><span>SUBTOTAL GENERAL</span><strong>$ ${money(remito.subtotal)}</strong></div><div><span>Bonificación por efectivo / transferencia ${escape(remito.descuentoPorcentaje)}%</span><strong>− $ ${money(remito.descuento)}</strong></div>`:''}<div class="remito-total"><span>TOTAL FINAL</span><strong>$ ${money(remito.total)}</strong></div>`:'<p>Continúa en la siguiente hoja. Este subtotal no es el total final.</p>'}</div></div>`;
  }).join('');
 }
 let printing=false;
-async function imprimir(db,carrito,clienteId){
+async function imprimir(db,carrito,clienteId,pago){
  if(printing)return;printing=true;let cleanup=()=>{};
  try{
-  const remito=prepararRemito(db,carrito,clienteId);let box=document.getElementById('remito-print');
+  const remito=prepararRemito(db,carrito,clienteId,pago);let box=document.getElementById('remito-print');
   if(!box){box=document.createElement('section');box.id='remito-print';document.body.append(box);}
   const previousStyle=box.style?.cssText;
   const canMeasure=Boolean(box.style&&box.querySelectorAll&&typeof box.getBoundingClientRect==='function');

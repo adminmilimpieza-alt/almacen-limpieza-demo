@@ -185,7 +185,9 @@ const Caja = (() => {
       const tot = document.createElement('td'); tot.className='c-total'; tot.textContent = '$'+(it.precio*it.cant);
       d.appendChild(cod); d.appendChild(info); d.appendChild(qty); d.appendChild(tot); box.appendChild(d);
     });
-    $('total').textContent = carrito.reduce((a,i)=>a+i.precio*i.cant,0);
+    const importes=Store.totalesCobro(carrito,$('pago').value);
+    $('total').textContent = importes.total.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if($('bonificacion-detalle')){ $('bonificacion-detalle').hidden=!importes.descuento; $('bonificacion-detalle').textContent='Subtotal: $'+importes.subtotal.toLocaleString('es-AR')+' · Bonificación 10% por efectivo / transferencia: −$'+importes.descuento.toLocaleString('es-AR'); }
     const n = carrito.reduce((a,i)=>a+i.cant,0);
     $('nitems').textContent = n + (n===1?' ítem':' ítems');
     const sc = box.closest('.ticket-scroll'); if(sc) sc.scrollTop = sc.scrollHeight;
@@ -276,8 +278,9 @@ const Caja = (() => {
     $('vaciar').onclick = ()=>{ carrito=[]; renderCarrito(); scan.focus(); };
     $('t-print').onclick = ()=>{
       if(typeof Remito==='undefined'){alert('La impresión está cargando. Volvé a intentarlo en un momento.');return;}
-      Remito.imprimir(Store.get(),carrito,$('f-cliente').value);
+      Remito.imprimir(Store.get(),carrito,$('f-cliente').value,$('pago').value);
     };
+    $('pago').onchange=()=>renderCarrito();
     $('cobrar').onclick = async ()=>{
       if(!carrito.length){ alert('Carrito vacío'); return; }
       const button=$('cobrar'); if(button.disabled)return;

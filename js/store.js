@@ -538,6 +538,12 @@ function crearStore(localStorage, catalogoInput){
       t.cierre=new Date().toISOString(); t.conteo=conteo; t.diferencia=dif; t.notas=notas||''; t.estado='cerrado';
       save(db); return t;
     },
+    totalesCobro(items,pago){
+      const subtotal=redondear2(items.reduce((a,i)=>a+Number(i.precio)*Number(i.cant),0));
+      const descuentoPorcentaje=['efectivo','banco'].includes(pago)?10:0;
+      const descuento=Math.round(subtotal*descuentoPorcentaje)/100;
+      return {subtotal,descuento,descuentoPorcentaje,total:redondear2(subtotal-descuento)};
+    },
     cobrar(items, pago, clienteId){
       const db=load();
       const turno=db.turnos.find(t=>t.estado==='abierto');
@@ -545,12 +551,12 @@ function crearStore(localStorage, catalogoInput){
       for(const it of items){ const p=db.productos.find(x=>x.id===it.id);
         if(!p||p.stock<it.cant) throw new Error('Sin stock: '+(it.nombre||it.id)); }
       for(const it of items){ db.productos.find(x=>x.id===it.id).stock-=it.cant; }
-      const total=items.reduce((a,i)=>a+i.precio*i.cant,0);
+      const importes=this.totalesCobro(items,pago),total=importes.total;
       const vid=newId('v');
       const cid=clienteId||'c1';
       const client=db.clientes.find(c=>c.id===cid);
       const snapshot={id:cid,nombre:client?.nombre||'Mostrador',extra:client?.extra||''};
-      const v={clienteSnapshot:snapshot,listaPrecioId:client?.listaPrecioId||listaDefault,id:vid, fecha:new Date().toISOString(), items, pago, total, clienteId:cid, turnoId:turno.id};
+      const v={clienteSnapshot:snapshot,listaPrecioId:client?.listaPrecioId||listaDefault,id:vid, fecha:new Date().toISOString(), items, pago, ...importes, clienteId:cid, turnoId:turno.id};
       db.ventas.unshift(v);
       if(pago==='cuenta'){
         // Cuenta corriente: no entra plata, queda como deuda del cliente.
@@ -663,7 +669,7 @@ const Store=new Proxy(LocalStore,{get(target,key){
   const online=globalThis.OnlineBusiness;
   if(online?.activo){
     if(key==='get')return ()=>online.get();
-    if(['turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto','clasificarImportacion'].includes(key))return (...args)=>online.read(key,args);
+    if(['totalesCobro','turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto','clasificarImportacion'].includes(key))return (...args)=>online.read(key,args);
     if(key==='actualizarFotos')return patches=>online.applyPhotos(patches);
     if(key==='export')return ()=>JSON.stringify(online.get(),null,2);
     if(onlineMutations.has(key))return (...args)=>online.mutate(key,args);

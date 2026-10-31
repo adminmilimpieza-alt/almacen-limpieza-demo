@@ -57,7 +57,7 @@ const Reportes = (() => {
     if(!ventas.length){box.textContent='Todavía no hay ventas operativas.';return;}
     ventas.forEach(v=>{
       const row=document.createElement('div');row.className='venta';
-      row.innerHTML=`<b>${esc(new Date(v.fecha).toLocaleString('es-AR'))}</b> · ${esc(v.pago)} · ${esc(db.clientes.find(c=>c.id===v.clienteId)?.nombre||'Mostrador')} · <b>$${esc(v.total)}</b>${v.anulada?' · anulada':''}<br>${(v.items||[]).map(i=>`${esc(i.nombre)} × ${esc(i.cant)}`).join(', ')}`;
+      row.innerHTML=`<b>${esc(new Date(v.fecha).toLocaleString('es-AR'))}</b> · ${esc(v.pago)} · ${esc(db.clientes.find(c=>c.id===v.clienteId)?.nombre||'Mostrador')} · <b>$${esc(v.total)}</b>${v.anulada?' · anulada':''}${v.descuento>0?' · Bonificación 10%: −$'+esc(v.descuento):''}<br>${(v.items||[]).map(i=>`${esc(i.nombre)} × ${esc(i.cant)}`).join(', ')}`;
       if(!v.anulada&&v.id){const b=document.createElement('button');b.textContent='Anular';b.onclick=async()=>{if(confirm(`¿Anular venta de $${v.total}? Vuelve el stock.`)){try{await Store.anularVenta(v.id);Stock.render();Caja.refresh();await render();}catch(e){alert(e.message);}}};row.append(b);}
       box.append(row);
     });
