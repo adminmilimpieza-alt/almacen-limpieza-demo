@@ -40,6 +40,7 @@ def die(msg, code=1):
 def buscar_git():
     """El git del PATH puede estar roto (falta una DLL). Busca uno que funcione."""
     candidatos = [os.environ.get("GIT_BIN"), shutil.which("git"),
+                  os.path.join(os.path.expanduser("~"), "AppData", "Local", "opencode-git", "cmd", "git.exe"),
                   os.path.join(os.path.expanduser("~"), "AppData", "Local", "hermes", "git", "cmd", "git.exe"),
                   r"C:\Program Files\Git\cmd\git.exe",
                   r"C:\Program Files\Git\bin\git.exe"]
