@@ -23,7 +23,7 @@ async function loadFile(){if(working)return;const file=$('prov-archivo').files[0
 }
 const applicable=r=>cambiosPendientes([r],omitidos).length===1;
 function setApply(){if(!$('prov-aplicar-seleccionadas'))return;$('prov-comparacion').querySelectorAll('[data-cotizacion],[data-pack]').forEach(el=>el.disabled=working||(el.hasAttribute('data-pack')&&conversiones[claveCambio(comparison[Number(el.dataset.pack)])]?.modo!=='pack'));$('prov-archivo').disabled=working;$('prov-comparar').disabled=working;const changes=comparison.filter(applicable);$('prov-aplicar-seleccionadas').disabled=working||!selected.size;$('prov-aplicar-todas').disabled=working||!changes.length;$('prov-aplicar-seleccionadas').textContent=`Aplicar seleccionados (${selected.size})`;$('prov-aplicar-todas').textContent=`Aplicar todos los cambios coincidentes (${changes.length})`;}
-function recalc(){comparison=compararFilas(sources,Store.get().productos,assignments,conversiones);selected=new Set([...selected].filter(i=>comparison[i]&&applicable(comparison[i])));render();}
+function recalc(){comparison=compararFilas(sources,Store.get().productos.map(p=>({...p,precioEnvase:Store.precioEnvase(p.id)})),assignments,conversiones);selected=new Set([...selected].filter(i=>comparison[i]&&applicable(comparison[i])));render();}
 function cotizacion(r){
  if(!r.id||r.source.baseCosto==='litro-kg')return '';
  const key=claveCambio(r),d=conversiones[key]||{},mode=d.modo||(r.unidadesSugeridas?'':'unidad'),n=d.unidades??r.unidadesSugeridas??'';

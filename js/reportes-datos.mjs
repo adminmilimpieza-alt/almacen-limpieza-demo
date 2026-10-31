@@ -12,9 +12,13 @@ export function enRango(fecha, desde='', hasta='') {
   return !!dia && (!desde || dia >= desde) && (!hasta || dia <= hasta);
 }
 export function listas(db) { return [{id:'mostrador',nombre:'Mostrador'},...(db.listasPrecios||[]).filter(l=>l.id!=='mostrador')]; }
+const productosEnvase=(db,p)=>p.envaseId?(db.productos||[]).find(e=>e.id===p.envaseId):null;
 export function precioLista(db,p,id='mostrador') {
   const particular = (db.listasPrecios||[]).find(l=>l.id===id)?.precios?.[p.id];
-  return id!=='mostrador' && particular != null && Number.isFinite(Number(particular)) ? Number(particular) : numero(p.precio);
+  const base=id!=='mostrador' && particular != null && Number.isFinite(Number(particular)) ? Number(particular) : numero(p.precio);
+  const e=productosEnvase(db,p);
+  const envaseParticular=e&&(db.listasPrecios||[]).find(l=>l.id===id)?.precios?.[e.id];
+  return Math.round((base+(e?numero(id!=='mostrador'&&envaseParticular!=null?envaseParticular:e.precio):0))*100)/100;
 }
 export function crearInforme(db,op={}) {
   const tipo=op.tipo||'ventas', clientes=db.clientes||[], productos=db.productos||[];
@@ -48,7 +52,7 @@ export function crearInforme(db,op={}) {
     eventos.sort((a,b)=>b[0].localeCompare(a[0]));
     Object.assign(informe,{titulo:'Pedidos y pagos a proveedores',subtitulo:periodo+' · pagos por fecha de pago o recepción registrada',columnas:['Fecha','Registro','Pedido','Proveedor','Estado','Detalle','Cantidad','Medio de pago','Pagado'],filas:eventos,resumen:[`Pagos del período: $${eventos.reduce((s,f)=>s+numero(f[8]),0).toFixed(2)}`]});
   } else if(tipo==='stock') {
-    Object.assign(informe,{titulo:'Stock actual',subtitulo:'Existencias al '+new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',dateStyle:'short',timeStyle:'short'}).format(new Date())+' (Argentina); no es stock histórico',columnas:['Código','Producto','Presentación','Stock','Venta'],filas:productos.filter(p=>p.activo!==false).map(p=>[p.codigo||'',p.nombre,p.presentacion||'',numero(p.stock),numero(p.precio)])});
+    Object.assign(informe,{titulo:'Stock actual',subtitulo:'Existencias al '+new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',dateStyle:'short',timeStyle:'short'}).format(new Date())+' (Argentina); no es stock histórico',columnas:['Código','Producto','Presentación','Stock','Venta'],filas:productos.filter(p=>p.activo!==false).map(p=>[p.codigo||'',p.nombre,p.presentacion||'',numero(p.stock),precioLista(db,p)])});
   } else if(tipo==='historial') {
     Object.assign(informe,{titulo:`Historial de compras · ${cliente?.nombre||'Todos los clientes'}`,subtitulo:periodo,columnas:['Compra','Fecha','Cliente','Tipo','Producto','Cantidad','Precio unitario','Subtotal','Total compra','Notas']});
     const frecuentes=new Map();

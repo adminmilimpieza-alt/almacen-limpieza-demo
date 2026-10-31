@@ -64,7 +64,8 @@ const Precios = (() => {
       list.map(p=>{
         const off = p.activo===false;
         const venta=Store.precioEnLista(p.id,listaId);
-        const margen=Number(p.costo)>0 ? Math.round((venta/Number(p.costo)-1)*10000)/100 : '';
+        const costoEnvase=Store.precioEnvase(p.id,listaId);
+        const margen=Number(p.costo)>0 ? Math.round(((venta-costoEnvase)/Number(p.costo)-1)*10000)/100 : '';
         const override=listaId!=='mostrador' && Object.prototype.hasOwnProperty.call(lista?.precios||{},p.id);
         const pend = pendientes.has(p.id);
         return `<tr class="${off?'oculto':''}">`+
@@ -72,7 +73,7 @@ const Precios = (() => {
 
           `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" ${listaId!=='mostrador'?'disabled':''} value="${p.costo??p.precio}" title="Costo de compra"></td>`+
           `<td><input class="tab-inp" type="number" min="-100" step="0.01" data-id="${p.id}" data-f="margen" value="${margen}" title="Margen sobre el costo; cambiarlo recalcula la venta"></td>`+
-          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" value="${venta}" title="Precio final de venta">${listaId!=='mostrador'?(override?'<button data-restablecer="'+p.id+'">Usar Mostrador</button>':'<small>Hereda Mostrador</small>'): ''}</td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" value="${venta}" title="Precio final de venta">${p.envaseId?'<small>Incluye envase $'+costoEnvase+' · líquido $'+Math.round((venta-costoEnvase)*100)/100+'</small>':''}${listaId!=='mostrador'?(override?'<button data-restablecer="'+p.id+'">Usar Mostrador</button>':'<small>Hereda Mostrador</small>'): ''}</td>`+
           `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
       }).join('')+'</tbody></table></div>';
     $('lista-precios').querySelectorAll('button[data-restablecer]').forEach(b=>{ b.onclick=async()=>{try{await Store.restablecerPrecioLista(listaId,b.dataset.restablecer);verLista();Caja.refresh();}catch(err){alert(err.message);}}; });

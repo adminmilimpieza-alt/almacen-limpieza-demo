@@ -135,7 +135,7 @@ export function leerLista(rows){
    continue;
   }
   const nombre=nombreCorto(detalle,presentacion);
-  const base={codigo,detalle,nombre,presentacion,categoria,provNombre:proveedor,costo,margen:margenFila,precio,aviso:nota,incompleta,fila:i+1};
+  const base={codigo,detalle,nombre,presentacion,categoria,provNombre:proveedor,costo,margen:margenFila,precio,envaseIncluido:['liquido','pileta'].includes(tipo)&&!ENVASES.test(detalle)?(envase||0):0,costoLiquido:costoLista,aviso:nota,incompleta,fila:i+1};
   let clave=claveProducto(base);
   if(vistos.has(clave)){clave=clave+'|'+normalizar(nombre);base.aviso=[nota,`Código y presentación repetidos (fila ${vistos.get(claveProducto(base))}); se distingue por nombre.`].filter(Boolean).join(' ');}
   else vistos.set(clave,base.fila);

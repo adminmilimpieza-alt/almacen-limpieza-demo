@@ -10,7 +10,7 @@ test('lista compartida sólo incluye identificación y venta efectiva',()=>{
 function cajaFixture(){
  let cliente='minorista',price=10;
  const productos=[{id:'u',codigo:'A',nombre:'Jabón 1L',categoria:'Líquidos 1L',stock:30,precio:100},{id:'b',codigo:'A',nombre:'Jabón 5L',categoria:'Líquidos 5L',stock:10,precio:400}];
- const context=vm.createContext({document:{getElementById:id=>id==='f-cliente'?{value:cliente}:null},Store:{get:()=>({productos}),precioParaCliente:(id,c)=>id==='b'?(c==='mayorista'?30:40):(c==='mayorista'?6:price)},alert:()=>{},setTimeout:()=>{},clearTimeout:()=>{}});
+ const context=vm.createContext({document:{getElementById:id=>id==='f-cliente'?{value:cliente}:null},Store:{disponibilidadVenta:id=>productos.find(p=>p.id===id)?.stock||0,comprobarStockVenta:()=>{},get:()=>({productos}),precioParaCliente:(id,c)=>id==='b'?(c==='mayorista'?30:40):(c==='mayorista'?6:price)},alert:()=>{},setTimeout:()=>{},clearTimeout:()=>{}});
  let source=readFileSync(new URL('../js/caja.js',import.meta.url),'utf8');
  source=source.replace('function renderCarrito(){','function renderCarrito(){ return;');
  source=source.replace('return {init, confirmarRecuperacion,','return {agregar, scanAgregar, optimizar, items:()=>carrito, init, confirmarRecuperacion,');
@@ -27,3 +27,5 @@ test('escáner y optimización 5L usan la lista del cliente',()=>{
 test('refrescar un precio no modifica las líneas ya armadas',()=>{
  const f=cajaFixture();f.api.agregar(f.productos[0]);f.price(99);f.api.agregar(f.productos[0]);assert.equal(f.api.items()[0].precio,10);assert.equal(f.api.items()[0].cant,2);
 });
+
+test('cinco botellas con envase vinculado conservan su presentación',()=>{const f=cajaFixture();f.productos[0].envaseId='botella';for(let i=0;i<5;i++)f.api.scanAgregar('A');assert.equal(f.api.items().length,1);assert.equal(f.api.items()[0].id,'u');assert.equal(f.api.items()[0].cant,5);});

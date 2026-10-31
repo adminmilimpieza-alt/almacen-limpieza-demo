@@ -41,7 +41,7 @@ export function compararFilas(rows,products,asignaciones={},conversiones={}){
    costoNuevo=Math.round(source.costo*factor*100)/100;
   }
   const dif=costoNuevo-Number(p.costo),estado=source.costo<=0?'sin-precio':Math.abs(dif)<.005?'igual':dif>0?'sube':'baja',precioNuevo=dif>0?Math.round((Number(p.costo)>0?p.precio*costoNuevo/p.costo:costoNuevo*(1+(Number(p.margen)||0)/100))*100)/100:p.precio;
-  return {source,sourceIndex,index,id:p.id,producto:p,estado,candidatos:[p.id],costoAnterior:p.costo,costoNuevo,diferencia:dif,precioAnterior:p.precio,precioNuevo,margenAnterior:p.costo>0?(p.precio/p.costo-1)*100:null,margenNuevo:costoNuevo>0?(precioNuevo/costoNuevo-1)*100:null,motivo,factor,divisorPack,unidadesSugeridas,modoCotizacion:decision.modo||'unidad'};
+  return {source,sourceIndex,index,id:p.id,producto:p,estado,candidatos:[p.id],costoAnterior:p.costo,costoNuevo,diferencia:dif,precioAnterior:Math.round((p.precio+Number(p.precioEnvase||0))*100)/100,precioNuevo:Math.round((precioNuevo+Number(p.precioEnvase||0))*100)/100,margenAnterior:p.costo>0?(p.precio/p.costo-1)*100:null,margenNuevo:costoNuevo>0?(precioNuevo/costoNuevo-1)*100:null,motivo,factor,divisorPack,unidadesSugeridas,modoCotizacion:decision.modo||'unidad'};
  });
  const counts=new Map();out.forEach(r=>{if(r.id)counts.set(r.id,(counts.get(r.id)||0)+1);});out.forEach(r=>{if(r.id&&counts.get(r.id)>1)r.estado='duplicada';});return out;
 }

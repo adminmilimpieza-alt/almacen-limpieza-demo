@@ -74,7 +74,7 @@ const Stock = (() => {
       if(oculto) tr.classList.add('oculto');
       const local = drift.has(p.id);
       const pendiente = pend.has(p.id);
-      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${p.precio}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
+      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${Store.precioEnLista(p.id)}${p.envaseId?'<small>Envase incluido</small>':''}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
       const td = document.createElement('td'); td.style.whiteSpace='nowrap';
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id;fotoBase={...p}; $('modal-titulo').textContent='Editar producto';

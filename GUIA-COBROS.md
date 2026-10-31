@@ -66,3 +66,12 @@ Los datos se guardan en Cloudflare. **Módulos → Respaldo → Descargar respal
 
 ### Bonificación por forma de pago
 Desde esta versión, las ventas nuevas en efectivo o Banco / Transferencia tienen una bonificación automática del 10% sobre el subtotal completo. La caja muestra el subtotal, la bonificación y el importe final al elegir el medio de pago. El remito y la venta guardada conservan esos importes. Mercado Pago y cuenta corriente no reciben esta bonificación. Cobrar una deuda anterior no vuelve a aplicar descuentos y las ventas anteriores mantienen sus valores originales.
+
+### Líquidos con envase
+Los líquidos de 1 L usan una botella de 1 L y los de 5 L un bidón de 5 L, incluidos los líquidos de pileta. La venta final suma el precio del líquido y del envase; el remito muestra una sola línea del producto. El 10% de efectivo / transferencia se calcula sobre ese importe completo. Las botellas y los bidones también se pueden vender sueltos, usando el mismo stock.
+
+En Stock, buscar «BOTELLA 1Lt. Tipo Lavandina» o «BIDON 5 Lts», pulsar Editar y cambiar Stock. En Precios se puede cambiar su precio de venta; ese cambio se refleja en todos los líquidos que lo utilizan. La botella de 250 cc es otro producto. La configuración inicial usa 100 botellas de 1 L a pedido del usuario; el cliente debe ajustar el conteo real.
+
+No se confirma una venta si falta el líquido o alguno de sus envases. Cinco botellas de 1 L ya no se convierten automáticamente en un bidón de 5 L. La anulación devuelve exactamente el líquido y los envases consumidos en esa venta. Los enlaces de pago conservan los componentes del momento de su creación; los anteriores a este cambio no agregan envases retroactivamente.
+
+El campo Venta en Precios muestra el final con envase; el margen corresponde al líquido, con un detalle de ambos importes. Al importar nuevamente el Excel del negocio, se separa el envase que ya venía incluido en la columna Venta para sumarlo una sola vez con el precio actual del envase.

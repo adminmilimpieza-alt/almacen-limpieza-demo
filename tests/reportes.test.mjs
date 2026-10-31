@@ -55,3 +55,4 @@ test('habituales limita diez productos y prioriza compras antes de cantidad',()=
 test('stock identifica fecha y hora de la instantánea argentina',()=>{
  assert.match(crearInforme(db,{tipo:'stock'}).subtitulo,/Existencias al .+ \(Argentina\)/);
 });
+test('listas y stock exportan la venta con envase y respetan precio por cliente',()=>{const d={...db,productos:[{...db.productos[0],envaseId:'env'},{id:'env',nombre:'Botella 1 L',precio:240,stock:100}],listasPrecios:[{id:'rev',nombre:'Revendedores',precios:{p:20,env:200}}]};assert.equal(crearInforme(d,{tipo:'precios'}).filas[0][3],270);assert.equal(crearInforme(d,{tipo:'precios',clienteId:'c'}).filas[0][3],220);assert.equal(crearInforme(d,{tipo:'stock'}).filas[0][4],270);});

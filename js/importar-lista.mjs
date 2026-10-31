@@ -5,6 +5,7 @@ import {leerLista} from './lista-proveedor.mjs';
 const ImportarLista=(()=>{
  const $=id=>document.getElementById(id);
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const ventaFila=f=>Math.round((Number(f.precio)+(f.envaseId?Number(Store.get().productos.find(p=>p.id===f.envaseId)?.precio)||0:0))*100)/100;
  const money=n=>Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
  let lectura=null,filas=[],bytes=null,nombreArchivo='',working=false;
 
@@ -24,7 +25,7 @@ const ImportarLista=(()=>{
    `<p class="hint">Proveedores de la lista: ${lectura.proveedores.map(p=>esc(p)).join(' · ')}</p>`+
    (lectura.avisos.length?`<details><summary>${lectura.avisos.length} avisos para revisar</summary><ul>${lectura.avisos.slice(0,60).map(a=>`<li>${esc(a)}</li>`).join('')}</ul></details>`:'');
   const visibles=resultado.filter(r=>r.estado!=='igual').slice(0,200);
-  $('cat-tabla').innerHTML=resultado.length?`<div class="prov-scroll"><table><thead><tr><th>Producto de la lista</th><th>Proveedor</th><th>Presentación</th><th>Costo</th><th>Venta</th><th>Estado</th></tr></thead><tbody>${visibles.map(({fila,actual,estado})=>`<tr class="prov-${estado==='nuevo'?'baja':'sube'}"><td>${esc(fila.codigo)} · ${esc(fila.nombre)}<small>Fila ${fila.fila}</small></td><td>${esc(fila.provNombre)}</td><td>${esc(fila.presentacion)}</td><td>${fila.costo==null?'sin costo':'$'+money(fila.costo)}</td><td>${actual&&Number(actual.precio)!==Number(fila.precio)?`$${money(actual.precio)} → `:''}$${money(fila.precio)}</td><td>${estado==='nuevo'?'Nuevo':estado==='actualiza'?'Se actualiza':estado==='sin-costo'?'Falta costo':'Sin cambios'}</td></tr>`).join('')}</tbody></table></div>${resultado.filter(r=>r.estado!=='igual').length>200?'<p class="hint">Se muestran los primeros 200 cambios.</p>':''}`:'';
+  $('cat-tabla').innerHTML=resultado.length?`<div class="prov-scroll"><table><thead><tr><th>Producto de la lista</th><th>Proveedor</th><th>Presentación</th><th>Costo</th><th>Venta</th><th>Estado</th></tr></thead><tbody>${visibles.map(({fila,actual,estado})=>`<tr class="prov-${estado==='nuevo'?'baja':'sube'}"><td>${esc(fila.codigo)} · ${esc(fila.nombre)}<small>Fila ${fila.fila}</small></td><td>${esc(fila.provNombre)}</td><td>${esc(fila.presentacion)}</td><td>${fila.costo==null?'sin costo':'$'+money(fila.costo)}</td><td>${actual&&Number(Store.precioEnLista(actual.id))!==Number(ventaFila(fila))?`$${money(Store.precioEnLista(actual.id))} → `:''}$${money(ventaFila(fila))}${fila.envaseId?'<small>Envase incluido</small>':''}</td><td>${estado==='nuevo'?'Nuevo':estado==='actualiza'?'Se actualiza':estado==='sin-costo'?'Falta costo':'Sin cambios'}</td></tr>`).join('')}</tbody></table></div>${resultado.filter(r=>r.estado!=='igual').length>200?'<p class="hint">Se muestran los primeros 200 cambios.</p>':''}`:'';
   if(salen.length)$('cat-tabla').insertAdjacentHTML('beforeend',`<details><summary>${salen.length} productos que salen de la lista</summary><ul>${salen.slice(0,80).map(p=>`<li>${esc(p.codigo)} · ${esc(p.nombre)} · ${esc(p.presentacion)}</li>`).join('')}</ul></details>`);
   habilitar();
  }
@@ -63,7 +64,7 @@ const ImportarLista=(()=>{
   if(!confirm(`¿Importar la lista al negocio? Se guardarán ${resultado.length} productos: ${detalle}. No se toca el stock, las fotos ni las ventas.`))return;
   working=true;habilitar();estado('Guardando online…');
   try{
-   const payload={filas:filas.map(({codigo,nombre,detalle:desc,presentacion,categoria,provNombre,costo,margen,precio,aviso,clave})=>({codigo,nombre,detalle:desc,presentacion,categoria,provNombre,costo,margen,precio,aviso,clave})),ocultarFaltantes:ocultar};
+   const payload={filas:filas.map(({codigo,nombre,detalle:desc,presentacion,categoria,provNombre,costo,margen,precio,envaseIncluido,costoLiquido,aviso,clave})=>({codigo,nombre,detalle:desc,presentacion,categoria,provNombre,costo,margen,precio,envaseIncluido,costoLiquido,aviso,clave})),ocultarFaltantes:ocultar};
    const r=await OnlineBusiness.mutate('importarCatalogo',[payload]);
    estado(`Listo: ${r.creados} productos nuevos, ${r.actualizados} actualizados, ${r.iguales} sin cambios, ${r.ocultados} ocultos${r.sinCosto?`, ${r.sinCosto} sin costo completo (no se crearon)`:''}${r.proveedores.length?`. Proveedores nuevos: ${r.proveedores.join(', ')}`:''}.`);
    lectura=null;filas=[];bytes=null;nombreArchivo='';$('cat-archivo').value='';$('cat-resumen').replaceChildren();$('cat-tabla').replaceChildren();

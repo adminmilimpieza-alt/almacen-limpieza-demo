@@ -2,7 +2,7 @@ import '../js/store.js';
 import catalogo from '../data/catalogo.json' with {type:'json'};
 import {authenticated} from './security.mjs';
 const cols=['productos','clientes','proveedores','ventas','movimientos','pedidos','turnos','listasPrecios'];
-const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo']);
+const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo','configurarEnvases']);
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const json=data=>Response.json(data,{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validId=id=>typeof id==='string'&&/^[\w-]{1,100}$/.test(id)&&!['__proto__','prototype','constructor'].includes(id);
@@ -37,7 +37,7 @@ function validateState(state){
  for(const p of state.productos)for(const field of ['foto','img'])if(p[field]&&!/^\/api\/photos\/[a-f0-9]{64}\?v=[a-f0-9-]{36}$/i.test(p[field]))throw fail('Subí la foto con el selector de imágenes.');
 
  for(const col of cols){const ids=new Set();for(const row of state[col]){if(!row||!validId(row.id)||ids.has(row.id))throw fail('Identificador inválido o duplicado.');ids.add(row.id);if(JSON.stringify(row).length>2000000)throw fail('Registro demasiado grande.',413);}}
- for(const p of state.productos){if(typeof p.nombre!=='string'||!p.nombre.trim()||!number(p.stock)||!number(p.costo)||!number(p.precio)||(p.margen!=null&&!margin(p.margen)))throw fail('Producto o stock inválido.');if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');}
+ for(const p of state.productos){if(typeof p.nombre!=='string'||!p.nombre.trim()||!number(p.stock)||!number(p.costo)||!number(p.precio)||(p.margen!=null&&!margin(p.margen)))throw fail('Producto o stock inválido.');if(p.envaseId&&(!validId(p.envaseId)||p.envaseId===p.id||!state.productos.some(e=>e.id===p.envaseId&&!e.envaseId)))throw fail('Envase del producto inválido.');if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');}
  for(const c of state.clientes)if(!number(c.deuda??0)||typeof c.nombre!=='string'||!c.nombre.trim())throw fail('Cliente inválido.');
  for(const l of state.listasPrecios){if(l.id==='mostrador'||typeof l.nombre!=='string'||!l.nombre.trim()||l.nombre.length>100||!l.precios||Array.isArray(l.precios)||typeof l.precios!=='object'||Object.entries(l.precios).some(([id,v])=>!state.productos.some(p=>p.id===id)||!number(v)))throw fail('Lista de precios inválida.');}
  for(const c of state.clientes)if(c.listaPrecioId&&c.listaPrecioId!=='mostrador'&&!state.listasPrecios.some(l=>l.id===c.listaPrecioId))throw fail('La lista del cliente no existe.');
@@ -47,8 +47,8 @@ function validateState(state){
  for(const m of state.movimientos)if(!state.turnos.some(t=>t.id===m.turnoId))throw fail('Turno no encontrado.');
  for(const p of state.pedidos){if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');items(p.items,state,false);}
 }
-function effectivePrice(state,p,clienteId='c1'){const c=state.clientes.find(c=>c.id===clienteId),list=state.listasPrecios?.find(l=>l.id===c?.listaPrecioId);return list?.precios?.[p.id]??p.precio;}
-export function comprobarTicket(state,ticket,clienteId){if(!stateClient(state,clienteId||'c1'))throw fail('Cliente no encontrado.');items(ticket,state,true,clienteId||'c1');if(ticket.some(i=>state.productos.find(p=>p.id===i.id).stock<i.cant))throw fail('No hay stock suficiente. Actualizá el ticket.',409);}
+function effectivePrice(state,p,clienteId='c1'){return factory(state).precioParaCliente(p.id,clienteId);}
+export function comprobarTicket(state,ticket,clienteId){if(!stateClient(state,clienteId||'c1'))throw fail('Cliente no encontrado.');items(ticket,state,true,clienteId||'c1');const s=factory(state);try{s.comprobarStockVenta(ticket);}catch(e){throw fail(e.message,409);}return s.prepararItemsVenta(ticket);}
 export async function readBusiness(env){await initialize(env);return snapshot(env);}
 function items(list,state,sale=true,clienteId='c1'){if(!Array.isArray(list)||!list.length||list.length>2000)throw fail('Productos inválidos.');const ids=new Set();for(const i of list){const p=state.productos.find(p=>p.id===i.id);if(!p||ids.has(i.id)||!number(i.cant)||i.cant<=0||(sale&&(!number(i.precio)||i.precio!==effectivePrice(state,p,clienteId)||p.activo===false)))throw fail('Cantidad, precio o producto inválido.');ids.add(i.id);}}
 function validateOperation(op,args,state){
@@ -72,6 +72,7 @@ function validateOperation(op,args,state){
    if(typeof fila.nombre!=='string'||!fila.nombre.trim()||fila.nombre.length>180)throw fail('Nombre de producto inválido.');
    if(!number(fila.precio)||fila.precio<=0)throw fail('Costo o venta inválidos en la lista.');
    if(fila.costo!=null&&(!number(fila.costo)||fila.costo<=0))throw fail('Costo o venta inválidos en la lista.');
+   if((fila.envaseIncluido!=null&&!number(fila.envaseIncluido))||(fila.costoLiquido!=null&&!number(fila.costoLiquido)))throw fail('Costo o envase de la lista inválido.');
    if(fila.margen!=null&&!margin(fila.margen))throw fail('Margen inválido en la lista.');
    if(fila.categoria!=null&&!['Accesorios','Líquidos 1L','Líquidos 5L','Pileta'].includes(fila.categoria))throw fail('Categoría inválida en la lista.');
    if(fila.clave!=null&&(typeof fila.clave!=='string'||fila.clave.length>240))throw fail('Identificación de producto inválida.');
@@ -81,12 +82,13 @@ function validateOperation(op,args,state){
  if(op==='anularVenta'){const sale=state.ventas.find(v=>v.id===args[0]);if(sale?.pago==='cuenta'&&(state.clientes.find(c=>c.id===sale.clienteId)?.deuda||0)<sale.total)throw fail('La cuenta ya tiene pagos aplicados. Revisá la deuda antes de anular esta venta.');}
  if(op==='cobrar'){items(args[0],state,true,args[2]||'c1');if(!['efectivo','banco','mercadopago','cuenta'].includes(args[1])||!state.clientes.some(c=>c.id===(args[2]||'c1')))throw fail('Pago o cliente inválido.');}
  if(op==='abrirTurno'&&!number(args[0]))throw fail('Saldo inválido.');
+ if(op==='configurarEnvases'&&(!args[0]||!validId(args[0].botellaId)||!validId(args[0].bidonId)||args[0].botellaId===args[0].bidonId))throw fail('Envases inválidos.');
  if(op==='cerrarTurno'&&(!args[0]||Object.values(args[0]).some(n=>!number(n))))throw fail('Conteo inválido.');
  if(op==='cobrarDeuda'&&(!number(args[1])||args[1]<=0||!['efectivo','banco','mercadopago'].includes(args[2])))throw fail('Cobro inválido.');
  if(op==='recibirPedido'&&(!number(args[1])||!['efectivo','banco','mercadopago'].includes(args[2]||'efectivo')))throw fail('Pago inválido.');
  if(op==='upsertPedido'){if(args[0]?.estado!=='pendiente')throw fail('Pedido inválido.');const old=state.pedidos.find(x=>x.id===args[0].id);if(old&&old.estado!=='pendiente')throw fail('Pedido ya recibido.');}
  if(op==='delEntidad'){const [col,id]=args;if(col==='clientes'&&(id==='c1'||state.ventas.some(v=>v.clienteId===id)||(state.clientes.find(c=>c.id===id)?.deuda||0)>0))throw fail('Cliente con operaciones.');if(col==='proveedores'&&(state.productos.some(p=>p.provId===id)||state.pedidos.some(p=>p.provId===id)))throw fail('Proveedor con operaciones.');}
- if(op==='eliminar'&&(state.ventas.some(v=>v.items.some(i=>i.id===args[0]))||state.pedidos.some(p=>p.items.some(i=>i.id===args[0]))))throw fail('Producto con operaciones.');
+ if(op==='eliminar'&&(state.ventas.some(v=>[...v.items,...(v.consumosStock||[])].some(i=>i.id===args[0]))||state.pedidos.some(p=>p.items.some(i=>i.id===args[0]))))throw fail('Producto con operaciones.');
  if(op==='upsertEntidad'&&args[0]==='clientes'){const old=state.clientes.find(c=>c.id===args[1]?.id);if((args[1]?.deuda??0)!==(old?.deuda??0))throw fail('La deuda se modifica mediante cobros y ventas.');}
 }
 const operationFingerprint=(op,args)=>JSON.stringify({op,args:op==='registrarPagoMP'?[{id:args?.[0]?.id}]:args});

@@ -7,6 +7,8 @@ const Caja = (() => {
   const $ = id => document.getElementById(id);
   let ticketBloqueado=false;
   let clienteAnterior='';
+  const disponible=p=>Store.disponibilidadVenta(p.id);
+  function alcanza(items){try{Store.comprobarStockVenta(items);return true;}catch(e){alert(e.message);return false;}}
   const precio = p => Store.precioParaCliente(p.id, $('f-cliente')?.value || null);
   const bloquearTicket=value=>{ticketBloqueado=value;if($('caja-controles'))$('caja-controles').disabled=value;};
   const pres = p => p.categoria==='Líquidos 5L' ? '5L' : (p.categoria==='Líquidos 1L' ? '1L' : 'U');
@@ -47,9 +49,9 @@ const Caja = (() => {
     if(!list.length){ box.innerHTML='<p class="hint catalogo-empty">Nada coincide con la búsqueda.</p>'; return; }
     list.forEach(p=>{
       const card = document.createElement('button'); card.type='button'; card.className='prod-card';
-      if(p.stock<=0) card.classList.add('sin-stock');
-      else if(p.stock<=5) card.classList.add('bajo-stock');
-      card.disabled = p.stock<=0;
+      if(disponible(p)<=0) card.classList.add('sin-stock');
+      else if(disponible(p)<=5) card.classList.add('bajo-stock');
+      card.disabled = disponible(p)<=0;
       const img = document.createElement('img'); img.loading='lazy'; img.alt = p.nombre;
       img.src = p.foto || p.img || placeholder(p);
       img.onerror = ()=>{ img.onerror=null; img.src = placeholder(p); };
@@ -60,7 +62,7 @@ const Caja = (() => {
       const price = document.createElement('span'); price.className='pc-price'; price.textContent = '$'+precio(p);
       meta.appendChild(cod); meta.appendChild(price);
       const st = document.createElement('span'); st.className='pc-stock';
-      st.textContent = p.stock>0 ? 'Stock: '+p.stock : 'Sin stock';
+      st.textContent = disponible(p)>0 ? 'Stock: '+disponible(p) : 'Sin stock';
       body.appendChild(nm); body.appendChild(meta); body.appendChild(st);
       card.appendChild(img); card.appendChild(body);
       card.onclick = ()=>{ agregar(p); flash('Agregado: '+p.nombre+' ('+pres(p)+')'); };
@@ -82,12 +84,12 @@ const Caja = (() => {
       const vars = variantes(p.codigo).sort((a,b)=>pres(a).localeCompare(pres(b)));
       const row = document.createElement('div'); row.className='sug';
       const info = document.createElement('div'); info.className='sug-info';
-      info.innerHTML = `<b>${nombreBase(vars[0])}</b><small>${p.codigo||''} · ${vars.map(v=>pres(v)+':'+v.stock).join(' / ')}</small>`;
+      info.innerHTML = `<b>${nombreBase(vars[0])}</b><small>${p.codigo||''} · ${vars.map(v=>pres(v)+':'+disponible(v)).join(' / ')}</small>`;
       row.appendChild(info);
       vars.forEach(v=>{
         const b = document.createElement('button'); b.className='sug-btn';
-        b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (v.stock>0 ? '$'+precio(v) : 'Sin stock');
-        b.disabled = v.stock<=0;
+        b.textContent = (vars.length>1 ? pres(v)+' · ' : '') + (disponible(v)>0 ? '$'+precio(v) : 'Sin stock');
+        b.disabled = disponible(v)<=0;
         b.onmousedown = e=>e.preventDefault();
         b.onclick = ()=>{ agregar(v); cerrarSugerencias(); const s=$('scan'); if(s){ s.value=''; s.focus(); } renderCatalogo(''); };
         row.appendChild(b);
@@ -102,7 +104,8 @@ const Caja = (() => {
   function agregar(p){
     if(ticketBloqueado)return;
     const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
-    if(enCarro+1 > p.stock){ alert('No hay más stock'); return; }
+    if(enCarro+1 > disponible(p)){ alert('No hay más stock de producto / envase'); return; }
+    if(!alcanza([...carrito,{id:p.id,cant:1}]))return;
     const it = carrito.find(x=>x.id===p.id);
     if(it) it.cant++;
     else carrito.push({id:p.id, nombre:p.nombre, precio:precio(p), cant:1, pres:pres(p), codigo:p.codigo});
@@ -113,6 +116,7 @@ const Caja = (() => {
   // se convierte solo y avisa el ahorro. Standard de venta fraccionada.
   function optimizar(silencioso){
     const db = Store.get();
+    if(carrito.some(i=>db.productos.find(p=>p.id===i.id)?.envaseId))return 0;
     let ahorro = 0; const avisos = [];
     const bases = [...new Set(carrito.map(i=>i.codigo).filter(Boolean))];
     bases.forEach(code=>{
@@ -167,14 +171,15 @@ const Caja = (() => {
       const mas = document.createElement('button'); mas.textContent='+';
       mas.onclick=()=>{ const p = prod(it.id); if(!p) return;
         const enCarro = carrito.filter(x=>x.id===it.id).reduce((a,i)=>a+i.cant,0);
-        if(enCarro+1>p.stock){alert('No hay más stock');return;} it.cant++; optimizar(false); renderCarrito(); };
+        if(enCarro+1>disponible(p)){alert('No hay más stock de producto / envase');return;} if(!alcanza([...carrito,{id:p.id,cant:1}]))return;it.cant++; optimizar(false); renderCarrito(); };
       qty.appendChild(menos); qty.appendChild(n); qty.appendChild(mas);
       const alt = otraPres(it);
       if(alt){
         const sw = document.createElement('button'); sw.textContent='→ '+pres(alt); sw.title='Cambiar a '+pres(alt); sw.setAttribute('aria-label','Cambiar a presentación '+pres(alt));
         sw.onclick=()=>{
           const enCarro = carrito.filter(x=>x.id===alt.id).reduce((a,i)=>a+i.cant,0);
-          if(enCarro+it.cant > alt.stock){ alert('Sin stock en '+pres(alt)); return; }
+          if(enCarro+it.cant > disponible(alt)){ alert('Sin stock en '+pres(alt)); return; }
+          if(!alcanza([...carrito.filter(x=>x!==it),{id:alt.id,cant:it.cant}]))return;
           const ex = carrito.find(x=>x.id===alt.id);
           if(ex){ ex.cant += it.cant; carrito.splice(idx,1); }
           else { it.id=alt.id; it.nombre=alt.nombre; it.precio=precio(alt); it.pres=pres(alt); }
@@ -235,8 +240,9 @@ const Caja = (() => {
     if(!vars.length) return false;
     const p = vars.find(v=>v.categoria==='Líquidos 1L') || vars[0];
     const enCarro = carrito.filter(x=>x.id===p.id).reduce((a,i)=>a+i.cant,0);
-    if(p.stock<=0){ flash(`Sin stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
-    if(enCarro+1 > p.stock){ flash(`No hay más stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
+    if(disponible(p)<=0){ flash(`Sin stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
+    if(enCarro+1 > disponible(p)){ flash(`No hay más stock: ${p.nombre}`); if(typeof Beep!=='undefined')Beep.err(); return true; }
+    if(!alcanza([...carrito,{id:p.id,cant:1}]))return true;
     const it = carrito.find(x=>x.id===p.id);
     if(it) it.cant++;
     else carrito.push({id:p.id, nombre:p.nombre, precio:precio(p), cant:1, pres:pres(p), codigo:p.codigo});
