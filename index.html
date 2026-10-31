@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=41">
-<link rel="stylesheet" href="css/remito.css?v=41">
-<link rel="stylesheet" href="css/reportes.css?v=41">
-<link rel="stylesheet" href="css/listas-precios.css?v=41">
-<link rel="stylesheet" href="css/informes.css?v=41">
-<link rel="stylesheet" href="css/proveedor.css?v=41">
+<link rel="stylesheet" href="css/style.css?v=42">
+<link rel="stylesheet" href="css/remito.css?v=42">
+<link rel="stylesheet" href="css/reportes.css?v=42">
+<link rel="stylesheet" href="css/listas-precios.css?v=42">
+<link rel="stylesheet" href="css/informes.css?v=42">
+<link rel="stylesheet" href="css/proveedor.css?v=42">
 
 </head>
 <body>
@@ -352,18 +352,28 @@
   <form method="dialog" id="form-prod">
     <button type="submit" hidden aria-hidden="true" tabindex="-1">Guardar</button>
     <h3 id="modal-titulo">Nuevo producto</h3>
-    <input id="f-codigo" placeholder="Código de barras (ej: 7791828000046)" autofocus>
-    <input id="f-nombre" placeholder="Nombre (ej: PAPEL HIGIENICO Felpita)" required>
-    <input id="f-cat" placeholder="Rubro (ej: Accesorios)">
-    <select id="f-prov" title="Proveedor"></select>
+    <label class="producto-campo" for="f-codigo">Código de barras o interno</label>
+    <input id="f-codigo" placeholder="Ej.: 7791828000046" autofocus>
+    <label class="producto-campo" for="f-nombre">Nombre del producto</label>
+    <input id="f-nombre" placeholder="Ej.: Lavandina concentrada" required>
+    <label class="producto-campo" for="f-cat">Rubro</label>
+    <input id="f-cat" placeholder="Ej.: Accesorios">
+    <label class="producto-campo" for="f-prov">Proveedor</label>
+    <select id="f-prov"></select>
+    <label class="producto-campo" for="f-costo">Costo de compra ($)</label>
     <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra">
-    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Venta (se calcula sola: costo × margen)" disabled>
-    <input id="f-margen" type="number" min="0" step="0.01" placeholder="Margen % (a mano)">
+    <label class="producto-campo" for="f-precio">Precio de venta base ($)</label>
+    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Se calcula desde el costo y el margen" disabled>
+    <label class="producto-campo" for="f-margen">Ganancia sobre el costo (%)</label>
+    <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
     <p class="hint" style="margin:0">Costo / venta / margen: se administran en el panel <b>Precios</b> (acá solo al crear el producto).</p>
-    <input id="f-pres" placeholder="Presentación (ej: 1 Lt, 5 Lts, x Unid)">
-    <input id="f-stock" type="number" min="0" step="1" placeholder="Stock inicial" value="10">
+    <label class="producto-campo" for="f-pres">Presentación</label>
+    <input id="f-pres" placeholder="Ej.: 1 Lt, 5 Lts, x Unid">
+    <label class="producto-campo" for="f-stock">Cantidad en stock (unidades)</label>
+    <input id="f-stock" type="number" min="0" step="1" placeholder="Unidades disponibles" value="10">
     <label class="chk" style="margin-top:10px"><input type="checkbox" id="f-activo" checked> Visible (se ofrece en caja)</label>
-    <div class="foto-row">
+    <p class="producto-campo" id="producto-foto-titulo">Foto del producto</p>
+    <div class="foto-row" role="group" aria-labelledby="producto-foto-titulo">
       <div id="foto-prev" class="foto-prev vacia"><span>Sin foto</span></div>
       <div class="foto-actions">
         <button type="button" id="foto-pick">Cargar foto</button>
@@ -398,26 +408,26 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=41"></script>
-<script src="js/store.js?v=41"></script>
-<script src="js/negocio-online.js?v=41"></script>
-<script src="js/pagos.js?v=41"></script>
-<script src="js/scan.js?v=41"></script>
-<script src="js/caja.js?v=41"></script>
-<script src="js/stock.js?v=41"></script>
-<script src="js/entidades.js?v=41"></script>
-<script src="js/cumple.js?v=41"></script>
-<script src="js/exportar-informe.js?v=41"></script>
-<script src="js/listas-precios.js?v=41"></script>
-<script src="js/operacion.js?v=41"></script>
-<script src="js/turnos.js?v=41"></script>
-<script src="js/reportes.js?v=41"></script>
-<script src="js/app.js?v=41"></script>
-<script src="js/precios-online.js?v=41"></script>
+<script src="js/catalogo.js?v=42"></script>
+<script src="js/store.js?v=42"></script>
+<script src="js/negocio-online.js?v=42"></script>
+<script src="js/pagos.js?v=42"></script>
+<script src="js/scan.js?v=42"></script>
+<script src="js/caja.js?v=42"></script>
+<script src="js/stock.js?v=42"></script>
+<script src="js/entidades.js?v=42"></script>
+<script src="js/cumple.js?v=42"></script>
+<script src="js/exportar-informe.js?v=42"></script>
+<script src="js/listas-precios.js?v=42"></script>
+<script src="js/operacion.js?v=42"></script>
+<script src="js/turnos.js?v=42"></script>
+<script src="js/reportes.js?v=42"></script>
+<script src="js/app.js?v=42"></script>
+<script src="js/precios-online.js?v=42"></script>
 
-<script type="module" src="js/fotos.mjs?v=41"></script>
-<script type="module" src="js/remito.mjs?v=41"></script>
-<script type="module" src="js/comparar-proveedor.mjs?v=41"></script>
-<script type="module" src="js/importar-lista.mjs?v=41"></script>
+<script type="module" src="js/fotos.mjs?v=42"></script>
+<script type="module" src="js/remito.mjs?v=42"></script>
+<script type="module" src="js/comparar-proveedor.mjs?v=42"></script>
+<script type="module" src="js/importar-lista.mjs?v=42"></script>
 </body>
 </html>

@@ -320,3 +320,8 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 @media print{#negocio-acceso,#negocio-barra{display:none!important}}
 #caja-controles{border:0;margin:0;padding:0;min-width:0}
 #caja-controles:disabled{opacity:.65}
+
+/* Etiquetas permanentes en alta y edición de productos. */
+#modal{max-height:calc(100dvh - 32px);overflow-y:auto}
+#form-prod .producto-campo{display:block;margin:10px 0 4px;font-size:13px;font-weight:600;color:var(--ink)}
+#form-prod .producto-campo+input,#form-prod .producto-campo+select{margin-top:0;width:100%}
