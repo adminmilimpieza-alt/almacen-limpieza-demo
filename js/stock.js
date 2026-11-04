@@ -1,7 +1,7 @@
 // stock.js — módulo Stock (punto 2) + historial ventas en Reportes
 const Stock = (() => {
   const $ = id => document.getElementById(id);
-  let editId = null, fotoActual = '', fotoBase=null;
+  let editId = null, fotoActual = '', fotoBase=null, precioEditado=false, ultimoModo='costo', envaseMostrado=0;
   function normalizarFoto(file){
     if(typeof Fotos!=='undefined')return Fotos.normalizarFoto(file);
     return new Promise((res, rej)=>{
@@ -56,6 +56,7 @@ const Stock = (() => {
   }
   function render(){
     const db = Store.get();
+    if(typeof Promociones!=='undefined') Promociones.render();
     const tb = $('tabla-stock'); tb.innerHTML='';
     const list = filtros();
     const drift = new Set(Store.driftStock().map(d=>d.p.id));
@@ -74,16 +75,21 @@ const Stock = (() => {
       if(oculto) tr.classList.add('oculto');
       const local = drift.has(p.id);
       const pendiente = pend.has(p.id);
-      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${Store.precioEnLista(p.id)}${p.envaseId?'<small>Envase incluido</small>':''}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
+      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${Store.precioEnLista(p.id)}${p.envaseId?'<small>'+(/5\s*l/i.test(p.presentacion||p.nombre)&&p.incluirEnvaseDefecto===false?'Sin bidón por defecto':'Envase incluido')+'</small>':''}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
       const td = document.createElement('td'); td.style.whiteSpace='nowrap';
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id;fotoBase={...p}; $('modal-titulo').textContent='Editar producto';
         $('f-codigo').value=p.codigo||''; $('f-nombre').value=p.nombre; $('f-cat').value=p.categoria||'';
         $('f-pres').value=p.presentacion||'';
-        $('f-costo').value=(p.costo??p.precio); $('f-precio').value=p.precio;
+        $('f-costo').value=(p.costo??p.precio); $('f-precio').value=Store.precioEnLista(p.id);
+        precioEditado=false; ultimoModo='costo';
+        $('f-iva').value=p.iva==null?'':String(p.iva);
+        $('f-margen-venta').value=p.margen==null?'':Math.round(p.margen/(100+p.margen)*10000)/100;
+        $('f-incluir-envase').checked=p.incluirEnvaseDefecto!==false;
+        envaseMostrado=envaseEditor(); $('f-precio').value=Number(p.precio)+envaseMostrado;
+        detallePrecio();
         $('f-margen').value=(p.margen==null?'':p.margen); $('f-stock').value=p.stock;
-        // El costo/precio/margen se administran en el panel Precios, no aca.
-        $('f-costo').disabled=true; $('f-precio').disabled=true; $('f-margen').disabled=true;
+        $('f-costo').disabled=false; $('f-precio').disabled=false; $('f-margen').disabled=false;
         $('f-activo').checked = !oculto;
         fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
@@ -94,6 +100,32 @@ const Stock = (() => {
       td.appendChild(bE); td.appendChild(bV); td.appendChild(bD); tr.appendChild(td); tb.appendChild(tr);
     });
   }
+  function envaseEditor(){
+    const db=Store.get(),p=db.productos.find(p=>p.id===editId);
+    const categoria=$('f-cat').value,presentacion=$('f-pres').value,nombre=$('f-nombre').value;
+    const pres=String(presentacion||nombre).toUpperCase();
+    let id;
+    if(p&&categoria===(p.categoria||'')&&presentacion===(p.presentacion||''))id=p.envaseId;
+    else if(['Líquidos 1L','Líquidos 5L','Pileta'].includes(categoria)){
+      const tipo=/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres)?'botellaId':/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)?'bidonId':null;
+      id=tipo&&db.catalogo?.envases?.[tipo];
+    }
+    if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)&&!$('f-incluir-envase').checked)return 0;
+    const envase=db.productos.find(e=>e.id===id);
+    return envase?Number(envase.precio):p?.envaseId===id&&id?Store.precioEnvase(p.id):0;
+  }
+  function cambiarEnvase(){
+    const base=Number($('f-precio').value)-envaseMostrado;
+    envaseMostrado=envaseEditor();
+    if($('f-precio').value!=='')$('f-precio').value=Math.round((base+envaseMostrado)*100)/100;
+    detallePrecio();
+  }
+  function detallePrecio(){
+    const p=Store.get().productos.find(p=>p.id===editId);
+    const envase=envaseEditor();
+    $('f-precio-detalle').textContent=$('f-iva').value===''?'IVA sin definir: se conserva el precio actual hasta elegir una tasa y editar.':`Costo sin IVA. Precio final con IVA${envase?' + envase $'+envase:''}. La ganancia se calcula sin IVA ni envase.`;
+    $('f-incluir-envase').parentElement.hidden=!(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&/5\s*l/i.test($('f-pres').value||p?.nombre||''));
+  }
   function fillProv(sel, cur){
     const db = Store.get();
     sel.innerHTML = '<option value="">— Sin proveedor —</option>' +
@@ -102,24 +134,36 @@ const Stock = (() => {
   }
   function init(){
     render();
+    if(typeof Promociones!=='undefined') Promociones.init();
     $('form-prod').onsubmit=event=>{event.preventDefault();$('guardar-prod').click();};
     $('cancelar-prod').onclick=()=>$('modal').close();
     $('nuevo').onclick=()=>{ editId=null;fotoBase=null; $('modal-titulo').textContent='Nuevo producto';
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
       $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
-      $('f-costo').disabled=false; $('f-margen').disabled=false;
+      $('f-costo').disabled=false; $('f-margen').disabled=false; $('f-precio').disabled=false;
+      precioEditado=false; ultimoModo='costo'; $('f-iva').value=''; $('f-margen-venta').value='';
+      $('f-incluir-envase').checked=true; envaseMostrado=0; fillProv($('f-prov'),''); detallePrecio();
       $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
-    // El precio de venta no se edita: sale de costo x margen mientras tipea.
-    // (En editar producto, editId != null, los inputs ya estan deshabilitados.)
-    const recalcula = ()=>{
-      if(editId) return;
-      const c=Number($('f-costo').value), m=Number($('f-margen').value);
-      $('f-precio').value = (c>0 && m>=0) ? Math.round(c*(1+m/100)*100)/100 : '';
+    const recalcula = modo=>{
+      precioEditado=true; ultimoModo=modo;
+      if($('f-iva').value===''){ detallePrecio(); return; }
+      try{
+        const cur=Store.get().productos.find(p=>p.id===editId);
+        const r=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo});
+        envaseMostrado=envaseEditor(); $('f-precio').value=r.precioFinal; $('f-margen').value=r.margen; $('f-margen-venta').value=r.margenVenta;
+        detallePrecio();
+      }catch(error){ $('f-precio-detalle').textContent=error.message; }
     };
-    $('f-costo').addEventListener('input', recalcula);
-    $('f-margen').addEventListener('input', recalcula);
+    $('f-costo').addEventListener('input',()=>recalcula('costo'));
+    $('f-margen').addEventListener('input',()=>recalcula('costo'));
+    $('f-margen-venta').addEventListener('input',()=>recalcula('margenVenta'));
+    $('f-precio').addEventListener('input',()=>recalcula('precioFinal'));
+    $('f-iva').addEventListener('change',()=>recalcula(ultimoModo));
+    $('f-pres').addEventListener('input',cambiarEnvase);
+    $('f-cat').addEventListener('input',cambiarEnvase);
+    $('f-incluir-envase').addEventListener('change',cambiarEnvase);
     $('reset').onclick=async ()=>{ if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; } if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ try{ await Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); }catch(err){ alert(err.message); } } };
     $('stk-q').addEventListener('input', render);
     $('stk-rubro').addEventListener('change', render);
@@ -150,22 +194,26 @@ const Stock = (() => {
       const button=$('guardar-prod');if(button.disabled)return;
       const db = Store.get();
       const cur = editId && db.productos.find(x=>x.id===editId);
-      // Editando: costo/precio/margen se mantienen (se cambian en el panel Precios).
+      if((precioEditado||!cur)&&$('f-iva').value===''){alert('Elegí IVA 10,5% o 21% para guardar cambios de precio.');return;}
+      let calculo=null;
+      if(precioEditado||!cur){try{calculo=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo:ultimoModo});}catch(error){alert(error.message);return;}}
       let p = Object.assign({}, cur||{}, {
         id: editId || crypto.randomUUID(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
         presentacion:$('f-pres').value.trim(),
-        costo: cur?cur.costo:Number($('f-costo').value),
-        precio: cur?cur.precio:Number($('f-precio').value),
-        margen: cur?((cur.margen==null)?null:cur.margen):(($('f-margen').value===''?null:Number($('f-margen').value))),
+        costo: calculo?calculo.costo:cur.costo,
+        precio: calculo?calculo.precioBase:cur.precio,
+        margen: calculo?calculo.margen:cur.margen,
+        ...(calculo?{iva:calculo.iva}:{}),
+        incluirEnvaseDefecto:$('f-incluir-envase').checked,
         stock:Number($('f-stock').value),
         activo: $('f-activo').checked,
-        provId: $('f-prov').value || ((cur&&cur.provId)||''),
+        provId: $('f-prov').value || '',
         foto: fotoActual || ''
       });
       // Nuevo producto: la venta sale de costo x margen, sino no se guarda.
       const sinPrecio = editId ? !(p.precio>=0) : !(Number($('f-precio').value)>0);
-      if(!p.nombre || !(p.costo>=0) || sinPrecio){ alert('Faltan datos (costo y margen para calcular la venta)'); return; }
+      if(!p.nombre || !(p.costo>=0) || sinPrecio){ alert('Completá nombre, costo y un precio de venta válido'); return; }
       button.disabled=true;button.textContent='Guardando…';
       try{
         if(typeof Fotos==='undefined'){

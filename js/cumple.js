@@ -4,7 +4,7 @@ const Cumple = (() => {
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
   let cursor = null, selDia = null;
-  const hoy = () => { const t = new Date(); return { y:t.getFullYear(), m:t.getMonth()+1, d:t.getDate() }; };
+  const hoy = () => { const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Argentina/Cordoba',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return {y:Number(p.year),m:Number(p.month),d:Number(p.day)}; };
   const esc = s => String(s||'').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   function clienteDe(c){
     const m = String(c.nac||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -71,7 +71,7 @@ const Cumple = (() => {
   function renderLista(){
     const cont = $('cumple-lista'); cont.innerHTML = '';
     let list = delMes();
-    if(selDia!=null) list = list.filter(x => x.f.d===selDia);
+    const dia=$('cumple-dia');if(dia){dia.replaceChildren();const title=document.createElement('h3');title.textContent=selDia==null?'Elegí un día para ver sus cumpleaños':`${selDia} de ${MESES[cursor.m]}`;dia.appendChild(title);if(selDia!=null){const names=list.filter(x=>x.f.d===selDia).map(x=>x.c.nombre);const p=document.createElement('p');p.textContent=names.length?names.join(' · '):'Sin cumpleaños este día.';dia.appendChild(p);}}
     list.sort((a,b) => a.f.d-b.f.d || String(a.c.nombre).localeCompare(String(b.c.nombre), 'es'));
     const head = document.createElement('div'); head.className='hint';
     head.textContent = list.length
@@ -96,7 +96,11 @@ const Cumple = (() => {
   function render(){
     if(!cursor){ const t = hoy(); cursor = {y:t.y, m:t.m-1}; }
     const mes = $('cal-mes'); if(mes) mes.textContent = `${MESES[cursor.m]} ${cursor.y}`;
-    renderGrid(); renderLista();
+    renderGrid(); renderLista(); renderAviso();
+  }
+  function renderAviso(){
+    const box=$('cumples-alert');if(!box)return;const t=hoy(),list=clientes().filter(x=>x.f.m===t.m&&x.f.d===t.d);box.hidden=!list.length;box.replaceChildren();if(!list.length)return;
+    const text=document.createElement('span');text.textContent='🎂 Hoy cumplen: '+list.map(x=>x.c.nombre).join(' · ')+'. ';const button=document.createElement('button');button.type='button';button.textContent='Ver calendario';button.onclick=()=>{cursor={y:t.y,m:t.m-1};selDia=t.d;render();Panel.go('mod-cumple');};box.append(text,button);
   }
   function init(){
     const t = hoy(); cursor = {y:t.y, m:t.m-1}; selDia = null;

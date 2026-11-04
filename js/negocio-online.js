@@ -84,6 +84,6 @@ const OnlineBusiness=(()=>{
   try{await refresh(true);if(pending())await recover();}catch(error){gate(error.status===401?'Ingresá la clave de operador para entrar al negocio online.':'No se pudo conectar. Verificá Internet y volvé a ingresar.');}
   return ready;
  }
- return {activo:true,ready,init,refresh,mutate,hasPending:()=>!!pending(),read(method,args){const raw=JSON.stringify(state);const memory={getItem:()=>raw,setItem(){throw new Error('La consulta intentó modificar datos.');}};const store=MiLimpiezaStoreFactory(memory);return store[method](...args);},get:()=>structuredClone(state||{productos:[],clientes:[],proveedores:[],ventas:[],movimientos:[],pedidos:[],turnos:[],cfg:{},catalogo:{}}),applyPhotos,uiReady(){initializedUI=true;renderAll();},revision:()=>revision};
+ return {activo:true,ready,init,refresh,mutate,hasPending:()=>!!pending(),read(method,args){const raw=JSON.stringify(state);const memory={getItem:()=>raw,setItem(){throw new Error('La consulta intentó modificar datos.');}};const store=MiLimpiezaStoreFactory(memory);return store[method](...args);},get:()=>structuredClone(state||{promociones:[],productos:[],clientes:[],proveedores:[],ventas:[],movimientos:[],pedidos:[],turnos:[],cfg:{},catalogo:{}}),applyPhotos,uiReady(){initializedUI=true;renderAll();},revision:()=>revision};
 })();
 globalThis.OnlineBusiness=OnlineBusiness;

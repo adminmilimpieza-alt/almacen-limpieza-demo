@@ -1,8 +1,8 @@
 import '../js/store.js';
 import catalogo from '../data/catalogo.json' with {type:'json'};
 import {authenticated} from './security.mjs';
-const cols=['productos','clientes','proveedores','ventas','movimientos','pedidos','turnos','listasPrecios'];
-const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo','configurarEnvases']);
+const cols=['productos','clientes','proveedores','ventas','movimientos','pedidos','turnos','listasPrecios','promociones'];
+const allowed=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo','configurarEnvases','guardarPromocion','eliminarPromocion','configurarRespaldoDrive']);
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const json=data=>Response.json(data,{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const validId=id=>typeof id==='string'&&/^[\w-]{1,100}$/.test(id)&&!['__proto__','prototype','constructor'].includes(id);
@@ -37,24 +37,31 @@ function validateState(state){
  for(const p of state.productos)for(const field of ['foto','img'])if(p[field]&&!/^\/api\/photos\/[a-f0-9]{64}\?v=[a-f0-9-]{36}$/i.test(p[field]))throw fail('Subí la foto con el selector de imágenes.');
 
  for(const col of cols){const ids=new Set();for(const row of state[col]){if(!row||!validId(row.id)||ids.has(row.id))throw fail('Identificador inválido o duplicado.');ids.add(row.id);if(JSON.stringify(row).length>2000000)throw fail('Registro demasiado grande.',413);}}
- for(const p of state.productos){if(typeof p.nombre!=='string'||!p.nombre.trim()||!number(p.stock)||!number(p.costo)||!number(p.precio)||(p.margen!=null&&!margin(p.margen)))throw fail('Producto o stock inválido.');if(p.envaseId&&(!validId(p.envaseId)||p.envaseId===p.id||!state.productos.some(e=>e.id===p.envaseId&&!e.envaseId)))throw fail('Envase del producto inválido.');if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');}
+ for(const p of state.productos){if(typeof p.nombre!=='string'||!p.nombre.trim()||!number(p.stock)||!number(p.costo)||!number(p.precio)||(p.margen!=null&&!margin(p.margen)))throw fail('Producto o stock inválido.');if(p.iva!=null&&![0,10.5,21].includes(p.iva))throw fail('IVA inválido.');if(p.incluirEnvaseDefecto!=null&&typeof p.incluirEnvaseDefecto!=='boolean')throw fail('Opción de envase inválida.');if(p.envaseId&&(!validId(p.envaseId)||p.envaseId===p.id||!state.productos.some(e=>e.id===p.envaseId&&!e.envaseId)))throw fail('Envase del producto inválido.');if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');}
  for(const c of state.clientes)if(!number(c.deuda??0)||typeof c.nombre!=='string'||!c.nombre.trim())throw fail('Cliente inválido.');
  for(const l of state.listasPrecios){if(l.id==='mostrador'||typeof l.nombre!=='string'||!l.nombre.trim()||l.nombre.length>100||!l.precios||Array.isArray(l.precios)||typeof l.precios!=='object'||Object.entries(l.precios).some(([id,v])=>!state.productos.some(p=>p.id===id)||!number(v)))throw fail('Lista de precios inválida.');}
  for(const c of state.clientes)if(c.listaPrecioId&&c.listaPrecioId!=='mostrador'&&!state.listasPrecios.some(l=>l.id===c.listaPrecioId))throw fail('La lista del cliente no existe.');
  if(state.turnos.filter(t=>t.estado==='abierto').length>1)throw fail('Ya hay una caja abierta.');
+ for(const promo of state.promociones||[]){if(typeof promo.nombre!=='string'||!promo.nombre.trim()||!number(promo.precio)||!Array.isArray(promo.items)||!promo.items.length||promo.items.some(c=>!state.productos.some(p=>p.id===c.id)||!Number.isInteger(c.cant)||c.cant<=0))throw fail('Promoción inválida.');}
  for(const m of state.movimientos)if(!number(m.monto)||!['ingreso','egreso'].includes(m.tipo)||!['efectivo','mercadopago','banco'].includes(m.medio))throw fail('Movimiento inválido.');
  for(const v of state.ventas){if(!stateClient(state,v.clienteId)||(!v.historica&&!state.turnos.some(t=>t.id===v.turnoId))||!number(v.total))throw fail('Venta inválida.');items(v.items,state,false);}
  for(const m of state.movimientos)if(!state.turnos.some(t=>t.id===m.turnoId))throw fail('Turno no encontrado.');
  for(const p of state.pedidos){if(p.provId&&!state.proveedores.some(x=>x.id===p.provId))throw fail('Proveedor no encontrado.');items(p.items,state,false);}
 }
-function effectivePrice(state,p,clienteId='c1'){return factory(state).precioParaCliente(p.id,clienteId);}
 export function comprobarTicket(state,ticket,clienteId){if(!stateClient(state,clienteId||'c1'))throw fail('Cliente no encontrado.');items(ticket,state,true,clienteId||'c1');const s=factory(state);try{s.comprobarStockVenta(ticket);}catch(e){throw fail(e.message,409);}return s.prepararItemsVenta(ticket);}
 export async function readBusiness(env){await initialize(env);return snapshot(env);}
-function items(list,state,sale=true,clienteId='c1'){if(!Array.isArray(list)||!list.length||list.length>2000)throw fail('Productos inválidos.');const ids=new Set();for(const i of list){const p=state.productos.find(p=>p.id===i.id);if(!p||ids.has(i.id)||!number(i.cant)||i.cant<=0||(sale&&(!number(i.precio)||i.precio!==effectivePrice(state,p,clienteId)||p.activo===false)))throw fail('Cantidad, precio o producto inválido.');ids.add(i.id);}}
+function items(list,state,sale=true,clienteId='c1'){
+ if(!Array.isArray(list)||!list.length||list.length>2000)throw fail('Productos inválidos.');const ids=new Set(),store=sale?factory(state):null;
+ for(const i of list){const p=state.productos.find(p=>p.id===i.id),promo=(state.promociones||[]).find(p=>p.id===i.id);const historicalPromo=!sale&&i.tipo==='promo'&&Array.isArray(i.consumosStock)&&i.consumosStock.length>0;let incluye=i.incluirEnvase===undefined?p?.incluirEnvaseDefecto!==false:i.incluirEnvase;const key=i.id+':'+incluye;
+ if((!p&&!promo&&!historicalPromo)||ids.has(key)||!number(i.cant)||i.cant<=0||i.incluirEnvase!==undefined&&typeof i.incluirEnvase!=='boolean')throw fail('Cantidad o producto inválido.');
+ if(sale&&(!number(i.precio)||(p||promo).activo===false||i.precio!==store.precioParaCliente(i.id,clienteId,i.incluirEnvase)))throw fail('Cantidad, precio o producto inválido.');
+ if(historicalPromo&&i.consumosStock.some(c=>!state.productos.some(p=>p.id===c.id)||!number(c.cant)||c.cant<=0))throw fail('Componente histórico inválido.');ids.add(key);
+ }
+}
 function validateOperation(op,args,state){
  if(!Array.isArray(args)||args.length>4)throw fail('Argumentos inválidos.');
  if(['upsertEntidad','delEntidad'].includes(op)&&!['clientes','proveedores'].includes(args[0]))throw fail('Colección inválida.');
- if(op==='addMovimiento'){const m=args[0];if(!m||Object.keys(m).some(k=>!['id','fecha','tipo','medio','concepto','monto','conciliado'].includes(k))||!number(m.monto)||m.monto<=0)throw fail('Movimiento inválido.');}
+ if(op==='addMovimiento'){const m=args[0];if(m?.categoria==='retiro-socio'&&m.tipo!=='egreso')throw fail('El retiro de socio debe ser un egreso.');if(m?.categoria!=null&&!['general','retiro-socio'].includes(m.categoria))throw fail('Categoría de movimiento inválida.');if(!m||Object.keys(m).some(k=>!['id','fecha','tipo','medio','concepto','monto','conciliado','categoria'].includes(k))||!number(m.monto)||m.monto<=0)throw fail('Movimiento inválido.');}
  if(op==='editarPrecio'&&(!['costo','margen','precio'].includes(args[1])||!(args[1]==='margen'?margin(args[2]):number(args[2]))))throw fail('Precio inválido.');
  if(op==='editarPrecioLista'&&(!['costo','margen','precio'].includes(args[2])||!(args[2]==='margen'?margin(args[3]):number(args[3]))))throw fail('Precio inválido.');
  if(op==='aplicarComparacionCostos'&&(!Array.isArray(args[0])||!args[0].length||args[0].length>2000||args[0].some(r=>!r||!number(r.costoAnterior)||!number(r.costoNuevo))))throw fail('Comparación inválida.');
@@ -80,7 +87,11 @@ function validateOperation(op,args,state){
   if(args[0].ocultarFaltantes!=null&&typeof args[0].ocultarFaltantes!=='boolean')throw fail('Opción de ocultar inválida.');
  }
  if(op==='anularVenta'){const sale=state.ventas.find(v=>v.id===args[0]);if(sale?.pago==='cuenta'&&(state.clientes.find(c=>c.id===sale.clienteId)?.deuda||0)<sale.total)throw fail('La cuenta ya tiene pagos aplicados. Revisá la deuda antes de anular esta venta.');}
+ if(op==='cobrar'&&args[3]==null)throw fail('Actualizá la página antes de cobrar: ahora la bonificación se elige en cada venta.',409);
+ if(op==='cobrar'&&(args[3]!=null&&(typeof args[3]!=='object'||Array.isArray(args[3])||Object.keys(args[3]).some(k=>k!=='bonificacion')||args[3].bonificacion!=null&&typeof args[3].bonificacion!=='boolean')))throw fail('Bonificación inválida.');
  if(op==='cobrar'){items(args[0],state,true,args[2]||'c1');if(!['efectivo','banco','mercadopago','cuenta'].includes(args[1])||!state.clientes.some(c=>c.id===(args[2]||'c1')))throw fail('Pago o cliente inválido.');}
+ if(op==='guardarPromocion'&&(!args[0]||args[0].id&&!validId(args[0].id)))throw fail('Promoción inválida.');
+ if(op==='configurarRespaldoDrive'&&(!args[0]||typeof args[0].email!=='string'))throw fail('Correo de respaldo requerido.');
  if(op==='abrirTurno'&&!number(args[0]))throw fail('Saldo inválido.');
  if(op==='configurarEnvases'&&(!args[0]||!validId(args[0].botellaId)||!validId(args[0].bidonId)||args[0].botellaId===args[0].bidonId))throw fail('Envases inválidos.');
  if(op==='cerrarTurno'&&(!args[0]||Object.values(args[0]).some(n=>!number(n))))throw fail('Conteo inválido.');

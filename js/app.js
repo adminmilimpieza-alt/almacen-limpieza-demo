@@ -2,25 +2,21 @@
 // La caja (escaneo, ticket, cobro) es la pantalla principal siempre visible.
 const Panel = (() => {
   const TITULOS = {
-    'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
+    'mod-listas':'Listas de precios', 'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
     'mod-cumple':'Cumpleaños', 'mod-proveedores':'Proveedores', 'mod-pedidos':'Pedidos',
     'mod-mov':'Movimientos de caja', 'mod-turno':'Turno de caja', 'mod-reportes':'Reportes', 'mod-respaldo':'Respaldo'
   };
   const $ = id => document.getElementById(id);
-  function abrirDrawer(){
-    $('drawer').hidden = false; document.body.classList.add('drawer-open');
-    $('menu-btn').setAttribute('aria-expanded','true');
-  }
-  function cerrarDrawer(){
-    $('drawer').hidden = true; document.body.classList.remove('drawer-open');
-    $('menu-btn').setAttribute('aria-expanded','false');
-  }
+  function abrirDrawer(){}
+  function cerrarDrawer(){}
   function go(id){
+    if(id==='caja'){back();return;}
     const body = $('panel-body'), sec = document.getElementById(id); if(!sec) return;
     if(!go._origen) go._origen = document.getElementById('modulos');
     // Si ya habia un modulo abierto, se vuelve a su lugar antes de montar el nuevo.
     while(body.firstChild) go._origen.appendChild(body.firstChild);
     body.appendChild(sec);
+    if(id==='mod-listas'&&typeof ListasPrecios!=='undefined')ListasPrecios.render();
     $('panel-title').textContent = TITULOS[id]||'';
     $('panel-overlay').hidden = false;
     cerrarDrawer();
@@ -34,8 +30,8 @@ const Panel = (() => {
   function init(){
     document.querySelectorAll('[data-go]').forEach(b=>{ b.onclick = ()=>go(b.dataset.go); });
     $('panel-back').onclick = back;
-    $('menu-btn').onclick = ()=>{ $('drawer').hidden ? abrirDrawer() : cerrarDrawer(); };
-    $('drawer-close').onclick = cerrarDrawer;
+    $('menu-btn').hidden=true;
+    document.querySelectorAll('[data-caja-vista]').forEach(b=>b.onclick=()=>{document.body.dataset.cajaVista=b.dataset.cajaVista;});
     document.addEventListener('keydown', e=>{
       if(e.key!=='Escape') return;
       if(!$('panel-overlay').hidden) back(); else cerrarDrawer();
@@ -45,7 +41,7 @@ const Panel = (() => {
 })();
 (async()=>{
   if(typeof OnlineBusiness!=='undefined')await OnlineBusiness.init();
-  Caja.init(); Stock.init(); Entidades.init(); Cumple.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init(); Turnos.init(); Panel.init();
+  Caja.init(); Stock.init(); Entidades.init(); Cumple.init(); Precios.init(); Pedidos.init(); Reportes.init(); Respaldo.init(); if(typeof RespaldoDrive!=='undefined')RespaldoDrive.init(); Turnos.init(); Panel.init();
   Pagos.init();
   if(typeof OnlineBusiness!=='undefined')OnlineBusiness.uiReady();
 })();

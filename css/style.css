@@ -325,3 +325,41 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 #modal{max-height:calc(100dvh - 32px);overflow-y:auto}
 #form-prod .producto-campo{display:block;margin:10px 0 4px;font-size:13px;font-weight:600;color:var(--ink)}
 #form-prod .producto-campo+input,#form-prod .producto-campo+select{margin-top:0;width:100%}
+/* Caja: catálogo y cobro con desplazamiento independiente. */
+.brand-logo{width:64px;height:54px;object-fit:contain;background:white;border-radius:8px}
+.main-nav{display:flex;gap:5px;overflow-x:auto;padding:8px 2vw;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.main-nav button{white-space:nowrap;padding:9px 12px}
+.pos{max-width:none;width:100%;padding:12px 2vw}
+.pos-left{padding:0;border:0;background:transparent}
+#caja-controles{min-width:0}
+.caja-columns{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:18px;height:calc(100dvh - 210px);min-height:460px}
+.catalogo-column{overflow:auto;min-width:0;padding:0 8px 14px 0}
+.catalogo{margin-top:12px}.catalogo-grid{max-height:none;overflow:visible;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.catalogo-tabs{display:flex;gap:6px}.catalogo-tabs [aria-selected=true]{background:var(--ink);color:var(--surface)}
+.ticket-card{margin:0;padding:12px;min-height:0;display:flex;flex-direction:column;overflow:auto}
+.ticket-card h2{flex:none}.ticket-scroll{min-height:90px;flex:1;max-height:none;overflow:auto}
+.ticket-checkout{flex:none;padding-top:10px;background:var(--surface-2)}
+.ticket-checkout .total{margin:2px 0 8px}.ticket-checkout .lbl{display:inline-flex;width:49%;padding-right:5px;box-sizing:border-box}.ticket-checkout .lbl select{max-width:100%}
+.bonificacion-opcion{margin:8px 0}.cobro-bar{display:flex;gap:10px}.cobro-bar #cobrar{flex:1}
+.caja-mobile-tabs{display:none}.cumple-layout{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:24px}.cumple-layout .cal-grid{align-self:start}
+.movimiento.ingreso{border-left:5px solid #287348;color:#185934;background:#eef8f0}.movimiento.egreso{border-left:5px solid #b54444;color:#8d2222;background:#fff0ef}
+#mov-totales{padding:14px;border:1px solid var(--line);font-weight:700;margin:12px 0}.mov-filtros label{display:flex;flex-direction:column;gap:4px}
+@media(max-width:760px){
+ header{padding:8px 12px}.brand h1{font-size:20px}.brand .badge,.brand small{display:none}.brand-logo{width:48px;height:40px}
+ .main-nav{padding:6px}.main-nav button{font-size:13px;padding:8px}.pos{padding:8px;width:100%;box-sizing:border-box}
+ .caja-mobile-tabs{display:flex;gap:8px;margin:8px 0}.caja-mobile-tabs button{flex:1}
+ .caja-columns{display:block;height:auto;min-height:0}.catalogo-column{height:calc(100dvh - 275px);overflow:auto;padding-right:0;padding-bottom:0}
+ .ticket-card{display:none;height:calc(100dvh - 255px);box-sizing:border-box}
+ body[data-caja-vista=ticket] .catalogo-column{display:none}body[data-caja-vista=ticket] .ticket-card{display:flex}
+ .ticket-scroll{min-height:80px}.ticket-tabla .c-cod,.ticket-tabla th:first-child{display:none}.ticket-tabla td{padding:7px 4px}.ticket-tabla .c-cant button{padding:5px 8px}
+ .ticket-checkout .lbl{font-size:13px}.ticket-checkout .row{margin:5px 0}.ticket-checkout .total{font-size:24px}
+ .cumple-layout{grid-template-columns:1fr}.panel-overlay{padding:10px}
+}
+@media print{.main-nav,.caja-mobile-tabs{display:none!important}.caja-columns{display:block;height:auto}.ticket-card{display:block;height:auto;overflow:visible}.catalogo-column{display:none}}
+.main-nav{flex-wrap:nowrap;max-width:none}.mobile-cobro{display:none}
+@media(max-width:760px){.mobile-cobro{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -3px 12px #0000000a}.ticket-card{height:calc(100dvh - 315px)}.catalogo-column{height:calc(100dvh - 335px)}.pos{padding-bottom:68px}}
+@media print{.mobile-cobro{display:none!important}}
+.prod-card-option{display:flex;flex-direction:column;min-width:0;gap:5px}.prod-card-option .prod-card{width:100%;flex:1}.prod-card-option .sin-bidon{font-size:12px;padding:7px;min-height:38px;border-color:var(--line);background:var(--surface)}
+
+/* Mantener ocultos los controles condicionales aunque tengan display propio. */
+[hidden]{display:none !important}

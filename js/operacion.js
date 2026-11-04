@@ -38,7 +38,7 @@ const Precios = (() => {
   function verLista(){
     if(typeof ListasPrecios!=='undefined') ListasPrecios.render();
     const db = Store.get();
-    const listaId=$('precio-lista')?.value||'mostrador';
+    const listaId='mostrador';
     const lista=Store.listarListasPrecios().find(l=>l.id===listaId);
     const f = $('precio-rubro').value;
     const normal=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -55,7 +55,7 @@ const Precios = (() => {
 
     const pendientes = new Set(Store.driftPrecio().map(d=>d.p.id))
     $('lista-precios').innerHTML =
-      `<p class="hint">${list.length} productos`+
+      `<p class="hint">Editá costo, IVA y precio de Mostrador desde Editar producto en Stock. ${list.length} productos`+
       (pendientes.size?` · <b>${pendientes.size} con cambios pendientes de compartir</b>`:'')+
       (ocultos?` · <b>${ocultos} ocultos</b> (no se ofrecen en caja)`:'')+
       (conAlerta?` · <b>${conAlerta}</b> con precio corregido sobre el Excel`:'')+`</p>`+
@@ -64,16 +64,16 @@ const Precios = (() => {
       list.map(p=>{
         const off = p.activo===false;
         const venta=Store.precioEnLista(p.id,listaId);
-        const costoEnvase=Store.precioEnvase(p.id,listaId);
-        const margen=Number(p.costo)>0 ? Math.round(((venta-costoEnvase)/Number(p.costo)-1)*10000)/100 : '';
+        const costoEnvase=p.incluirEnvaseDefecto===false&&/5\s*l/i.test(p.presentacion||p.nombre)?0:Store.precioEnvase(p.id,listaId);
+        const margen=Number(p.costo)>0 ? Math.round(((venta-costoEnvase)/(1+Number(p.iva||0)/100)/Number(p.costo)-1)*10000)/100 : '';
         const override=listaId!=='mostrador' && Object.prototype.hasOwnProperty.call(lista?.precios||{},p.id);
         const pend = pendientes.has(p.id);
         return `<tr class="${off?'oculto':''}">`+
           `<td>${p.nombre}${p.alerta?' <span class="tag warn" title="'+String(p.alerta).replace(/"/g,'')+'">revisar</span>':''}${pend?' <span class="tag info" title="Costo/margen editado en este equipo, todavía no compartido">pendiente</span>':''}<small class="precios-producto-dato">${p.codigo||'Sin código'} · ${p.presentacion||p.categoria||''}</small></td>`+
 
-          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" ${listaId!=='mostrador'?'disabled':''} value="${p.costo??p.precio}" title="Costo de compra"></td>`+
-          `<td><input class="tab-inp" type="number" min="-100" step="0.01" data-id="${p.id}" data-f="margen" value="${margen}" title="Margen sobre el costo; cambiarlo recalcula la venta"></td>`+
-          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" value="${venta}" title="Precio final de venta">${p.envaseId?'<small>Incluye envase $'+costoEnvase+' · líquido $'+Math.round((venta-costoEnvase)*100)/100+'</small>':''}${listaId!=='mostrador'?(override?'<button data-restablecer="'+p.id+'">Usar Mostrador</button>':'<small>Hereda Mostrador</small>'): ''}</td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="costo" disabled value="${p.costo??p.precio}" title="Costo de compra"></td>`+
+          `<td><input class="tab-inp" type="number" min="-100" step="0.01" data-id="${p.id}" data-f="margen" ${listaId==='mostrador'?'disabled':''} value="${margen}" title="Margen sobre el costo; cambiarlo recalcula la venta"></td>`+
+          `<td><input class="tab-inp" type="number" min="0" step="0.01" data-id="${p.id}" data-f="precio" ${listaId==='mostrador'?'disabled':''} value="${venta}" title="Precio final de venta">${p.envaseId?'<small>'+(costoEnvase?'Incluye envase $'+costoEnvase:'Sin bidón por defecto')+' · líquido $'+Math.round((venta-costoEnvase)*100)/100+'</small>':''}${listaId!=='mostrador'?(override?'<button data-restablecer="'+p.id+'">Usar Mostrador</button>':'<small>Hereda Mostrador</small>'): ''}</td>`+
           `<td class="precios-extra"><button data-id="${p.id}" data-off="${off?'1':'0'}">${off?'Mostrar':'Ocultar'}</button></td></tr>`;
       }).join('')+'</tbody></table></div>';
     $('lista-precios').querySelectorAll('button[data-restablecer]').forEach(b=>{ b.onclick=async()=>{try{await Store.restablecerPrecioLista(listaId,b.dataset.restablecer);verLista();Caja.refresh();}catch(err){alert(err.message);}}; });
@@ -119,14 +119,14 @@ const Precios = (() => {
   function init(){
     if(typeof ListasPrecios!=='undefined') ListasPrecios.init();
     renderRubro(); verLista(); estadoUI();
-    $('precio-lista')?.addEventListener('change',verLista);
+
     $('precio-buscar').addEventListener('input',verLista);
     $('precios-avanzadas').addEventListener('toggle',()=>{ $('mod-precios').classList.toggle('precios-mostrar-extra',$('precios-avanzadas').open); });
     if($('csv-ver')) $('csv-ver').onclick=()=>{
       const f = $('csv').files[0]; if(!f){alert('Elegí un CSV');return;}
       const r = new FileReader();
       r.onload=()=>{ pendiente=parseCSV(r.result);
-        $('csv-prev').innerHTML = `<p class="hint">${pendiente.length} filas. Primeras:</p><pre>${pendiente.slice(0,5).map(x=>JSON.stringify(x)).join('\n')}</pre>`; };
+        $('csv-prev').innerHTML = `<p class="hint">${pendiente.length} filas. Este formato no incluye IVA: conserva la tasa configurada de cada producto. Revisá los productos sin IVA antes de cambiar su precio. Primeras:</p><pre>${pendiente.slice(0,5).map(x=>JSON.stringify(x)).join('\n')}</pre>`; };
       r.readAsText(f);
     };
     if($('csv-aplicar')) $('csv-aplicar').onclick=async ()=>{
@@ -142,11 +142,12 @@ const Precios = (() => {
     rubrosM();
     $('margen-aplicar').onclick=async ()=>{
       try{
-      const selectedLista=$('precio-lista')?.value||'mostrador';
+      const selectedLista='mostrador';
       const propio = $('margen-tipo').value==='propio';
       const m = propio ? 'propio' : Number($('margen').value);
       if(!propio && !(m>=0)){ alert('Margen inválido'); return; }
       if(selectedLista!=='mostrador'&&propio){alert('Para cambiar varios precios de esta lista, elegí Margen uniforme.');return;}
+      if(selectedLista==='mostrador'){alert('Editá costo, IVA y ganancia desde Editar producto en Stock. Los precios actuales se conservan hasta elegir su IVA.');return;}
       if(!confirm('¿Recalcular los precios de la lista seleccionada con este margen?'))return;
       const n=selectedLista==='mostrador'?await Store.aplicarMargen(m,$('margen-rubro').value||null):await Store.aplicarMargenLista(selectedLista,m,$('margen-rubro').value||null);
       alert(propio ? `Venta recalculada con el margen propio de cada producto (${n} productos)` : `Venta recalculada en ${n} productos (+${m}%)`);
@@ -174,7 +175,7 @@ const Precios = (() => {
     $('precio-rubro').addEventListener('change', verLista);
     $('precio-prov').addEventListener('change', verLista);
     $('precio-ver-ocultos').addEventListener('change', verLista);
-    $('precio-print').onclick=()=>ExportarInforme.imprimir(ListasPrecios.informe($('precio-lista')?.value||'mostrador'));
+    $('precio-print').onclick=()=>ExportarInforme.imprimir(ListasPrecios.informe('mostrador'));
   }
   return {init, render:verLista};
 })();

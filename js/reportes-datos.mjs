@@ -18,7 +18,7 @@ export function precioLista(db,p,id='mostrador') {
   const base=id!=='mostrador' && particular != null && Number.isFinite(Number(particular)) ? Number(particular) : numero(p.precio);
   const e=productosEnvase(db,p);
   const envaseParticular=e&&(db.listasPrecios||[]).find(l=>l.id===id)?.precios?.[e.id];
-  return Math.round((base+(e?numero(id!=='mostrador'&&envaseParticular!=null?envaseParticular:e.precio):0))*100)/100;
+  return Math.round((base+(e&&p.incluirEnvaseDefecto!==false?numero(id!=='mostrador'&&envaseParticular!=null?envaseParticular:e.precio):0))*100)/100;
 }
 export function crearInforme(db,op={}) {
   const tipo=op.tipo||'ventas', clientes=db.clientes||[], productos=db.productos||[];
@@ -29,7 +29,7 @@ export function crearInforme(db,op={}) {
   const ventas=(db.ventas||[]).filter(v=>!v.anulada&&!v.anulado&&enRango(v.fecha,op.desde,op.hasta)&&(!op.clienteId||v.clienteId===op.clienteId));
   const periodo=`Desde ${op.desde||'el inicio'} hasta ${op.hasta||'hoy'} · fechas de Argentina`;
   if(tipo==='precios') {
-    Object.assign(informe,{titulo:`Lista de precios · ${nombreLista}`,subtitulo:cliente?`Para ${cliente.nombre}`:'Precios de venta',columnas:['Código','Producto','Presentación','Venta'],filas:productos.filter(p=>p.activo!==false).map(p=>[p.codigo||'',p.nombre,p.presentacion||'',precioLista(db,p,listaId)])});
+    Object.assign(informe,{titulo:`Lista de precios · ${nombreLista}`,subtitulo:cliente?`Para ${cliente.nombre}`:'Precios de venta',fotos:productos.filter(p=>p.activo!==false).map(p=>p.foto||''),columnas:['Código','Producto','Presentación','Venta'],filas:productos.filter(p=>p.activo!==false).map(p=>[p.codigo||'',p.nombre,p.presentacion||'',precioLista(db,p,listaId)])});
   } else if(tipo==='clientes') {
     Object.assign(informe,{titulo:'Clientes · uso interno',subtitulo:'Contiene datos privados y deuda actual',columnas:['Cliente','Teléfono','Dirección','Referencia','Rol','Lista asignada','Deuda actual'],filas:clientes.filter(c=>!op.clienteId||c.id===op.clienteId).map(c=>[c.nombre,c.tel||'',c.extra||c.direccion||'',c.ref||'',c.rol||'—',listas(db).find(l=>l.id===(c.listaPrecioId||'mostrador'))?.nombre||'Mostrador',numero(c.deuda)])});
   } else if(tipo==='caja') {

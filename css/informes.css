@@ -12,3 +12,4 @@
  #informe-print thead{display:table-header-group}
  #informe-print tr{break-inside:avoid}
 }
+@media print{#informe-print .lista-comercial article{display:flex;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid #bbb;break-inside:avoid}#informe-print .lista-comercial img,#informe-print .lista-sin-foto{width:80px;height:80px;object-fit:contain;flex-shrink:0}#informe-print .lista-sin-foto{display:flex;align-items:center;justify-content:center;background:#eee;color:#555}#informe-print .lista-comercial h3{margin:0 0 5px;font-size:12pt}#informe-print .lista-comercial p{margin:4px 0}#informe-print .lista-comercial strong{font-size:13pt}}

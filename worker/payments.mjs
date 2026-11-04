@@ -5,7 +5,7 @@ export function normalizeItems(input) {
     if (typeof i.precio !== 'number' || !Number.isFinite(i.precio) || i.precio <= 0 || typeof i.cant !== 'number' || !Number.isFinite(i.cant) || i.cant <= 0 || i.cant > 10000) throw new Error('Precio o cantidad inválidos.');
     const cents = Math.round((i.precio * i.cant + Number.EPSILON) * 100);
     if (!Number.isSafeInteger(cents) || cents < 1) throw new Error('Importe inválido.');
-    return {id:i.id.slice(0,80), nombre:i.nombre.trim().slice(0,180), precio:i.precio, cant:i.cant, cents};
+    return {id:i.id.slice(0,80), nombre:i.nombre.trim().slice(0,180), precio:i.precio, cant:i.cant,...(typeof i.incluirEnvase==='boolean'?{incluirEnvase:i.incluirEnvase}:{}),...(i.tipo==='promo'?{tipo:'promo'}:{}), cents};
   });
   const totalCents = items.reduce((n,i)=>n+i.cents,0);
   if (totalCents > 10000000000) throw new Error('El ticket supera el importe máximo.');

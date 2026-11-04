@@ -1,6 +1,6 @@
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=value=>Number(value).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
-export function prepararRemito(db,carrito=[],clienteId,pago){
+export function prepararRemito(db,carrito=[],clienteId,pago,options={}){
  const venta=carrito.length?null:db.ventas?.find(v=>!v.historica&&!v.anulada);
  const source=carrito.length?carrito:venta?.items;
  if(!source?.length)throw new Error('Armá un ticket o registrá una venta antes de imprimir el remito.');
@@ -8,7 +8,7 @@ export function prepararRemito(db,carrito=[],clienteId,pago){
  if(items.some(i=>!Number.isFinite(Number(i.precio))||Number(i.precio)<0||!Number.isFinite(Number(i.cant))||Number(i.cant)<=0))throw new Error('El ticket tiene cantidades o precios inválidos.');
  const cliente={...(venta?.clienteSnapshot||db.clientes?.find(c=>c.id===(venta?.clienteId||clienteId))||{nombre:'Mostrador',extra:''})};
  const subtotal=venta?.subtotal??Math.round(items.reduce((sum,i)=>sum+Number(i.precio)*Number(i.cant),0)*100)/100;
- const descuentoPorcentaje=venta?(venta.descuentoPorcentaje||0):(['efectivo','banco'].includes(pago)?10:0);
+ const descuentoPorcentaje=venta?(venta.descuentoPorcentaje||0):(options.bonificacion===true&&['efectivo','banco'].includes(pago)?10:0);
  const descuento=venta?(venta.descuento||0):Math.round(subtotal*descuentoPorcentaje)/100;
  return {fecha:venta?.fecha||new Date().toISOString(),cliente,items,subtotal,descuento,descuentoPorcentaje,total:venta?.total??Math.round((subtotal-descuento)*100)/100};
 }
@@ -17,7 +17,7 @@ export function prepararRemito(db,carrito=[],clienteId,pago){
 export function paginasRemito(remito,capacidad=16){
  const paginas=[];let pagina={filas:[],subtotal:0},usadas=0;
  remito.items.forEach((item,index)=>{
-  const descripcion=String(item.nombre??'')+(item.pres&&!String(item.nombre).includes(item.pres)?' · '+item.pres:'');
+  const descripcion=String(item.nombre??'')+(item.incluirEnvase===false&&/(?:^|\s)5\s*l/i.test(item.pres||item.nombre)?' · Recarga':'')+(item.pres&&!String(item.nombre).includes(item.pres)?' · '+item.pres:'');
   const partes=descripcion.match(/[\s\S]{1,64}/g)||[''];
   partes.forEach((texto,parte)=>{
    const unidades=Math.max(1,Math.ceil(texto.length/54));
@@ -38,10 +38,10 @@ export function htmlRemito(remito,capacidad=16){
  }).join('');
 }
 let printing=false;
-async function imprimir(db,carrito,clienteId,pago){
+async function imprimir(db,carrito,clienteId,pago,options={}){
  if(printing)return;printing=true;let cleanup=()=>{};
  try{
-  const remito=prepararRemito(db,carrito,clienteId,pago);let box=document.getElementById('remito-print');
+  const remito=prepararRemito(db,carrito,clienteId,pago,options);let box=document.getElementById('remito-print');
   if(!box){box=document.createElement('section');box.id='remito-print';document.body.append(box);}
   const previousStyle=box.style?.cssText;
   const canMeasure=Boolean(box.style&&box.querySelectorAll&&typeof box.getBoundingClientRect==='function');

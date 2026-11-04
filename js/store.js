@@ -28,7 +28,7 @@ function crearStore(localStorage, catalogoInput){
       margen:(r.margen==null?null:Number(r.margen)), alerta:r.alerta||'', clave:r.clave||'',
       stock:(r.stock==null?10:r.stock), activo:(r.activo!==false), foto:''
     })),
-    ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
+    promociones:[], ventas:[], clientes:[{id:'c1', nombre:'Mostrador', tel:'', extra:'', deuda:0}],
     proveedores: CATALOGO_SEED.proveedores.map(p=>({id:p.id, nombre:p.nombre, tel:'', notas:p.notas||''})),
     movimientos:[], pedidos:[], turnos:[],
     listasPrecios:[{id:'revendedores',nombre:'Revendedores',precios:{}}],
@@ -42,7 +42,7 @@ function crearStore(localStorage, catalogoInput){
       const raw = localStorage.getItem(KEY);
       if(!raw){ return migrar(); }
       const db = JSON.parse(raw);
-      db.productos=db.productos||[]; db.ventas=db.ventas||[];
+      db.productos=db.productos||[]; db.ventas=db.ventas||[];db.promociones=Array.isArray(db.promociones)?db.promociones:[];
       db.clientes=db.clientes||seed().clientes; db.proveedores=db.proveedores||[];
       db.movimientos=db.movimientos||[]; db.pedidos=db.pedidos||[]; db.turnos=db.turnos||[];
       db.listasPrecios=Array.isArray(db.listasPrecios)?db.listasPrecios:[];if(!db.listasPrecios.some(l=>l.id==='revendedores'))db.listasPrecios.unshift({id:'revendedores',nombre:'Revendedores',precios:{}});
@@ -314,10 +314,21 @@ function crearStore(localStorage, catalogoInput){
   function precioBase(db,p,listaId){const list=listas(db).find(l=>l.id===(listaId||listaDefault));if(!list)throw new Error('Lista de precios no encontrada.');return Number(list.precios?.[p.id]??p.precio);}
   function envase(db,p){if(!p.envaseId)return null;const e=db.productos.find(x=>x.id===p.envaseId);if(!e||e.id===p.id||e.envaseId)throw new Error('Revisá el envase de '+p.nombre);return e;}
   function precioEnvase(db,p,listaId){const e=envase(db,p);return e?precioBase(db,e,listaId):0;}
-  function precioLista(db,id,listaId){const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+precioEnvase(db,p,listaId));}
+  function incluyeEnvase(p,eleccion){if(eleccion===false&&p.envaseId&&tipoEnvase(p)!=='bidonId')throw new Error('Sólo se puede quitar el envase en productos de 5 L.');return eleccion===undefined?(tipoEnvase(p)==='bidonId'?p.incluirEnvaseDefecto!==false:true):eleccion!==false;}
+  function precioLista(db,id,listaId,incluir){const promo=db.promociones?.find(p=>p.id===id);if(promo)return Number(promo.precio);const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+(incluyeEnvase(p,incluir)?precioEnvase(db,p,listaId):0));}
+  const factorIVA=p=>1+(Number(p.iva)||0)/100;
+  function calcularPrecio(input){const costo=Number(input.costo),iva=Number(input.iva||0),envasePrecio=Number(input.envasePrecio||0);if(!Number.isFinite(costo)||costo<0||![0,10.5,21].includes(iva)||!Number.isFinite(envasePrecio)||envasePrecio<0)throw new Error('Costo, IVA o envase inválidos.');let neto;if(input.modo==='precioFinal'){const final=Number(input.precioFinal);if(!Number.isFinite(final)||final<envasePrecio)throw new Error('El precio final no puede ser menor al envase.');neto=(final-envasePrecio)/(1+iva/100);}else if(input.modo==='margenVenta'){const m=Number(input.margenVenta);if(!Number.isFinite(m)||m>=100)throw new Error('El margen sobre venta debe ser menor al 100%.');neto=costo/(1-m/100);}else{const m=Number(input.margen||0);if(!Number.isFinite(m)||m< -100)throw new Error('Ganancia inválida.');neto=costo*(1+m/100);}const precioBase=redondear2(neto*(1+iva/100)),precioFinal=redondear2(precioBase+envasePrecio);return {costo,iva,margen:costo>0?redondear2((neto/costo-1)*100):null,margenVenta:neto>0?redondear2((neto-costo)/neto*100):null,precioBase,precioFinal};}
   function tipoEnvase(p){if(!['Líquidos 1L','Líquidos 5L','Pileta'].includes(p.categoria))return null;const pres=String(p.presentacion||p.nombre).toUpperCase();if(/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres))return 'botellaId';if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres))return 'bidonId';return null;}
   function vincularEnvase(db,p){const tipo=tipoEnvase(p);if(db.catalogo?.envases&&tipo)p.envaseId=db.catalogo.envases[tipo];else delete p.envaseId;}
-  function consumos(db,items,snapshot=false){const result=new Map();const sumar=(id,cant)=>result.set(id,(result.get(id)||0)+cant);for(const it of items){const p=db.productos.find(p=>p.id===it.id);if(!p||!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Producto o cantidad inválidos.');sumar(p.id,it.cant);const e=snapshot?it.envaseVenta:(p.envaseId?{id:envase(db,p).id,cant:1}:null);if(e){if(!Number.isInteger(it.cant))throw new Error('Los productos con envase se venden por unidades enteras.');if(!Number.isFinite(e.cant)||e.cant<=0)throw new Error('Envase inválido.');sumar(e.id,e.cant*it.cant);}}return [...result].map(([id,cant])=>({id,cant}));}
+  function consumos(db,items,snapshot=false){
+    const result=new Map(),sumar=(id,cant)=>result.set(id,(result.get(id)||0)+cant);
+    const producto=(it,multiplicador)=>{const p=db.productos.find(p=>p.id===it.id);if(!p||!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Producto o cantidad inválidos.');sumar(p.id,it.cant*multiplicador);const e=p.envaseId&&incluyeEnvase(p,it.incluirEnvase)?envase(db,p):null;if(e){if(!Number.isInteger(it.cant*multiplicador))throw new Error('Los productos con envase se venden por unidades enteras.');sumar(e.id,it.cant*multiplicador);}};
+    for(const it of items){if(!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Cantidad inválida.');
+      if(snapshot&&Array.isArray(it.consumosStock)){for(const c of it.consumosStock){if(!Number.isFinite(c.cant)||c.cant<=0)throw new Error('Componente inválido.');sumar(c.id,c.cant*it.cant);}continue;}
+      if(snapshot){if(!db.productos.some(p=>p.id===it.id))throw new Error('Producto no encontrado.');sumar(it.id,it.cant);if(it.envaseVenta){if(!Number.isFinite(it.envaseVenta.cant)||it.envaseVenta.cant<=0)throw new Error('Envase inválido.');sumar(it.envaseVenta.id,it.envaseVenta.cant*it.cant);}continue;}
+      const promo=db.promociones.find(p=>p.id===it.id);if(promo){if(promo.activo===false||!Number.isInteger(it.cant))throw new Error('Promoción o cantidad inválida.');for(const c of promo.items)producto(c,it.cant);}else producto(it,1);
+    }return [...result].map(([id,cant])=>({id,cant}));
+  }
   function comprobarStock(db,consumo){for(const it of consumo){const p=db.productos.find(p=>p.id===it.id);if(!p||p.activo===false||p.stock<it.cant)throw new Error('Sin stock suficiente de producto / envase: '+(p?.nombre||it.id));}}
   function cambiarCosto(db,p,costo){
     const anterior=Number(p.costo)||0,venta=Number(p.precio)||0;
@@ -325,7 +336,7 @@ function crearStore(localStorage, catalogoInput){
       p.precio=redondear2(anterior>0?venta*costo/anterior:costo*(1+(Number(p.margen)||0)/100));
       for(const list of db.listasPrecios||[])if(Object.hasOwn(list.precios||{},p.id))list.precios[p.id]=redondear2(anterior>0?list.precios[p.id]*costo/anterior:list.precios[p.id]);
     }
-    p.costo=costo;p.margen=margenReal(p.precio,costo);
+    p.costo=costo;p.margen=margenReal(p.precio/factorIVA(p),costo);
   }
   return {
     get(){ return load(); },
@@ -333,24 +344,28 @@ function crearStore(localStorage, catalogoInput){
       const db=load();for(const [key,re] of [['botellaId',/^BOTELLA\b/i],['bidonId',/^BID[OÓ]N\b/i]]){const e=db.productos.find(p=>p.id===input?.[key]);if(!e||e.activo===false||e.envaseId||!re.test(e.nombre)||!new RegExp('(?:^|\\s)'+(key==='botellaId'?1:5)+'\\s*(?:L|LT|LTS)\\b','i').test(e.presentacion||e.nombre))throw new Error('Elegí un envase '+(key==='botellaId'?'botella de 1 L':'bidón de 5 L')+' válido.');}
       db.catalogo.envases={botellaId:input.botellaId,bidonId:input.bidonId};let vinculados=0;for(const p of db.productos){vincularEnvase(db,p);if(p.envaseId)vinculados++;}save(db);return {vinculados};
     },
-    disponibilidadVenta(id){const db=load(),p=db.productos.find(p=>p.id===id);if(!p||p.activo===false)return 0;const e=envase(db,p);return Math.max(0,Math.min(p.stock,e?(e.activo===false?0:Math.floor(e.stock)):Infinity));},
+    previsualizarPrecioProducto(input){return calcularPrecio(input);},
+    guardarPromocion(input){const db=load(),id=input.id||newId('promo-'),nombre=String(input.nombre||'').trim();if(db.productos.some(p=>p.id===id)||!/^[\w-]{1,100}$/.test(id)||!nombre||nombre.length>180||!Number.isFinite(input.precio)||input.precio<=0||!Array.isArray(input.items)||!input.items.length||input.items.length>100)throw new Error('Nombre, precio y componentes de la promoción requeridos.');const items=input.items.map(c=>{if(!db.productos.some(p=>p.id===c.id)||!Number.isInteger(c.cant)||c.cant<=0||c.cant>10000||c.incluirEnvase!==undefined&&typeof c.incluirEnvase!=='boolean')throw new Error('Componente de promoción inválido.');const p=db.productos.find(p=>p.id===c.id);return {id:c.id,cant:c.cant,incluirEnvase:incluyeEnvase(p,c.incluirEnvase)};});const promo={id,nombre,precio:redondear2(input.precio),items,activo:input.activo!==false};const i=db.promociones.findIndex(p=>p.id===id);if(i<0)db.promociones.push(promo);else db.promociones[i]=promo;save(db);return promo;},
+    eliminarPromocion(id){const db=load(),p=db.promociones.find(p=>p.id===id);if(!p)throw new Error('Promoción no encontrada.');p.activo=false;save(db);},
+    configurarRespaldoDrive(input){const email=String(input.email||'').trim().toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('Correo de respaldo inválido.');const db=load();db.catalogo.respaldoDrive={...(db.catalogo.respaldoDrive||{}),email,revision:db.catalogo.respaldoDrive?.email===email?db.catalogo.respaldoDrive.revision:newId('destino-')};save(db);return {email};},
+    disponibilidadVenta(id,incluir){const db=load(),p=db.productos.find(p=>p.id===id),promo=db.promociones.find(p=>p.id===id);if((!p&&!promo)||(p||promo).activo===false)return 0;try{const req=consumos(db,[{id,cant:1,incluirEnvase:incluir}]);return Math.max(0,Math.floor(Math.min(...req.map(c=>{const p=db.productos.find(p=>p.id===c.id);return p?.activo!==false?(p?.stock||0)/c.cant:0;}))));}catch{return 0;}},
     comprobarStockVenta(items,snapshot=false){const db=load(),consumo=consumos(db,items,snapshot);comprobarStock(db,consumo);return consumo;},
-    prepararItemsVenta(items){const db=load();return items.map(it=>{const p=db.productos.find(p=>p.id===it.id),e=p&&envase(db,p);return {...it,envaseVenta:e?{id:e.id,cant:1}:null};});},
+    prepararItemsVenta(items){const db=load();return items.map(it=>{const p=db.productos.find(p=>p.id===it.id),promo=db.promociones.find(p=>p.id===it.id);if(!p&&!promo)throw new Error('Producto no encontrado.');return {...it,nombre:(p||promo).nombre,tipo:promo?'promo':'producto',consumosStock:consumos(db,[{...it,cant:1}]),envaseVenta:null};});},
     precioEnvase(id,listaId='mostrador'){const db=load(),p=db.productos.find(p=>p.id===id);return p?precioEnvase(db,p,listaId):0;},
     reset(){ const d=seed(); save(d); },
     export(){ return JSON.stringify(load(), null, 2); },
     import(json){ save(JSON.parse(json)); },
     listarListasPrecios(){return listas(load());},
     precioEnLista(id,listaId='mostrador'){return precioLista(load(),id,listaId);},
-    precioParaCliente(id,clienteId='c1'){const db=load(),c=db.clientes.find(c=>c.id===clienteId);return precioLista(db,id,c?.listaPrecioId||listaDefault);},
-    previsualizarCambioCosto(id,costoNuevo){const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');const old={...p};cambiarCosto(db,p,Number(costoNuevo));return {costoAnterior:old.costo,costoNuevo:p.costo,precioAnterior:redondear2(old.precio+precioEnvase(db,p,listaDefault)),precioNuevo:precioLista(db,p.id,listaDefault),margenNuevo:p.margen};},
+    precioParaCliente(id,clienteId='c1',incluir){const db=load(),c=db.clientes.find(c=>c.id===clienteId);return precioLista(db,id,c?.listaPrecioId||listaDefault,incluir);},
+    previsualizarCambioCosto(id,costoNuevo){const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');const old={...p},precioAnterior=precioLista(db,p.id,listaDefault);cambiarCosto(db,p,Number(costoNuevo));return {costoAnterior:old.costo,costoNuevo:p.costo,precioAnterior,precioNuevo:precioLista(db,p.id,listaDefault),margenNuevo:p.margen};},
     editarPrecio(id,field,value){
       if(!['costo','margen','precio'].includes(field))throw new Error('Campo de precio inválido.');
       const n=Number(value);if(!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Precio inválido.');
       const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');
       if(field==='costo')cambiarCosto(db,p,n);
-      if(field==='precio'){const base=redondear2(n-precioEnvase(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio,p.costo);}
-      if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100));}
+      if(field==='precio'){const base=redondear2(n-(incluyeEnvase(p)?precioEnvase(db,p,listaDefault):0));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio/factorIVA(p),p.costo);}
+      if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100)*factorIVA(p));}
       save(db);return p;
     },
     guardarListaPrecios(input){
@@ -366,12 +381,12 @@ function crearStore(localStorage, catalogoInput){
       if(!['margen','precio'].includes(field))throw new Error('El costo es común. Modificalo en Mostrador.');
       const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),p=db.productos.find(p=>p.id===id),n=Number(value);
       if(!list||!p||!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Lista, producto o precio inválido.');
-      const base=redondear2(field==='precio'?n-precioEnvase(db,p,listaId):p.costo*(1+n/100));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
+      const base=redondear2(field==='precio'?n-(incluyeEnvase(p)?precioEnvase(db,p,listaId):0):p.costo*(1+n/100)*factorIVA(p));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
     },
     aplicarMargenLista(listaId,margen,categoria){
       if(listaId===listaDefault)return this.aplicarMargen(margen,categoria);
       const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),n=Number(margen);if(!list||!Number.isFinite(n)||n< -100)throw new Error('Lista o margen inválido.');let count=0;
-      for(const p of db.productos)if((!categoria||p.categoria===categoria)&&p.costo>0){list.precios[p.id]=redondear2(p.costo*(1+n/100));count++;}save(db);return count;
+      for(const p of db.productos)if((!categoria||p.categoria===categoria)&&p.costo>0){list.precios[p.id]=redondear2(p.costo*(1+n/100)*factorIVA(p));count++;}save(db);return count;
     },
     restablecerPrecioLista(listaId,id){const db=load(),list=db.listasPrecios.find(l=>l.id===listaId);if(!list)throw new Error('Lista no encontrada.');delete list.precios[id];save(db);},
     aplicarComparacionCostos(rows){
@@ -415,7 +430,7 @@ function crearStore(localStorage, catalogoInput){
         const precioAnterior=Number(actual.precio)||0,id=provId(f.provNombre);
         actual.costo=Number(f.costo)>0?Number(f.costo):Number(actual.costo)||0;
         actual.precio=Number(f.precio);
-        actual.margen=f.margen==null?margenReal(actual.precio,actual.costo):Number(f.margen);
+        actual.margen=actual.iva!=null?margenReal(actual.precio/factorIVA(actual),actual.costo):(f.margen==null?margenReal(actual.precio,actual.costo):Number(f.margen));
         actual.provId=id;actual.categoria=f.categoria||actual.categoria||'Accesorios';actual.activo=true;
         if(!actual.codigo&&f.codigo)actual.codigo=String(f.codigo).slice(0,40);
         // Si el código es único en ambos lados, cambió la presentación escrita y no el producto.
@@ -443,10 +458,10 @@ function crearStore(localStorage, catalogoInput){
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     guardarProductoEdicion(draft,base){
       const db=load(),index=db.productos.findIndex(p=>p.id===draft.id);
-      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};vincularEnvase(db,nuevo);db.productos.push(nuevo);save(db);return;}
+      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};if(nuevo.iva!=null)nuevo.margen=nuevo.costo>0?redondear2(margenReal(nuevo.precio/factorIVA(nuevo),nuevo.costo)):null;vincularEnvase(db,nuevo);db.productos.push(nuevo);save(db);return;}
       if(index<0)throw new Error('El producto fue eliminado en otra pestaña.');
       const current=db.productos[index],next={...current};
-      const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','stock','activo','provId'];
+      const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','iva','incluirEnvaseDefecto','stock','activo','provId'];
       const identifiers=['codigo','categoria','presentacion',...(!base.codigo?['nombre']:[])];
       for(const field of identifiers)if(current[field]!==base[field]&&draft[field]!==current[field])throw new Error('La identidad del producto cambió en otra pestaña. Reabrí la edición.');
       for(const field of fields){
@@ -455,6 +470,7 @@ function crearStore(localStorage, catalogoInput){
         next[field]=draft[field];
       }
       for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])next[field]=draft[field];
+      if(next.iva!=null&&['costo','precio','margen','iva'].some(k=>next[k]!==current[k]))next.margen=next.costo>0?redondear2(margenReal(next.precio/factorIVA(next),next.costo)):null;
       vincularEnvase(db,next);db.productos[index]=next;save(db);
     },
     // Apply photo fields to fresh data, never a stale snapshot of sales/stock.
@@ -471,7 +487,7 @@ function crearStore(localStorage, catalogoInput){
       }
       if(changed)save(db);return changed;
     },
-    eliminar(id){ const db=load();if(db.productos.some(p=>p.envaseId===id)||Object.values(db.catalogo.envases||{}).includes(id))throw new Error('El envase está vinculado a líquidos. No se puede borrar.');db.productos=db.productos.filter(x=>x.id!==id);for(const l of db.listasPrecios)delete l.precios[id]; save(db); },
+    eliminar(id){ const db=load();if(db.promociones.some(p=>p.items.some(c=>c.id===id))||db.productos.some(p=>p.envaseId===id)||Object.values(db.catalogo.envases||{}).includes(id))throw new Error('El envase está vinculado a líquidos. No se puede borrar.');db.productos=db.productos.filter(x=>x.id!==id);for(const l of db.listasPrecios)delete l.precios[id]; save(db); },
     // Actualiza costo / precio / margen de productos ya cargados.
     // El codigo se repite entre 1L y 5L: se desambigua por categoria y presentacion.
     // lista: [{codigo?, nombre?, presentacion?, costo?, precio?, margen?, provId?}]
@@ -493,8 +509,9 @@ function crearStore(localStorage, catalogoInput){
         if(!p){ faltan.push(r.codigo||r.nombre||'?'); return; }
         if(r.costo!=null && r.costo!=='') p.costo=Number(r.costo);
         if(r.margen!=null && r.margen!=='') p.margen=Number(r.margen);
-        if(r.precio!=null && r.precio!=='') p.precio=Number(r.precio);
-        else if(r.costo!=null && r.costo!=='' && p.margen!=null) p.precio=redondear2(p.costo*(1+p.margen/100));
+        if(r.precio!=null && r.precio!==''){const base=redondear2(Number(r.precio)-(incluyeEnvase(p)?precioEnvase(db,p,listaDefault):0));if(base<0)throw new Error('La venta final no puede ser menor al envase.');p.precio=base;}
+        else if(r.costo!=null && r.costo!=='' && p.margen!=null && p.iva!=null)p.precio=redondear2(p.costo*(1+p.margen/100)*factorIVA(p));
+        p.margen=margenReal(p.precio/factorIVA(p),p.costo);
         if(r.provId) p.provId=r.provId;
         tocados++;
       });
@@ -556,24 +573,24 @@ function crearStore(localStorage, catalogoInput){
       t.cierre=new Date().toISOString(); t.conteo=conteo; t.diferencia=dif; t.notas=notas||''; t.estado='cerrado';
       save(db); return t;
     },
-    totalesCobro(items,pago){
+    totalesCobro(items,pago,options={}){
       const subtotal=redondear2(items.reduce((a,i)=>a+Number(i.precio)*Number(i.cant),0));
-      const descuentoPorcentaje=['efectivo','banco'].includes(pago)?10:0;
+      const descuentoPorcentaje=options.bonificacion===true&&['efectivo','banco'].includes(pago)?10:0;
       const descuento=Math.round(subtotal*descuentoPorcentaje)/100;
       return {subtotal,descuento,descuentoPorcentaje,total:redondear2(subtotal-descuento)};
     },
-    cobrar(items, pago, clienteId){
+    cobrar(items, pago, clienteId,options={}){
       const db=load();
       const turno=db.turnos.find(t=>t.estado==='abierto');
       if(!turno) throw new Error('Abrí la caja primero (panel Turno)');
       const consumosStock=consumos(db,items);comprobarStock(db,consumosStock);
       for(const it of consumosStock)db.productos.find(x=>x.id===it.id).stock-=it.cant;
-      const importes=this.totalesCobro(items,pago),total=importes.total;
+      const importes=this.totalesCobro(items,pago,options),total=importes.total;
       const vid=newId('v');
       const cid=clienteId||'c1';
       const client=db.clientes.find(c=>c.id===cid);
       const snapshot={id:cid,nombre:client?.nombre||'Mostrador',extra:client?.extra||''};
-      const v={consumosStock,clienteSnapshot:snapshot,listaPrecioId:client?.listaPrecioId||listaDefault,id:vid, fecha:new Date().toISOString(), items, pago, ...importes, clienteId:cid, turnoId:turno.id};
+      const v={consumosStock,clienteSnapshot:snapshot,listaPrecioId:client?.listaPrecioId||listaDefault,id:vid, fecha:new Date().toISOString(), items:this.prepararItemsVenta(items), pago, ...importes, clienteId:cid, turnoId:turno.id};
       db.ventas.unshift(v);
       if(pago==='cuenta'){
         // Cuenta corriente: no entra plata, queda como deuda del cliente.
@@ -678,12 +695,12 @@ function crearStore(localStorage, catalogoInput){
 // Browser and Worker use the same business rules. Only the storage adapter differs.
 globalThis.MiLimpiezaStoreFactory=crearStore;
 const LocalStore=crearStore(globalThis.localStorage,typeof CATALOGO!=='undefined'?CATALOGO:undefined);
-const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo','configurarEnvases']);
+const onlineMutations=new Set(['guardarProductoEdicion','eliminar','toggleActivo','actualizarPrecios','aplicarMargen','editarPrecio','asignarProveedor','abrirTurno','cerrarTurno','cobrar','anularVenta','cobrarDeuda','addMovimiento','conciliar','upsertEntidad','delEntidad','upsertPedido','recibirPedido','delPedido','editarPrecioLista','guardarListaPrecios','eliminarListaPrecios','restablecerPrecioLista','aplicarComparacionCostos','registrarCompraHistorica','aplicarMargenLista','importarCatalogo','configurarEnvases','guardarPromocion','eliminarPromocion','configurarRespaldoDrive']);
 const Store=new Proxy(LocalStore,{get(target,key){
   const online=globalThis.OnlineBusiness;
   if(online?.activo){
     if(key==='get')return ()=>online.get();
-    if(['precioEnvase','disponibilidadVenta','comprobarStockVenta','prepararItemsVenta','totalesCobro','turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto','clasificarImportacion'].includes(key))return (...args)=>online.read(key,args);
+    if(['previsualizarPrecioProducto','precioEnvase','disponibilidadVenta','comprobarStockVenta','prepararItemsVenta','totalesCobro','turnoAbierto','ultimoCerrado','resumenTurno','urlCatalogo','estadoCatalogo','catalogoParaPublicar','driftStock','driftPrecio','preciosPendientes','listarListasPrecios','precioEnLista','precioParaCliente','previsualizarCambioCosto','clasificarImportacion'].includes(key))return (...args)=>online.read(key,args);
     if(key==='actualizarFotos')return patches=>online.applyPhotos(patches);
     if(key==='export')return ()=>JSON.stringify(online.get(),null,2);
     if(onlineMutations.has(key))return (...args)=>online.mutate(key,args);

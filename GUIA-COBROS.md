@@ -75,3 +75,14 @@ En Stock, buscar «BOTELLA 1Lt. Tipo Lavandina» o «BIDON 5 Lts», pulsar Edita
 No se confirma una venta si falta el líquido o alguno de sus envases. Cinco botellas de 1 L ya no se convierten automáticamente en un bidón de 5 L. La anulación devuelve exactamente el líquido y los envases consumidos en esa venta. Los enlaces de pago conservan los componentes del momento de su creación; los anteriores a este cambio no agregan envases retroactivamente.
 
 El campo Venta en Precios muestra el final con envase; el margen corresponde al líquido, con un detalle de ambos importes. Al importar nuevamente el Excel del negocio, se separa el envase que ya venía incluido en la columna Venta para sumarlo una sola vez con el precio actual del envase.
+
+### Cambios vigentes — 4 de noviembre de 2026
+La bonificación del 10% ahora es OPCIONAL: marcar su casilla en Caja para efectivo o transferencia. Empieza desactivada y se limpia tras cada venta confirmada. Mercado Pago usa el total completo y pide revisar ese importe antes de generar el enlace.
+
+Stock concentra creación y edición de proveedor, costo sin IVA, ganancia sobre costo, margen sobre venta, IVA 10,5%/21%, final editable y existencias. Elegir IVA y guardar para aplicar la nueva fórmula a un producto; no se recalculan los precios anteriores en bloque. El bidón de5L puede desmarcarse por defecto en Stock o para una línea del ticket; sólo se suma y consume cuando está incluido. La botella1L continúa automática.
+
+En Stock, Promociones permite definir nombre, precio y componentes/cantidades; Caja muestra Productos y Promociones como pestañas. Las promociones consumen los mismos productos y envases del catálogo, y la anulación devuelve los componentes originales.
+
+Listas de precios es un módulo separado con edición de precios particulares, PDF e impresión con fotos incorporadas. No incluye costos ni deudas. Movimientos permite ver todos o filtrar ingresos/egresos, fechas y medios, con totales; Retiro de socio es un egreso identificado.
+
+El correo de respaldo Drive se puede cambiar desde Respaldo. El destino inicial es milimpiezainsumos@gmail.com. No hay copias automáticas hasta que se configure la aplicación Google y esa cuenta autorice el acceso; el estado indica expresamente si está pendiente. Configuración técnica en docs/RESPALDO-DRIVE.md.

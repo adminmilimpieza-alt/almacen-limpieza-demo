@@ -1,5 +1,6 @@
 import {handleBusiness,transactBusiness,replayBusiness,readBusiness,comprobarTicket} from './business.mjs';
 import { handlePhotos } from './photos.mjs';
+import {handleDriveBackup,runDriveBackup} from './drive-backup.mjs';
 import { normalizeItems, paymentResult } from './payments.mjs';
 import { authenticated, sessionCookie, validWebhook, hmac, equal } from './security.mjs';
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
@@ -44,6 +45,7 @@ async function route(request,env){
   const url=new URL(request.url),path=url.pathname;
   if(path==='/api/health') return json({service:'Mi Limpieza',database:!!env.DB,operatorConfigured:!!env.ADMIN_PASSWORD&&env.ADMIN_PASSWORD.length>=16,mercadoPagoConfigured:!!(env.MP_ACCESS_TOKEN||(env.MP_CLIENT_ID&&env.MP_CLIENT_SECRET)),webhookConfigured:!!env.MP_WEBHOOK_SECRET});
   if(!env.DB) throw fail('Falta vincular la base de cobros D1.',503);
+  if(path.startsWith('/api/respaldo-drive'))return handleDriveBackup(request,env);
   if(path==='/api/business') return handleBusiness(request,env);
   if(path==='/api/prices') return json({error:'Actualizá la página: los precios ahora se guardan en el negocio online.'},410);
   if(path==='/api/photos'||path.startsWith('/api/photos/')) return handlePhotos(request,env);
@@ -136,7 +138,7 @@ async function route(request,env){
   }
   throw fail('Ruta no encontrada.',404);
 }
-export default {async fetch(request,env){
+export default {async scheduled(controller,env,ctx){ctx.waitUntil(runDriveBackup(env));},async fetch(request,env){
   try{
     if(new URL(request.url).pathname.startsWith('/api/')) return await route(request,env);
     const response=await env.ASSETS.fetch(request);

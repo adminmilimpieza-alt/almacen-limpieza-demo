@@ -1,15 +1,15 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=42">
-<link rel="stylesheet" href="css/remito.css?v=42">
-<link rel="stylesheet" href="css/reportes.css?v=42">
-<link rel="stylesheet" href="css/listas-precios.css?v=42">
-<link rel="stylesheet" href="css/informes.css?v=42">
-<link rel="stylesheet" href="css/proveedor.css?v=42">
+<link rel="stylesheet" href="css/style.css?v=43">
+<link rel="stylesheet" href="css/remito.css?v=43">
+<link rel="stylesheet" href="css/reportes.css?v=43">
+<link rel="stylesheet" href="css/listas-precios.css?v=43">
+<link rel="stylesheet" href="css/informes.css?v=43">
+<link rel="stylesheet" href="css/proveedor.css?v=43">
 
 </head>
 <body>
@@ -22,40 +22,21 @@
 <header>
   <div class="brand">
     <button id="menu-btn" class="icon-btn" aria-label="Módulos" aria-expanded="false"><span></span><span></span><span></span></button>
-    <div class="brand-mark">M</div>
+    <img class="brand-logo" src="data/remito-logo.jpg" alt="Mi Limpieza">
     <div><h1>Mi Limpieza · Caja</h1><small>Fernando Miretti · Villa María, Córdoba</small></div>
     <span class="badge">Mi Limpieza</span>
   </div>
 </header>
 
-<!-- Menú lateral izquierdo: todos los módulos de gestión -->
-<aside id="drawer" class="drawer" hidden aria-label="Módulos">
-  <div class="drawer-head">
-    <div class="brand-mark">M</div>
-    <b>Módulos</b>
-    <button id="drawer-close" class="icon-btn" aria-label="Cerrar">×</button>
-  </div>
-  <nav class="drawer-nav">
-    <button data-go="mod-stock">Stock<small>productos y cantidades</small></button>
-    <button data-go="mod-precios">Precios<small>lista y actualización</small></button>
-    <button data-go="mod-clientes">Clientes<small>altas</small></button>
-    <button data-go="mod-cumple">Cumpleaños<small>calendario y saludos</small></button>
-    <button data-go="mod-proveedores">Proveedores<small>altas</small></button>
-    <button data-go="mod-pedidos">Pedidos<small>a proveedores</small></button>
-    <button data-go="mod-turno">Turno de caja<small>apertura y cierre</small></button>
-    <button data-go="mod-mov">Movimientos<small>ingresos y egresos</small></button>
-    <button data-go="mod-reportes">Reportes<small>caja, historial, listas</small></button>
-    <button data-go="mod-respaldo">Respaldo<small>descargar copia</small></button>
-  </nav>
-</aside>
-
+<nav class="main-nav" aria-label="Navegación principal"><button data-go="caja">Caja</button><button data-go="mod-stock">Stock</button><button data-go="mod-listas">Listas de precios</button><button data-go="mod-clientes">Clientes</button><button data-go="mod-cumple">Cumpleaños</button><button data-go="mod-proveedores">Proveedores</button><button data-go="mod-pedidos">Pedidos</button><button data-go="mod-turno">Turno</button><button data-go="mod-mov">Movimientos</button><button data-go="mod-reportes">Reportes</button><button data-go="mod-respaldo">Respaldo</button></nav>
 <main class="pos">
   <!-- CAJA: escáner + líneas del ticket con columnas, total y cobro -->
   <section class="pos-left" id="pos-left">
     <fieldset id="caja-controles">
     <div id="turno-status"></div>
     <div id="cumples-alert" class="cumple-alert" hidden></div>
-    <div class="scan-hero">
+    <div class="caja-mobile-tabs"><button type="button" data-caja-vista="catalogo">Productos y promociones</button><button type="button" data-caja-vista="ticket">Ticket y cobro</button></div>
+    <div class="caja-columns"><div class="catalogo-column"><div class="scan-hero">
       <div class="scan-hero-head">
         <span class="scan-step">1 · Buscá el producto</span>
         <span class="hint">Escaneá el código o escribí parte del nombre…</span>
@@ -75,13 +56,13 @@
     <div id="cam-wrap"><video id="cam" playsinline muted></video></div>
     <section class="catalogo">
       <div class="catalogo-head">
-        <h2>Productos</h2>
+        <div class="catalogo-tabs" role="tablist" aria-label="Catálogo"><button type="button" id="tab-productos" role="tab" aria-selected="true">Productos</button><button type="button" id="tab-promos" role="tab" aria-selected="false">Promociones</button></div>
         <span class="hint" id="catalogo-count"></span>
       </div>
       <p class="hint">Tocá una foto para sumarlo al ticket. Con la rueda del mouse recorrés todo el catálogo.</p>
       <div id="catalogo" class="catalogo-grid"></div>
     </section>
-    <div class="ticket-card">
+    </div><div class="ticket-card" id="pos-right">
       <h2>Ticket <span id="nitems" class="tag info">0 ítems</span></h2>
       <div class="ticket-scroll">
         <table class="ticket-tabla">
@@ -89,6 +70,7 @@
           <tbody id="carrito"></tbody>
         </table>
       </div>
+      <div class="ticket-checkout">
       <p id="bonificacion-detalle" class="hint" hidden></p>
       <div class="total">Total: $<span id="total">0</span></div>
       <label class="lbl">Cliente
@@ -102,10 +84,10 @@
           <option value="cuenta">Cuenta corriente</option>
         </select>
       </label>
+      <label class="chk bonificacion-opcion"><input type="checkbox" id="bonificacion"> Aplicar bonificación del 10%</label>
       <div class="cobro-bar">
         <button id="cobrar" class="primary big">Cobrar</button>
         <button id="vaciar">Vaciar</button>
-        <button id="actualizar-ticket" type="button">Actualizar precios del ticket</button>
       </div>
       <div class="row">
         <button id="linkmp">Link de pago</button>
@@ -131,6 +113,8 @@
         <div id="mp-orders"></div>
       </details>
     </div>
+    </div></div>
+    <div class="mobile-cobro"><b>Total: $<span id="mobile-total">0,00</span></b><button type="button" data-caja-vista="ticket">Ver ticket y cobrar</button></div>
     </fieldset>
   </section>
 </main>
@@ -187,10 +171,7 @@
       <thead><tr><th></th><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th>Stock</th><th>Vis</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
     </table>
-    <p class="hint">Stock 5 o menos en rojo. Stock y fotos guardados online para todos los equipos.</p>
-  </section>
-
-  <section id="mod-precios">
+    <details class="stock-precios"><summary>Costos, precios e importación de proveedores</summary>  <section id="mod-precios">
     <div class="precios-guardar">
       <div><h2>Precios</h2><p id="precios-online-estado" role="status" aria-live="polite">Consultando precios online…</p></div>
       <button id="precio-publicar" class="primary">Actualizar precios</button>
@@ -199,8 +180,7 @@
       <form id="precios-login-form" class="row"><input id="precios-password" type="password" required autocomplete="current-password" placeholder="Clave de operador" aria-label="Clave de operador para precios"><button type="submit">Iniciar sesión y compartir precios</button></form>
     </details>
     <p class="hint">Buscá un producto y cambiá su costo, margen o precio final. Al redondear la venta, se recalcula el margen. Los cambios se guardan online al terminar cada edición.</p>
-    <label>Lista de precios<select id="precio-lista"><option value="mostrador">Mostrador</option></select></label>
-    <details class="precios-opcion"><summary>Administrar y compartir listas</summary><div id="listas-gestion"></div></details>
+
     <label class="precios-buscar">Buscar producto<input id="precio-buscar" type="search" placeholder="Nombre o código del producto" autocomplete="off"></label>
     <details class="precios-opcion" id="precios-carga"><summary>Comparar lista del proveedor · Excel, CSV o PDF</summary>
       <p>Elegí el archivo, revisá las columnas y compará. La carga no cambia precios. Aplicás sólo lo que elijas.</p>
@@ -247,6 +227,12 @@
     <div id="lista-precios"></div>
   </section>
 
+</details>
+    <div id="promociones-editor"></div>
+    <p class="hint">Stock 5 o menos en rojo. Stock y fotos guardados online para todos los equipos.</p>
+  </section>
+
+  <section id="mod-listas"><h2>Listas de precios</h2><label>Lista de precios<select id="precio-lista"><option value="mostrador">Mostrador</option></select></label><div id="listas-gestion"></div><div id="lista-precios-editor"></div></section>
   <section id="mod-clientes">
     <div class="row"><button id="cli-nuevo" class="primary">+ Nuevo cliente</button></div>
     <table><thead><tr><th>Nombre</th><th>Referencia</th><th>Tel</th><th>Dirección</th><th>Cumpleaños</th><th>Lista de precios</th><th>Deuda</th><th>Historial / acciones</th></tr></thead>
@@ -260,11 +246,10 @@
       <button id="cal-next" aria-label="Mes siguiente">→</button>
       <button id="cal-hoy">Hoy</button>
     </div>
-    <div id="cal-grid" class="cal-grid"></div>
+    <div class="cumple-layout"><div id="cal-grid" class="cal-grid"></div><div><div id="cumple-dia" aria-live="polite"></div><h3>Cumpleaños del mes</h3><div id="cumple-lista"></div></div></div>
     <label class="lbl">Mensaje de saludo
       <input id="cumple-msg" value="¡Feliz cumpleaños, {nombre}! De parte de Mi Limpieza. Pasá a retirar tu regalo.">
     </label>
-    <div id="cumple-lista"></div>
   </section>
 
   <section id="mod-proveedores">
@@ -294,7 +279,7 @@
 
   <section id="mod-mov">
     <div class="row">
-      <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select>
+      <select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option><option value="retiro-socio">Retiro de socio</option></select><label>Fecha<input id="m-fecha" type="datetime-local"></label>
       <select id="m-medio"><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco</option></select>
     </div>
     <div class="row">
@@ -303,7 +288,8 @@
     </div>
     <button id="m-agregar">Agregar movimiento</button>
     <p class="hint">Tildar = conciliado con Mercado Pago / Banco.</p>
-    <div id="movimientos"></div>
+    <div class="row mov-filtros"><label>Desde<input type="date" id="mov-desde"></label><label>Hasta<input type="date" id="mov-hasta"></label><label>Tipo<select id="mov-tipo"><option value="">Todos</option><option value="ingreso">Ingresos</option><option value="egreso">Egresos</option><option value="retiro-socio">Retiro de socio</option></select></label><label>Medio<select id="mov-medio"><option value="">Todos</option><option value="efectivo">Efectivo</option><option value="mercadopago">Mercado Pago</option><option value="banco">Banco / Transferencia</option></select></label><label>Concepto<input type="search" id="mov-concepto"></label></div><div id="mov-totales" role="status"></div>
+    <div id="movimientos"></div><div class="row"><button id="mov-prev">Anterior</button><span id="mov-pagina"></span><button id="mov-next">Siguiente</button></div>
   </section>
 
 <section id="mod-reportes">
@@ -360,13 +346,13 @@
     <input id="f-cat" placeholder="Ej.: Accesorios">
     <label class="producto-campo" for="f-prov">Proveedor</label>
     <select id="f-prov"></select>
-    <label class="producto-campo" for="f-costo">Costo de compra ($)</label>
+    <label class="producto-campo" for="f-costo">Costo de compra sin IVA ($)</label>
     <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra">
-    <label class="producto-campo" for="f-precio">Precio de venta base ($)</label>
-    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Se calcula desde el costo y el margen" disabled>
+    <label class="producto-campo" for="f-precio">Precio final de venta ($)</label>
+    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio final">
     <label class="producto-campo" for="f-margen">Ganancia sobre el costo (%)</label>
     <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
-    <p class="hint" style="margin:0">Costo / venta / margen: se administran en el panel <b>Precios</b> (acá solo al crear el producto).</p>
+    <label class="producto-campo" for="f-margen-venta">Margen sobre venta (%)</label><input id="f-margen-venta" type="number" step="0.01"><label class="producto-campo" for="f-iva">IVA</label><select id="f-iva"><option value="">Elegí IVA</option><option value="10.5">10,5%</option><option value="21">21%</option></select><label class="chk"><input id="f-incluir-envase" type="checkbox" checked> Incluir bidón por defecto (5 L)</label><p id="f-precio-detalle" class="hint"></p>
     <label class="producto-campo" for="f-pres">Presentación</label>
     <input id="f-pres" placeholder="Ej.: 1 Lt, 5 Lts, x Unid">
     <label class="producto-campo" for="f-stock">Cantidad en stock (unidades)</label>
@@ -408,26 +394,28 @@
   </form>
 </dialog>
 
-<script src="js/catalogo.js?v=42"></script>
-<script src="js/store.js?v=42"></script>
-<script src="js/negocio-online.js?v=42"></script>
-<script src="js/pagos.js?v=42"></script>
-<script src="js/scan.js?v=42"></script>
-<script src="js/caja.js?v=42"></script>
-<script src="js/stock.js?v=42"></script>
-<script src="js/entidades.js?v=42"></script>
-<script src="js/cumple.js?v=42"></script>
-<script src="js/exportar-informe.js?v=42"></script>
-<script src="js/listas-precios.js?v=42"></script>
-<script src="js/operacion.js?v=42"></script>
-<script src="js/turnos.js?v=42"></script>
-<script src="js/reportes.js?v=42"></script>
-<script src="js/app.js?v=42"></script>
-<script src="js/precios-online.js?v=42"></script>
+<script src="js/catalogo.js?v=43"></script>
+<script src="js/store.js?v=43"></script>
+<script src="js/negocio-online.js?v=43"></script>
+<script src="js/pagos.js?v=43"></script>
+<script src="js/scan.js?v=43"></script>
+<script src="js/caja.js?v=43"></script>
+<script src="js/stock.js?v=43"></script>
+<script src="js/promociones.js?v=43"></script>
+<script src="js/respaldo-drive.js?v=43"></script>
+<script src="js/entidades.js?v=43"></script>
+<script src="js/cumple.js?v=43"></script>
+<script src="js/exportar-informe.js?v=43"></script>
+<script src="js/listas-precios.js?v=43"></script>
+<script src="js/operacion.js?v=43"></script>
+<script src="js/turnos.js?v=43"></script>
+<script src="js/reportes.js?v=43"></script>
+<script src="js/app.js?v=43"></script>
+<script src="js/precios-online.js?v=43"></script>
 
-<script type="module" src="js/fotos.mjs?v=42"></script>
-<script type="module" src="js/remito.mjs?v=42"></script>
-<script type="module" src="js/comparar-proveedor.mjs?v=42"></script>
-<script type="module" src="js/importar-lista.mjs?v=42"></script>
+<script type="module" src="js/fotos.mjs?v=43"></script>
+<script type="module" src="js/remito.mjs?v=43"></script>
+<script type="module" src="js/comparar-proveedor.mjs?v=43"></script>
+<script type="module" src="js/importar-lista.mjs?v=43"></script>
 </body>
 </html>
