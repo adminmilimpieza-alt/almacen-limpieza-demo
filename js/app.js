@@ -7,6 +7,7 @@ const Panel = (() => {
     'mod-mov':'Movimientos de caja', 'mod-turno':'Turno de caja', 'mod-reportes':'Reportes', 'mod-respaldo':'Respaldo'
   };
   const $ = id => document.getElementById(id);
+  function ajustarPanel(){const nav=document.querySelector('.main-nav');if(nav&&nav.getBoundingClientRect)$('panel-overlay').style.top=Math.max(0,nav.getBoundingClientRect().bottom)+'px';}
   function abrirDrawer(){}
   function cerrarDrawer(){}
   function go(id){
@@ -20,7 +21,7 @@ const Panel = (() => {
     $('panel-title').textContent = TITULOS[id]||'';
     $('panel-overlay').hidden = false;
     cerrarDrawer();
-    body.scrollTop = 0; window.scrollTo(0,0);
+    body.scrollTop = 0; window.scrollTo(0,0);ajustarPanel();
   }
   function back(){
     const body = $('panel-body'), modulos = document.getElementById('modulos');
@@ -29,7 +30,7 @@ const Panel = (() => {
   }
   function init(){
     document.querySelectorAll('[data-go]').forEach(b=>{ b.onclick = ()=>go(b.dataset.go); });
-    $('panel-back').onclick = back;
+    $('panel-back').onclick = back;window.addEventListener('resize',()=>{if(!$('panel-overlay').hidden)ajustarPanel();});
     $('menu-btn').hidden=true;
     document.querySelectorAll('[data-caja-vista]').forEach(b=>b.onclick=()=>{document.body.dataset.cajaVista=b.dataset.cajaVista;});
     document.addEventListener('keydown', e=>{

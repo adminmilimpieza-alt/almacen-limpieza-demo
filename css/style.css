@@ -363,3 +363,6 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 
 /* Mantener ocultos los controles condicionales aunque tengan display propio. */
 [hidden]{display:none !important}
+
+/* Navegación accesible también al abrir los módulos. */
+.main-nav{z-index:110}
