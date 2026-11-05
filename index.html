@@ -28,7 +28,7 @@
   </div>
 </header>
 
-<nav class="main-nav" aria-label="Navegación principal"><button data-go="caja">Caja</button><button data-go="mod-stock">Stock</button><button data-go="mod-listas">Listas de precios</button><button data-go="mod-clientes">Clientes</button><button data-go="mod-cumple">Cumpleaños</button><button data-go="mod-proveedores">Proveedores</button><button data-go="mod-pedidos">Pedidos</button><button data-go="mod-turno">Turno</button><button data-go="mod-mov">Movimientos</button><button data-go="mod-reportes">Reportes</button><button data-go="mod-respaldo">Respaldo</button></nav>
+<nav class="main-nav" aria-label="Navegación principal"><button data-go="caja">Caja</button><button data-go="mod-stock">Stock</button><button data-go="mod-promociones">Promociones</button><button data-go="mod-listas">Listas de precios</button><button data-go="mod-clientes">Clientes</button><button data-go="mod-cumple">Cumpleaños</button><button data-go="mod-proveedores">Proveedores</button><button data-go="mod-pedidos">Pedidos</button><button data-go="mod-turno">Turno</button><button data-go="mod-mov">Movimientos</button><button data-go="mod-reportes">Reportes</button><button data-go="mod-respaldo">Respaldo</button></nav>
 <main class="pos">
   <!-- CAJA: escáner + líneas del ticket con columnas, total y cobro -->
   <section class="pos-left" id="pos-left">
@@ -228,9 +228,10 @@
   </section>
 
 </details>
-    <div id="promociones-editor"></div>
     <p class="hint">Stock 5 o menos en rojo. Stock y fotos guardados online para todos los equipos.</p>
   </section>
+
+  <section id="mod-promociones"><div id="promociones-editor"></div></section>
 
   <section id="mod-listas"><h2>Listas de precios</h2><label>Lista de precios<select id="precio-lista"><option value="mostrador">Mostrador</option></select></label><div id="listas-gestion"></div><div id="lista-precios-editor"></div></section>
   <section id="mod-clientes">
@@ -410,7 +411,7 @@
 <script src="js/operacion.js?v=44"></script>
 <script src="js/turnos.js?v=44"></script>
 <script src="js/reportes.js?v=44"></script>
-<script src="js/app.js?v=44"></script>
+<script src="js/app.js?v=45"></script>
 <script src="js/precios-online.js?v=44"></script>
 
 <script type="module" src="js/fotos.mjs?v=44"></script>

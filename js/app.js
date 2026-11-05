@@ -2,7 +2,7 @@
 // La caja (escaneo, ticket, cobro) es la pantalla principal siempre visible.
 const Panel = (() => {
   const TITULOS = {
-    'mod-listas':'Listas de precios', 'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
+    'mod-listas':'Listas de precios', 'mod-promociones':'Promociones', 'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
     'mod-cumple':'Cumpleaños', 'mod-proveedores':'Proveedores', 'mod-pedidos':'Pedidos',
     'mod-mov':'Movimientos de caja', 'mod-turno':'Turno de caja', 'mod-reportes':'Reportes', 'mod-respaldo':'Respaldo'
   };
@@ -18,6 +18,7 @@ const Panel = (() => {
     while(body.firstChild) go._origen.appendChild(body.firstChild);
     body.appendChild(sec);
     if(id==='mod-listas'&&typeof ListasPrecios!=='undefined')ListasPrecios.render();
+    if(id==='mod-promociones'&&typeof Promociones!=='undefined')Promociones.render();
     $('panel-title').textContent = TITULOS[id]||'';
     $('panel-overlay').hidden = false;
     cerrarDrawer();
