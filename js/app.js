@@ -1,12 +1,8 @@
 // app.js — menú lateral (drawer) + overlay de módulos a pantalla completa.
 // La caja (escaneo, ticket, cobro) es la pantalla principal siempre visible.
 const Panel = (() => {
-  const TITULOS = {
-    'mod-listas':'Listas de precios', 'mod-promociones':'Promociones', 'mod-stock':'Stock', 'mod-precios':'Precios', 'mod-clientes':'Clientes',
-    'mod-cumple':'Cumpleaños', 'mod-proveedores':'Proveedores', 'mod-pedidos':'Pedidos',
-    'mod-mov':'Movimientos de caja', 'mod-turno':'Turno de caja', 'mod-reportes':'Reportes', 'mod-respaldo':'Respaldo'
-  };
   const $ = id => document.getElementById(id);
+  function marcarActivo(id){document.querySelectorAll('.main-nav [data-go]').forEach(b=>{const activo=b.dataset.go===id;b.classList.toggle('active',activo);if(activo)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});}
   function ajustarPanel(){const nav=document.querySelector('.main-nav');if(nav&&nav.getBoundingClientRect)$('panel-overlay').style.top=Math.max(0,nav.getBoundingClientRect().bottom)+'px';}
   function abrirDrawer(){}
   function cerrarDrawer(){}
@@ -19,7 +15,7 @@ const Panel = (() => {
     body.appendChild(sec);
     if(id==='mod-listas'&&typeof ListasPrecios!=='undefined')ListasPrecios.render();
     if(id==='mod-promociones'&&typeof Promociones!=='undefined')Promociones.render();
-    $('panel-title').textContent = TITULOS[id]||'';
+    marcarActivo(id);
     $('panel-overlay').hidden = false;
     cerrarDrawer();
     document.body.classList.add('panel-abierto');
@@ -30,10 +26,11 @@ const Panel = (() => {
     while(body.firstChild) modulos.appendChild(body.firstChild);
     $('panel-overlay').hidden = true;
     document.body.classList.remove('panel-abierto');
+    marcarActivo('caja');
   }
   function init(){
     document.querySelectorAll('[data-go]').forEach(b=>{ b.onclick = ()=>go(b.dataset.go); });
-    $('panel-back').onclick = back;window.addEventListener('resize',()=>{if(!$('panel-overlay').hidden)ajustarPanel();});
+    marcarActivo('caja');window.addEventListener('resize',()=>{if(!$('panel-overlay').hidden)ajustarPanel();});
     $('menu-btn').hidden=true;
     document.querySelectorAll('[data-caja-vista]').forEach(b=>b.onclick=()=>{document.body.dataset.cajaVista=b.dataset.cajaVista;});
     document.addEventListener('keydown', e=>{
