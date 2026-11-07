@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=46">
+<link rel="stylesheet" href="css/style.css?v=48">
 <link rel="stylesheet" href="css/remito.css?v=44">
 <link rel="stylesheet" href="css/reportes.css?v=44">
 <link rel="stylesheet" href="css/listas-precios.css?v=44">
@@ -163,10 +163,10 @@
       <button id="stk-assign">Asignar a los filtrados</button>
     </div>
     <p class="hint" id="stk-count"></p>
-    <table>
+    <div class="stock-tabla-scroll" role="region" aria-label="Tabla de stock" tabindex="0"><table>
       <thead><tr><th></th><th>Cód</th><th>Producto</th><th>Pres</th><th>Rubro</th><th>Proveedor</th><th>Costo</th><th>Venta</th><th>M%</th><th>Stock</th><th>Vis</th><th></th></tr></thead>
       <tbody id="tabla-stock"></tbody>
-    </table>
+    </table></div>
     <details class="stock-precios"><summary>Costos, precios e importación de proveedores</summary>  <section id="mod-precios">
     <div class="precios-guardar">
       <div><h2>Precios</h2><p id="precios-online-estado" role="status" aria-live="polite">Consultando precios online…</p></div>
