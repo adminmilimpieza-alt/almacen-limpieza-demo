@@ -22,12 +22,14 @@ const Panel = (() => {
     $('panel-title').textContent = TITULOS[id]||'';
     $('panel-overlay').hidden = false;
     cerrarDrawer();
-    body.scrollTop = 0; window.scrollTo(0,0);ajustarPanel();
+    document.body.classList.add('panel-abierto');
+    $('panel-overlay').scrollTop = 0; window.scrollTo(0,0);ajustarPanel();
   }
   function back(){
     const body = $('panel-body'), modulos = document.getElementById('modulos');
     while(body.firstChild) modulos.appendChild(body.firstChild);
     $('panel-overlay').hidden = true;
+    document.body.classList.remove('panel-abierto');
   }
   function init(){
     document.querySelectorAll('[data-go]').forEach(b=>{ b.onclick = ()=>go(b.dataset.go); });

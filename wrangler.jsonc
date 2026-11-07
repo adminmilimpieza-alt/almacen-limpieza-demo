@@ -4,6 +4,10 @@
   "main": "worker/index.mjs",
   "compatibility_date": "2026-10-23",
   "workers_dev": true,
+  "vars": {
+    "GOOGLE_CLIENT_ID": "1033602011253-ao20hbtecqps07jcu75s648uhnogh9ai.apps.googleusercontent.com",
+    "GOOGLE_REDIRECT_URI": "https://milimpieza.adminmilimpieza.workers.dev/api/respaldo-drive/callback"
+  },
   "triggers": {"crons":["0 7 * * *"]},
   "assets": {"directory":"./dist", "binding":"ASSETS", "run_worker_first":true},
   "d1_databases": [{"binding":"DB", "database_name":"milimpieza-cobros", "database_id":"9e0b5b43-2e55-4baf-a336-249d1153be24", "migrations_dir":"migrations"}],
