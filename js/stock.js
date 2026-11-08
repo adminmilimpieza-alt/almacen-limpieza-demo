@@ -125,6 +125,8 @@ const Stock = (() => {
     const envase=envaseEditor();
     $('f-precio-detalle').textContent=$('f-iva').value===''?'IVA sin definir: se conserva el precio actual hasta elegir una tasa y editar.':`Costo sin IVA. Precio final con IVA${envase?' + envase $'+envase:''}. La ganancia se calcula sin IVA ni envase.`;
     $('f-incluir-envase').parentElement.hidden=!(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&/5\s*l/i.test($('f-pres').value||p?.nombre||''));
+    const precio=$('f-precio').value;
+    $('f-precio-redondeado').value=precio!==''&&Number.isFinite(Number(precio))?Math.round(Number(precio)/10)*10:'';
   }
   function fillProv(sel, cur){
     const db = Store.get();
@@ -160,6 +162,11 @@ const Stock = (() => {
     $('f-margen').addEventListener('input',()=>recalcula('costo'));
     $('f-margen-venta').addEventListener('input',()=>recalcula('margenVenta'));
     $('f-precio').addEventListener('input',()=>recalcula('precioFinal'));
+    $('f-aplicar-redondeado').onclick=()=>{
+      const valor=$('f-precio-redondeado').value;
+      if(valor===''||!Number.isFinite(Number(valor))||Number(valor)<0){alert('Ingresá un precio redondeado válido.');return;}
+      $('f-precio').value=valor;recalcula('precioFinal');
+    };
     $('f-iva').addEventListener('change',()=>recalcula(ultimoModo));
     $('f-pres').addEventListener('input',cambiarEnvase);
     $('f-cat').addEventListener('input',cambiarEnvase);

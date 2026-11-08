@@ -345,11 +345,18 @@
     <select id="f-prov"></select>
     <label class="producto-campo" for="f-costo">Costo de compra sin IVA ($)</label>
     <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra">
+    <label class="producto-campo" for="f-iva">IVA</label>
+    <select id="f-iva"><option value="">Elegí IVA</option><option value="10.5">10,5%</option><option value="21">21%</option></select>
+    <label class="producto-campo" for="f-margen-venta">Margen sobre venta (%)</label>
+    <input id="f-margen-venta" type="number" step="0.01">
+    <label class="producto-campo" for="f-margen">Costo financiero (% sobre costo)</label>
+    <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
     <label class="producto-campo" for="f-precio">Precio final de venta ($)</label>
     <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio final">
-    <label class="producto-campo" for="f-margen">Ganancia sobre el costo (%)</label>
-    <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
-    <label class="producto-campo" for="f-margen-venta">Margen sobre venta (%)</label><input id="f-margen-venta" type="number" step="0.01"><label class="producto-campo" for="f-iva">IVA</label><select id="f-iva"><option value="">Elegí IVA</option><option value="10.5">10,5%</option><option value="21">21%</option></select><label class="chk"><input id="f-incluir-envase" type="checkbox" checked> Incluir bidón por defecto (5 L)</label><p id="f-precio-detalle" class="hint"></p>
+    <label class="producto-campo" for="f-precio-redondeado">Precio redondeado sugerido ($)</label>
+    <div class="row"><input id="f-precio-redondeado" type="number" min="0" step="0.01" placeholder="Sugerencia editable"><button type="button" id="f-aplicar-redondeado">Usar este precio</button></div>
+    <p class="hint">Sugerencia al múltiplo de $10 más cercano. Podés cambiarla y elegir «Usar este precio» para cobrar ese importe.</p>
+    <label class="chk"><input id="f-incluir-envase" type="checkbox" checked> Incluir bidón por defecto (5 L)</label><p id="f-precio-detalle" class="hint"></p>
     <label class="producto-campo" for="f-pres">Presentación</label>
     <input id="f-pres" placeholder="Ej.: 1 Lt, 5 Lts, x Unid">
     <label class="producto-campo" for="f-stock">Cantidad en stock (unidades)</label>
@@ -397,7 +404,7 @@
 <script src="js/pagos.js?v=44"></script>
 <script src="js/scan.js?v=44"></script>
 <script src="js/caja.js?v=44"></script>
-<script src="js/stock.js?v=44"></script>
+<script src="js/stock.js?v=49"></script>
 <script src="js/promociones.js?v=44"></script>
 <script src="js/respaldo-drive.js?v=44"></script>
 <script src="js/entidades.js?v=44"></script>

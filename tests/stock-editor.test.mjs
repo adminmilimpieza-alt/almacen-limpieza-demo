@@ -48,3 +48,14 @@ test('cambiar sólo la opción de bidón conserva precio e IVA legado',async()=>
  f.get('f-incluir-envase').checked=false;f.get('f-incluir-envase').change();assert.equal(Number(f.get('f-precio').value),185);
  await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved[0].precio,185);assert.equal(f.saved[0].iva,undefined);assert.equal(f.saved[0].incluirEnvaseDefecto,false);
 });
+test('la sugerencia no cambia el precio hasta aplicarla y admite un importe elegido',async()=>{
+ const f=fixture({id:'p',nombre:'Producto',costo:100,precio:181.5,margen:50,iva:21,stock:3});
+ f.created.find(e=>e.textContent==='Editar').onclick();
+ assert.equal(Number(f.get('f-precio-redondeado').value),180);
+ await f.get('guardar-prod').onclick({preventDefault(){}});
+ assert.equal(f.saved[0].precio,181.5);
+ f.get('f-precio-redondeado').value='200';f.get('f-aplicar-redondeado').onclick();
+ assert.equal(Number(f.get('f-precio').value),200);
+ await f.get('guardar-prod').onclick({preventDefault(){}});
+ assert.equal(f.saved[1].precio,200);
+});
