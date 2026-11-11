@@ -5,6 +5,7 @@ import { normalizeItems, paymentResult } from './payments.mjs';
 import { authenticated, sessionCookie, validWebhook, hmac, equal } from './security.mjs';
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
+const minPasswordLength=12;
 const uuid=value=>typeof value==='string' && /^[a-f0-9-]{36}$/i.test(value);
 async function body(request){
   const text=await request.text(); if(text.length>50000) throw fail('Solicitud demasiado grande.',413);
@@ -43,7 +44,7 @@ async function refreshOrder(env,order){
 }
 async function route(request,env){
   const url=new URL(request.url),path=url.pathname;
-  if(path==='/api/health') return json({service:'Mi Limpieza',database:!!env.DB,operatorConfigured:!!env.ADMIN_PASSWORD&&env.ADMIN_PASSWORD.length>=16,mercadoPagoConfigured:!!(env.MP_ACCESS_TOKEN||(env.MP_CLIENT_ID&&env.MP_CLIENT_SECRET)),webhookConfigured:!!env.MP_WEBHOOK_SECRET});
+  if(path==='/api/health') return json({service:'Mi Limpieza',database:!!env.DB,operatorConfigured:!!env.ADMIN_PASSWORD&&env.ADMIN_PASSWORD.length>=minPasswordLength,mercadoPagoConfigured:!!(env.MP_ACCESS_TOKEN||(env.MP_CLIENT_ID&&env.MP_CLIENT_SECRET)),webhookConfigured:!!env.MP_WEBHOOK_SECRET});
   if(!env.DB) throw fail('Falta vincular la base de cobros D1.',503);
   if(path.startsWith('/api/respaldo-drive'))return handleDriveBackup(request,env);
   if(path==='/api/business') return handleBusiness(request,env);
@@ -60,7 +61,7 @@ async function route(request,env){
   // Mutating requests must originate from this app; CORS is intentionally absent.
   if(request.method!=='GET' && request.headers.get('Origin')!==url.origin) throw fail('Origen no autorizado.',403);
   if(path==='/api/login' && request.method==='POST'){
-    if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<16) throw fail('Falta configurar una clave de operador de al menos 16 caracteres en Cloudflare.',503);
+    if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<minPasswordLength) throw fail('Falta configurar una clave de operador de al menos 12 caracteres en Cloudflare.',503);
     const ip=request.headers.get('CF-Connecting-IP')||'local';
     const key=await hmac(env.ADMIN_PASSWORD,ip), now=Date.now();
     await env.DB.prepare('DELETE FROM login_limits WHERE reset_at < ?').bind(now).run();
