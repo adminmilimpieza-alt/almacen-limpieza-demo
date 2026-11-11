@@ -135,7 +135,7 @@ const Caja = (() => {
     bases.forEach(code=>{
       const v1 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 1L' && p.activo!==false);
       const v5 = db.productos.find(p=>p.codigo===code && p.categoria==='Líquidos 5L' && p.activo!==false);
-      if(!v1 || !v5) return;
+      if(!v1 || !v5 || (v1.adicionales||[]).length || (v5.adicionales||[]).length) return;
       const lin1 = carrito.filter(i=>i.id===v1.id);
       const tot1 = lin1.reduce((a,i)=>a+i.cant,0);
       if(tot1 < 5) return;

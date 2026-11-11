@@ -59,3 +59,8 @@ test('la sugerencia no cambia el precio hasta aplicarla y admite un importe eleg
  await f.get('guardar-prod').onclick({preventDefault(){}});
  assert.equal(f.saved[1].precio,200);
 });
+test('agregar un adicional suma su precio y guarda la selección sin cambiar la base',async()=>{
+ const f=fixture({id:'p',nombre:'Producto',costo:100,precio:181.5,margen:50,iva:21,stock:3},{productos:[{id:'p',nombre:'Producto',costo:100,precio:181.5,margen:50,iva:21,stock:3},{id:'spray',nombre:'Pulverizador',categoria:'Adicionales',precio:100,costo:50,stock:10}]});
+ f.created.find(e=>e.textContent==='Editar').onclick();f.get('f-adicional').value='spray';f.get('f-adicional-agregar').onclick();assert.equal(Number(f.get('f-precio').value),281.5);
+ await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved[0].precio,181.5);assert.equal(f.saved[0].adicionales[0].id,'spray');assert.equal(f.saved[0].adicionales[0].cant,1);
+});

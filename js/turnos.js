@@ -9,7 +9,7 @@ const Turnos = (() => {
     const t = Store.turnoAbierto();
     box.innerHTML = t
       ? `<span class="tag ok">Caja abierta</span> <span class="hint">desde ${fh(t.apertura)} · saldo inicial ${fmt(t.saldo_inicial)}</span>`
-      : `<span class="tag warn">Caja cerrada</span> <span class="hint">abrí el turno en el panel para vender</span>`;
+      : `<span class="tag warn">Caja cerrada</span> <span class="hint">abrí el turno acá para vender</span>`;
   }
   function render(){
     status();
@@ -43,7 +43,14 @@ const Turnos = (() => {
         el.style.color = d===0 ? 'inherit' : (d<0 ? '#9F2F2D' : '#346538');
       }); };
       ['efectivo','mercadopago','banco'].forEach(m=>{ $('t-c-'+m).addEventListener('input', viva); });
-      $('t-printc').onclick = ()=>{ document.body.classList.add('print-cierre'); window.print(); };
+      $('t-printc').onclick = ()=>{
+        const copia=document.createElement('section'); copia.id='turno-print';
+        copia.innerHTML=box.innerHTML;
+        copia.querySelectorAll('input').forEach((input,i)=>{ input.setAttribute('value',box.querySelectorAll('input')[i].value); });
+        document.body.appendChild(copia); document.body.classList.add('print-cierre');
+        window.addEventListener('afterprint',()=>{ copia.remove(); document.body.classList.remove('print-cierre'); },{once:true});
+        window.print();
+      };
       $('t-cerrar').onclick = async ()=>{
         try{
           const conteo = {efectivo:Number($('t-c-efectivo').value)||0, mercadopago:Number($('t-c-mercadopago').value)||0, banco:Number($('t-c-banco').value)||0};

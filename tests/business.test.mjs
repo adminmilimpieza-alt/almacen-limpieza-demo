@@ -138,3 +138,12 @@ test('flujo nuevo: promos compartidas, bidón opcional, IVA y bonificación expl
 });
 
 test('un navegador anterior no puede cobrar con una bonificación distinta de la mostrada',async()=>{const env={DB:db(),ADMIN_PASSWORD:password};let s=await(await read(env)).json();s=await transactBusiness(env,op(s.revision,'abrirTurno',[0]));const p=s.state.productos[0];await assert.rejects(transactBusiness(env,{id:crypto.randomUUID(),revision:s.revision,op:'cobrar',args:[[{id:p.id,precio:p.precio,cant:1}],'efectivo','c1']}),{status:409});assert.equal((await(await read(env)).json()).state.ventas.length,0);});
+
+test('adicionales compartidos: precio, comprobación de link, venta y anulación',async()=>{
+ const env={DB:db(),ADMIN_PASSWORD:password};let s=await(await read(env)).json();const run=async(name,args)=>s=await transactBusiness(env,op(s.revision,name,args));
+ await run('guardarProductoEdicion',[{id:'extra-test',nombre:'Pulverizador',categoria:'Adicionales',precio:100,costo:50,stock:3,activo:true},null]);
+ await run('guardarProductoEdicion',[{id:'base-test',nombre:'Producto de prueba',categoria:'Otros',precio:500,costo:200,stock:10,activo:true,adicionales:[{id:'extra-test',cant:1}]},null]);await run('abrirTurno',[0]);
+ const line={id:'base-test',nombre:'Producto de prueba',precio:600,cant:2};assert.deepEqual(comprobarTicket(s.state,[line],'c1')[0].consumosStock,[{id:'base-test',cant:1},{id:'extra-test',cant:1}]);
+ await assert.rejects(run('cobrar',[[{...line,precio:500}],'banco','c1']),{status:400});await run('cobrar',[[line],'banco','c1']);assert.equal(s.state.productos.find(p=>p.id==='extra-test').stock,1);assert.equal(s.state.ventas[0].total,1200);
+ const sale=s.state.ventas[0];await run('anularVenta',[sale.id]);assert.equal(s.state.productos.find(p=>p.id==='extra-test').stock,3);
+});

@@ -1,7 +1,7 @@
 // stock.js — módulo Stock (punto 2) + historial ventas en Reportes
 const Stock = (() => {
   const $ = id => document.getElementById(id);
-  let editId = null, fotoActual = '', fotoBase=null, precioEditado=false, ultimoModo='costo', envaseMostrado=0;
+  let editId = null, fotoActual = '', fotoBase=null, precioEditado=false, ultimoModo='costo', envaseMostrado=0, adicionalesActuales=[];
   function normalizarFoto(file){
     if(typeof Fotos!=='undefined')return Fotos.normalizarFoto(file);
     return new Promise((res, rej)=>{
@@ -86,7 +86,7 @@ const Stock = (() => {
         $('f-iva').value=p.iva==null?'':String(p.iva);
         $('f-margen-venta').value=p.margen==null?'':Math.round(p.margen/(100+p.margen)*10000)/100;
         $('f-incluir-envase').checked=p.incluirEnvaseDefecto!==false;
-        envaseMostrado=envaseEditor(); $('f-precio').value=Number(p.precio)+envaseMostrado;
+        adicionalesActuales=(p.adicionales||[]).map(c=>({...c}));renderAdicionales();envaseMostrado=envaseEditor(); $('f-precio').value=Number(p.precio)+envaseMostrado;
         detallePrecio();
         $('f-margen').value=(p.margen==null?'':p.margen); $('f-stock').value=p.stock;
         $('f-costo').disabled=false; $('f-precio').disabled=false; $('f-margen').disabled=false;
@@ -110,9 +110,17 @@ const Stock = (() => {
       const tipo=/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres)?'botellaId':/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)?'bidonId':null;
       id=tipo&&db.catalogo?.envases?.[tipo];
     }
-    if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)&&!$('f-incluir-envase').checked)return 0;
+    if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)&&!$('f-incluir-envase').checked)id=null;
     const envase=db.productos.find(e=>e.id===id);
-    return envase?Number(envase.precio):p?.envaseId===id&&id?Store.precioEnvase(p.id):0;
+    const precioEnvase=envase?Number(envase.precio):p?.envaseId===id&&id?Store.precioEnvase(p.id):0;
+    return precioEnvase+adicionalesActuales.reduce((sum,c)=>sum+(Number(db.productos.find(x=>x.id===c.id)?.precio)||0)*c.cant,0);
+  }
+  function renderAdicionales(){
+    const db=Store.get(),select=$('f-adicional'),box=$('f-adicionales');
+    select.innerHTML='<option value="">Elegí un adicional…</option>';
+    const envases=Object.values(db.catalogo?.envases||{});
+    db.productos.filter(p=>p.id!==editId&&p.activo!==false&&(String(p.categoria||'').trim().toLowerCase()==='adicionales'||envases.includes(p.id))&&!p.envaseId&&!(p.adicionales||[]).length&&!adicionalesActuales.some(c=>c.id===p.id)).forEach(p=>{const option=document.createElement('option');option.value=p.id;option.textContent=p.nombre+' · $'+p.precio;select.appendChild(option);});
+    box.innerHTML='';adicionalesActuales.forEach((c,i)=>{const p=db.productos.find(x=>x.id===c.id);const row=document.createElement('div'),label=document.createElement('span'),remove=document.createElement('button');label.textContent=(p?.nombre||'Adicional no encontrado')+' · '+c.cant+' unidad(es) · $'+(Number(p?.precio)||0)*c.cant+' ';remove.type='button';remove.textContent='Quitar';remove.onclick=()=>{adicionalesActuales.splice(i,1);renderAdicionales();cambiarEnvase();};row.appendChild(label);row.appendChild(remove);box.appendChild(row);});
   }
   function cambiarEnvase(){
     const base=Number($('f-precio').value)-envaseMostrado;
@@ -123,7 +131,7 @@ const Stock = (() => {
   function detallePrecio(){
     const p=Store.get().productos.find(p=>p.id===editId);
     const envase=envaseEditor();
-    $('f-precio-detalle').textContent=$('f-iva').value===''?'IVA sin definir: se conserva el precio actual hasta elegir una tasa y editar.':`Costo sin IVA. Precio final con IVA${envase?' + envase $'+envase:''}. La ganancia se calcula sin IVA ni envase.`;
+    $('f-precio-detalle').textContent=$('f-iva').value===''?'IVA sin definir: se conserva el precio actual hasta elegir una tasa y editar.':`Costo sin IVA. Precio final con IVA${envase?' + envases y adicionales $'+envase:''}. La ganancia se calcula sobre el producto sin adicionales.`;
     $('f-incluir-envase').parentElement.hidden=!(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&/5\s*l/i.test($('f-pres').value||p?.nombre||''));
     const precio=$('f-precio').value;
     $('f-precio-redondeado').value=precio!==''&&Number.isFinite(Number(precio))?Math.round(Number(precio)/10)*10:'';
@@ -144,7 +152,7 @@ const Stock = (() => {
       $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
       $('f-costo').disabled=false; $('f-margen').disabled=false; $('f-precio').disabled=false;
       precioEditado=false; ultimoModo='costo'; $('f-iva').value=''; $('f-margen-venta').value='';
-      $('f-incluir-envase').checked=true; envaseMostrado=0; fillProv($('f-prov'),''); detallePrecio();
+      $('f-incluir-envase').checked=true; adicionalesActuales=[];renderAdicionales();envaseMostrado=0; fillProv($('f-prov'),''); detallePrecio();
       $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
@@ -171,6 +179,7 @@ const Stock = (() => {
     $('f-pres').addEventListener('input',cambiarEnvase);
     $('f-cat').addEventListener('input',cambiarEnvase);
     $('f-incluir-envase').addEventListener('change',cambiarEnvase);
+    $('f-adicional-agregar').onclick=()=>{const id=$('f-adicional').value;if(!id)return;const p=Store.get().productos.find(x=>x.id===id),actual=Store.get().productos.find(x=>x.id===editId),pres=String($('f-pres').value||$('f-nombre').value).toUpperCase(),tipo=/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres)?'botellaId':/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)?'bidonId':null,auto=actual?.envaseId||(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&tipo?Store.get().catalogo?.envases?.[tipo]:null);if(id===auto){alert('Este envase ya está vinculado automáticamente al producto.');return;}if(!p)return;adicionalesActuales.push({id,cant:1});renderAdicionales();cambiarEnvase();};
     $('reset').onclick=async ()=>{ if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; } if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ try{ await Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); }catch(err){ alert(err.message); } } };
     $('stk-q').addEventListener('input', render);
     $('stk-rubro').addEventListener('change', render);
@@ -213,6 +222,7 @@ const Stock = (() => {
         margen: calculo?calculo.margen:cur.margen,
         ...(calculo?{iva:calculo.iva}:{}),
         incluirEnvaseDefecto:$('f-incluir-envase').checked,
+        adicionales:adicionalesActuales.map(c=>({...c})),
         stock:Number($('f-stock').value),
         activo: $('f-activo').checked,
         provId: $('f-prov').value || '',

@@ -18,7 +18,8 @@ export function precioLista(db,p,id='mostrador') {
   const base=id!=='mostrador' && particular != null && Number.isFinite(Number(particular)) ? Number(particular) : numero(p.precio);
   const e=productosEnvase(db,p);
   const envaseParticular=e&&(db.listasPrecios||[]).find(l=>l.id===id)?.precios?.[e.id];
-  return Math.round((base+(e&&p.incluirEnvaseDefecto!==false?numero(id!=='mostrador'&&envaseParticular!=null?envaseParticular:e.precio):0))*100)/100;
+  const extras=(p.adicionales||[]).reduce((sum,c)=>{const a=(db.productos||[]).find(x=>x.id===c.id);if(!a)return sum;const particular=(db.listasPrecios||[]).find(l=>l.id===id)?.precios?.[a.id];return sum+numero(id!=='mostrador'&&particular!=null?particular:a.precio)*c.cant;},0);
+  return Math.round((base+extras+(e&&p.incluirEnvaseDefecto!==false?numero(id!=='mostrador'&&envaseParticular!=null?envaseParticular:e.precio):0))*100)/100;
 }
 export function crearInforme(db,op={}) {
   const tipo=op.tipo||'ventas', clientes=db.clientes||[], productos=db.productos||[];

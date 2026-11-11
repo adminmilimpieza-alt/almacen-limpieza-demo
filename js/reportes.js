@@ -1,7 +1,7 @@
 // Todos los formatos comparten la misma instantánea del informe visible.
 const Reportes = (() => {
   const $=id=>document.getElementById(id);
-  const datos=import('./reportes-datos.mjs');
+  const datos=import('./reportes-datos.mjs?v=2');
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let actual=null;
   const opts=()=>({tipo:$('rep-tipo')?.value||'ventas',desde:$('rep-desde')?.value||'',hasta:$('rep-hasta')?.value||'',clienteId:$('rep-cli')?.value||'',listaId:$('rep-lista')?.value||'',incluirHistoricas:$('rep-historicas')?.checked||false});

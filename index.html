@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mi Limpieza · Caja y stock</title>
-<link rel="stylesheet" href="css/style.css?v=48">
+<link rel="stylesheet" href="css/style.css?v=49">
 <link rel="stylesheet" href="css/remito.css?v=44">
 <link rel="stylesheet" href="css/reportes.css?v=44">
 <link rel="stylesheet" href="css/listas-precios.css?v=44">
@@ -34,6 +34,7 @@
   <section class="pos-left" id="pos-left">
     <fieldset id="caja-controles">
     <div id="turno-status"></div>
+    <details id="turno-caja"><summary>Abrir o cerrar turno de caja</summary><div id="turno-box"></div></details>
     <div id="cumples-alert" class="cumple-alert" hidden></div>
     <div class="caja-mobile-tabs"><button type="button" data-caja-vista="catalogo">Productos y promociones</button><button type="button" data-caja-vista="ticket">Ticket y cobro</button></div>
     <div class="caja-columns"><div class="catalogo-column"><div class="scan-hero">
@@ -270,7 +271,7 @@
   </section>
 
   <section id="mod-turno">
-    <div id="turno-box"></div>
+    <p class="hint">La apertura y el cierre se realizan desde Caja.</p>
     <div id="turnos-hist"></div>
   </section>
 
@@ -340,7 +341,7 @@
     <label class="producto-campo" for="f-nombre">Nombre del producto</label>
     <input id="f-nombre" placeholder="Ej.: Lavandina concentrada" required>
     <label class="producto-campo" for="f-cat">Rubro</label>
-    <input id="f-cat" placeholder="Ej.: Accesorios">
+    <input id="f-cat" list="rubros-producto" placeholder="Ej.: Adicionales"><datalist id="rubros-producto"><option value="Adicionales"></datalist>
     <label class="producto-campo" for="f-prov">Proveedor</label>
     <select id="f-prov"></select>
     <label class="producto-campo" for="f-costo">Costo de compra sin IVA ($)</label>
@@ -351,6 +352,9 @@
     <input id="f-margen-venta" type="number" step="0.01">
     <label class="producto-campo" for="f-margen">Costo financiero (% sobre costo)</label>
     <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
+    <label class="producto-campo" for="f-adicional">Adicionales incluidos</label>
+    <div class="row"><select id="f-adicional"><option value="">Elegí un adicional…</option></select><button type="button" id="f-adicional-agregar">Agregar</button></div>
+    <div id="f-adicionales"></div><p class="hint">Creá el pulverizador, bolsas u otros productos con rubro Adicionales. Cada uno suma su precio de venta y se descuenta del stock al vender.</p>
     <label class="producto-campo" for="f-precio">Precio final de venta ($)</label>
     <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio final">
     <label class="producto-campo" for="f-precio-redondeado">Precio redondeado sugerido ($)</label>
@@ -399,12 +403,12 @@
 </dialog>
 
 <script src="js/catalogo.js?v=44"></script>
-<script src="js/store.js?v=44"></script>
+<script src="js/store.js?v=45"></script>
 <script src="js/negocio-online.js?v=44"></script>
 <script src="js/pagos.js?v=44"></script>
 <script src="js/scan.js?v=44"></script>
-<script src="js/caja.js?v=44"></script>
-<script src="js/stock.js?v=49"></script>
+<script src="js/caja.js?v=45"></script>
+<script src="js/stock.js?v=50"></script>
 <script src="js/promociones.js?v=44"></script>
 <script src="js/respaldo-drive.js?v=44"></script>
 <script src="js/entidades.js?v=44"></script>
@@ -412,8 +416,8 @@
 <script src="js/exportar-informe.js?v=44"></script>
 <script src="js/listas-precios.js?v=44"></script>
 <script src="js/operacion.js?v=44"></script>
-<script src="js/turnos.js?v=44"></script>
-<script src="js/reportes.js?v=44"></script>
+<script src="js/turnos.js?v=45"></script>
+<script src="js/reportes.js?v=45"></script>
 <script src="js/app.js?v=47"></script>
 <script src="js/precios-online.js?v=44"></script>
 

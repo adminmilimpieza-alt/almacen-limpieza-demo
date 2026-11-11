@@ -165,7 +165,7 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
   body.print-ticket .ticket-card{position:static;border:none;padding:0;margin:0;background:#fff}
   body.print-ticket .ticket-scroll{max-height:none;overflow:visible}
   /* Cierre: solo panel */
-  body.print-cierre .pos-left, body.print-cierre button{display:none !important}
+  body.print-cierre > *:not(#turno-print), body.print-cierre button{display:none !important}
   body.print-cierre .panel-overlay{position:static;display:block !important;overflow:visible;
     padding:0;background:#fff}
   body.print-cierre .panel-body{max-width:none;margin:0;padding:0;border:none}

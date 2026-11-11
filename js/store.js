@@ -314,15 +314,18 @@ function crearStore(localStorage, catalogoInput){
   function precioBase(db,p,listaId){const list=listas(db).find(l=>l.id===(listaId||listaDefault));if(!list)throw new Error('Lista de precios no encontrada.');return Number(list.precios?.[p.id]??p.precio);}
   function envase(db,p){if(!p.envaseId)return null;const e=db.productos.find(x=>x.id===p.envaseId);if(!e||e.id===p.id||e.envaseId)throw new Error('Revisá el envase de '+p.nombre);return e;}
   function precioEnvase(db,p,listaId){const e=envase(db,p);return e?precioBase(db,e,listaId):0;}
+  function adicionales(db,p){return (p.adicionales||[]).map(c=>{const producto=db.productos.find(x=>x.id===c.id);if(!producto||producto.id===p.id||producto.envaseId||(producto.adicionales||[]).length||!Number.isInteger(c.cant)||c.cant<=0)throw new Error('Revisá los adicionales de '+p.nombre);return {producto,cant:c.cant};});}
+  function precioAdicionales(db,p,listaId){return adicionales(db,p).reduce((total,c)=>total+precioBase(db,c.producto,listaId)*c.cant,0);}
+  function precioComplementos(db,p,listaId,incluir){return precioAdicionales(db,p,listaId)+(incluyeEnvase(p,incluir)?precioEnvase(db,p,listaId):0);}
   function incluyeEnvase(p,eleccion){if(eleccion===false&&p.envaseId&&tipoEnvase(p)!=='bidonId')throw new Error('Sólo se puede quitar el envase en productos de 5 L.');return eleccion===undefined?(tipoEnvase(p)==='bidonId'?p.incluirEnvaseDefecto!==false:true):eleccion!==false;}
-  function precioLista(db,id,listaId,incluir){const promo=db.promociones?.find(p=>p.id===id);if(promo)return Number(promo.precio);const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+(incluyeEnvase(p,incluir)?precioEnvase(db,p,listaId):0));}
+  function precioLista(db,id,listaId,incluir){const promo=db.promociones?.find(p=>p.id===id);if(promo)return Number(promo.precio);const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+precioComplementos(db,p,listaId,incluir));}
   const factorIVA=p=>1+(Number(p.iva)||0)/100;
   function calcularPrecio(input){const costo=Number(input.costo),iva=Number(input.iva||0),envasePrecio=Number(input.envasePrecio||0);if(!Number.isFinite(costo)||costo<0||![0,10.5,21].includes(iva)||!Number.isFinite(envasePrecio)||envasePrecio<0)throw new Error('Costo, IVA o envase inválidos.');let neto;if(input.modo==='precioFinal'){const final=Number(input.precioFinal);if(!Number.isFinite(final)||final<envasePrecio)throw new Error('El precio final no puede ser menor al envase.');neto=(final-envasePrecio)/(1+iva/100);}else if(input.modo==='margenVenta'){const m=Number(input.margenVenta);if(!Number.isFinite(m)||m>=100)throw new Error('El margen sobre venta debe ser menor al 100%.');neto=costo/(1-m/100);}else{const m=Number(input.margen||0);if(!Number.isFinite(m)||m< -100)throw new Error('Ganancia inválida.');neto=costo*(1+m/100);}const precioBase=redondear2(neto*(1+iva/100)),precioFinal=redondear2(precioBase+envasePrecio);return {costo,iva,margen:costo>0?redondear2((neto/costo-1)*100):null,margenVenta:neto>0?redondear2((neto-costo)/neto*100):null,precioBase,precioFinal};}
   function tipoEnvase(p){if(!['Líquidos 1L','Líquidos 5L','Pileta'].includes(p.categoria))return null;const pres=String(p.presentacion||p.nombre).toUpperCase();if(/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres))return 'botellaId';if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres))return 'bidonId';return null;}
   function vincularEnvase(db,p){const tipo=tipoEnvase(p);if(db.catalogo?.envases&&tipo)p.envaseId=db.catalogo.envases[tipo];else delete p.envaseId;}
   function consumos(db,items,snapshot=false){
     const result=new Map(),sumar=(id,cant)=>result.set(id,(result.get(id)||0)+cant);
-    const producto=(it,multiplicador)=>{const p=db.productos.find(p=>p.id===it.id);if(!p||!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Producto o cantidad inválidos.');sumar(p.id,it.cant*multiplicador);const e=p.envaseId&&incluyeEnvase(p,it.incluirEnvase)?envase(db,p):null;if(e){if(!Number.isInteger(it.cant*multiplicador))throw new Error('Los productos con envase se venden por unidades enteras.');sumar(e.id,it.cant*multiplicador);}};
+    const producto=(it,multiplicador)=>{const p=db.productos.find(p=>p.id===it.id);if(!p||!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Producto o cantidad inválidos.');const cantidad=it.cant*multiplicador;sumar(p.id,cantidad);const e=p.envaseId&&incluyeEnvase(p,it.incluirEnvase)?envase(db,p):null, extras=adicionales(db,p);if((e||extras.length)&&!Number.isInteger(cantidad))throw new Error('Los productos con adicionales se venden por unidades enteras.');if(e)sumar(e.id,cantidad);for(const extra of extras)sumar(extra.producto.id,extra.cant*cantidad);};
     for(const it of items){if(!Number.isFinite(it.cant)||it.cant<=0)throw new Error('Cantidad inválida.');
       if(snapshot&&Array.isArray(it.consumosStock)){for(const c of it.consumosStock){if(!Number.isFinite(c.cant)||c.cant<=0)throw new Error('Componente inválido.');sumar(c.id,c.cant*it.cant);}continue;}
       if(snapshot){if(!db.productos.some(p=>p.id===it.id))throw new Error('Producto no encontrado.');sumar(it.id,it.cant);if(it.envaseVenta){if(!Number.isFinite(it.envaseVenta.cant)||it.envaseVenta.cant<=0)throw new Error('Envase inválido.');sumar(it.envaseVenta.id,it.envaseVenta.cant*it.cant);}continue;}
@@ -364,7 +367,7 @@ function crearStore(localStorage, catalogoInput){
       const n=Number(value);if(!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Precio inválido.');
       const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');
       if(field==='costo')cambiarCosto(db,p,n);
-      if(field==='precio'){const base=redondear2(n-(incluyeEnvase(p)?precioEnvase(db,p,listaDefault):0));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio/factorIVA(p),p.costo);}
+      if(field==='precio'){const base=redondear2(n-precioComplementos(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio/factorIVA(p),p.costo);}
       if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100)*factorIVA(p));}
       save(db);return p;
     },
@@ -381,7 +384,7 @@ function crearStore(localStorage, catalogoInput){
       if(!['margen','precio'].includes(field))throw new Error('El costo es común. Modificalo en Mostrador.');
       const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),p=db.productos.find(p=>p.id===id),n=Number(value);
       if(!list||!p||!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Lista, producto o precio inválido.');
-      const base=redondear2(field==='precio'?n-(incluyeEnvase(p)?precioEnvase(db,p,listaId):0):p.costo*(1+n/100)*factorIVA(p));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
+      const base=redondear2(field==='precio'?n-precioComplementos(db,p,listaId):p.costo*(1+n/100)*factorIVA(p));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
     },
     aplicarMargenLista(listaId,margen,categoria){
       if(listaId===listaDefault)return this.aplicarMargen(margen,categoria);
@@ -458,7 +461,7 @@ function crearStore(localStorage, catalogoInput){
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     guardarProductoEdicion(draft,base){
       const db=load(),index=db.productos.findIndex(p=>p.id===draft.id);
-      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};if(nuevo.iva!=null)nuevo.margen=nuevo.costo>0?redondear2(margenReal(nuevo.precio/factorIVA(nuevo),nuevo.costo)):null;vincularEnvase(db,nuevo);db.productos.push(nuevo);save(db);return;}
+      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};if(nuevo.iva!=null)nuevo.margen=nuevo.costo>0?redondear2(margenReal(nuevo.precio/factorIVA(nuevo),nuevo.costo)):null;vincularEnvase(db,nuevo);adicionales(db,nuevo);if(nuevo.adicionales?.some(c=>c.id===nuevo.envaseId))throw new Error('El envase ya está incluido automáticamente.');db.productos.push(nuevo);save(db);return;}
       if(index<0)throw new Error('El producto fue eliminado en otra pestaña.');
       const current=db.productos[index],next={...current};
       const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','iva','incluirEnvaseDefecto','stock','activo','provId'];
@@ -469,9 +472,10 @@ function crearStore(localStorage, catalogoInput){
         if(current[field]!==base[field]&&current[field]!==draft[field])throw new Error('Cambió '+field+' durante la subida. Reabrí la edición; la foto puede haberse guardado online.');
         next[field]=draft[field];
       }
+      if(JSON.stringify(draft.adicionales||[])!==JSON.stringify(base.adicionales||[])){if(JSON.stringify(current.adicionales||[])!==JSON.stringify(base.adicionales||[])&&JSON.stringify(current.adicionales||[])!==JSON.stringify(draft.adicionales||[]))throw new Error('Los adicionales cambiaron en otro equipo. Reabrí la edición.');next.adicionales=draft.adicionales||[];}
       for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])next[field]=draft[field];
       if(next.iva!=null&&['costo','precio','margen','iva'].some(k=>next[k]!==current[k]))next.margen=next.costo>0?redondear2(margenReal(next.precio/factorIVA(next),next.costo)):null;
-      vincularEnvase(db,next);db.productos[index]=next;save(db);
+      vincularEnvase(db,next);adicionales(db,next);if(next.adicionales?.some(c=>c.id===next.envaseId))throw new Error('El envase ya está incluido automáticamente.');db.productos[index]=next;save(db);
     },
     // Apply photo fields to fresh data, never a stale snapshot of sales/stock.
     actualizarFotos(patches){
@@ -487,7 +491,7 @@ function crearStore(localStorage, catalogoInput){
       }
       if(changed)save(db);return changed;
     },
-    eliminar(id){ const db=load();if(db.promociones.some(p=>p.items.some(c=>c.id===id))||db.productos.some(p=>p.envaseId===id)||Object.values(db.catalogo.envases||{}).includes(id))throw new Error('El envase está vinculado a líquidos. No se puede borrar.');db.productos=db.productos.filter(x=>x.id!==id);for(const l of db.listasPrecios)delete l.precios[id]; save(db); },
+    eliminar(id){ const db=load();if(db.promociones.some(p=>p.items.some(c=>c.id===id))||db.productos.some(p=>p.envaseId===id||(p.adicionales||[]).some(c=>c.id===id))||Object.values(db.catalogo.envases||{}).includes(id))throw new Error('El producto está vinculado como envase o adicional. No se puede borrar.');db.productos=db.productos.filter(x=>x.id!==id);for(const l of db.listasPrecios)delete l.precios[id]; save(db); },
     // Actualiza costo / precio / margen de productos ya cargados.
     // El codigo se repite entre 1L y 5L: se desambigua por categoria y presentacion.
     // lista: [{codigo?, nombre?, presentacion?, costo?, precio?, margen?, provId?}]
@@ -509,7 +513,7 @@ function crearStore(localStorage, catalogoInput){
         if(!p){ faltan.push(r.codigo||r.nombre||'?'); return; }
         if(r.costo!=null && r.costo!=='') p.costo=Number(r.costo);
         if(r.margen!=null && r.margen!=='') p.margen=Number(r.margen);
-        if(r.precio!=null && r.precio!==''){const base=redondear2(Number(r.precio)-(incluyeEnvase(p)?precioEnvase(db,p,listaDefault):0));if(base<0)throw new Error('La venta final no puede ser menor al envase.');p.precio=base;}
+        if(r.precio!=null && r.precio!==''){const base=redondear2(Number(r.precio)-precioComplementos(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al envase.');p.precio=base;}
         else if(r.costo!=null && r.costo!=='' && p.margen!=null && p.iva!=null)p.precio=redondear2(p.costo*(1+p.margen/100)*factorIVA(p));
         p.margen=margenReal(p.precio/factorIVA(p),p.costo);
         if(r.provId) p.provId=r.provId;
