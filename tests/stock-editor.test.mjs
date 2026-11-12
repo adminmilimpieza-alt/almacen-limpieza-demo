@@ -18,6 +18,12 @@ test('editar sólo stock conserva precio e IVA desconocido sin asignar una tasa'
  await f.get('guardar-prod').onclick({preventDefault(){}});
  assert.equal(f.saved.length,1);assert.equal(f.saved[0].precio,185);assert.equal(f.saved[0].iva,undefined);assert.equal(f.saved[0].stock,9);
 });
+test('editar precio final de un producto anterior no exige inventar su IVA',async()=>{
+ const f=fixture({id:'p',nombre:'Legado',costo:100,precio:185,margen:50,stock:3});
+ f.created.find(e=>e.textContent==='Editar').onclick();f.get('f-precio').value='250';f.get('f-precio').input();
+ await f.get('guardar-prod').onclick({preventDefault(){}});
+ assert.equal(f.saved.length,1);assert.equal(f.saved[0].precio,250);assert.equal(f.saved[0].iva,undefined);assert.equal(f.saved[0].stock,3);
+});
 test('nuevo producto carga proveedor y exige elegir IVA para guardar precio',async()=>{
  const f=fixture();f.get('nuevo').onclick();assert.match(f.get('f-prov').innerHTML,/Proveedor Uno/);
  f.get('f-nombre').value='Nuevo';f.get('f-costo').value=100;f.get('f-margen').value=50;f.get('f-costo').input();

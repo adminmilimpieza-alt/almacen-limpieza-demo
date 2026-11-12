@@ -210,9 +210,11 @@ const Stock = (() => {
       const button=$('guardar-prod');if(button.disabled)return;
       const db = Store.get();
       const cur = editId && db.productos.find(x=>x.id===editId);
-      if((precioEditado||!cur)&&$('f-iva').value===''){alert('Elegí IVA 10,5% o 21% para guardar cambios de precio.');return;}
+      const precioManualSinIVA=!!cur&&precioEditado&&ultimoModo==='precioFinal'&&$('f-iva').value===''&&Number($('f-costo').value)===Number(cur.costo)&&String($('f-margen').value)===String(cur.margen??'');
+      if((precioEditado||!cur)&&$('f-iva').value===''&&!precioManualSinIVA){alert('Elegí IVA 10,5% o 21% para guardar cambios de precio.');return;}
       let calculo=null;
-      if(precioEditado||!cur){try{calculo=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo:ultimoModo});}catch(error){alert(error.message);return;}}
+      if(precioManualSinIVA){const precio=Number($('f-precio').value),base=Math.round((precio-envaseEditor())*100)/100;if(!Number.isFinite(precio)||base<0){alert('El precio final no puede ser menor al valor de los adicionales.');return;}calculo={costo:cur.costo,precioBase:base,margen:cur.margen};}
+      else if(precioEditado||!cur){try{calculo=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo:ultimoModo});}catch(error){alert(error.message);return;}}
       let p = Object.assign({}, cur||{}, {
         id: editId || crypto.randomUUID(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
@@ -220,7 +222,7 @@ const Stock = (() => {
         costo: calculo?calculo.costo:cur.costo,
         precio: calculo?calculo.precioBase:cur.precio,
         margen: calculo?calculo.margen:cur.margen,
-        ...(calculo?{iva:calculo.iva}:{}),
+        ...(calculo&&!precioManualSinIVA?{iva:calculo.iva}:{}),
         incluirEnvaseDefecto:$('f-incluir-envase').checked,
         adicionales:adicionalesActuales.map(c=>({...c})),
         stock:Number($('f-stock').value),
