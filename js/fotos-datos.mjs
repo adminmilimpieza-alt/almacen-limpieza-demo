@@ -9,7 +9,7 @@ export async function mergePhotos(db,manifest){
   const keys=await Promise.all(db.productos.map(p=>photoKey(p)));
   const patches=[];let pending=0,conflicts=0;
   db.productos.forEach((p,i)=>{
-    const row=remote.get(keys[i]);
+    const row=remote.get(p.fotoOnlineKey??keys[i]);
     if(localPhoto(p.foto)||p.fotoPendiente){pending++;if(row)conflicts++;return;}
     if(!row)return;
     const foto=row.deleted?'':`/api/photos/${row.key}?v=${row.revision}`;
@@ -22,7 +22,18 @@ export async function mergePhotos(db,manifest){
 export async function preparePhotoEdit(draft,original,current){
   const product={...draft};
   const same=original&&await photoKey(original)===await photoKey(product);
-  if(!same){delete product.fotoOnlineKey;delete product.fotoOnlineRevision;return {product,base:null};}
+  if(!same){
+    const soloCambioDeRubro=original&&
+      await photoKey({...product,categoria:original.categoria})===await photoKey(original);
+    if(soloCambioDeRubro&&product.foto===(original.foto||original.img||'')&&
+      !current?.fotoPendiente&&current?.fotoOnlineKey&&current.fotoOnlineRevision){
+      for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])product[field]=current[field];
+      return {product,base:current,conservarFoto:true};
+    }
+    delete product.fotoOnlineKey;
+    delete product.fotoOnlineRevision;
+    return {product,base:null};
+  }
   if(product.foto===original.foto&&!original.fotoPendiente){
     for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])product[field]=current[field];
     return {product,base:current};

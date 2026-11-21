@@ -71,3 +71,25 @@ test('rechaza un cambio de stock que entró en conflicto durante la subida',()=>
   s.abrirTurno(0);s.cobrar([{id:'p1',nombre:'Lavandina',precio:100,cant:1}],'efectivo','c1');
   assert.throws(()=>s.guardarProductoEdicion({...original,stock:50},original));assert.equal(s.get().productos[0].stock,original.stock-1);
 });
+
+test('mover un producto de rubro reutiliza su foto online y la sincroniza por la clave guardada',async()=>{
+  const key=await photoKey(product);
+  const original={...product,foto:'/api/photos/'+key+'?v=old',fotoOnlineKey:key,fotoOnlineRevision:'old'};
+  const current={...original,foto:'/api/photos/'+key+'?v=new',fotoOnlineRevision:'new'};
+  const draft={...original,categoria:'Nuevo rubro'};
+  const prepared=await sync.preparePhotoEdit(draft,original,current);
+
+  assert.equal(prepared.conservarFoto,true);
+  assert.equal(prepared.product.foto,current.foto);
+  assert.equal(prepared.product.fotoOnlineKey,key);
+
+  const s=store(),base=s.get().productos[0];
+  s.guardarProductoEdicion(prepared.product,base);
+  const db=s.get();
+  assert.equal(db.productos[0].categoria,'Nuevo rubro');
+  assert.equal(db.productos[0].stock,base.stock);
+  assert.equal(db.productos[0].precio,base.precio);
+  const otherKey=await photoKey(draft);
+  await sync.mergePhotos(db,[{key:otherKey,revision:'foto-ajena'},{key,revision:'nueva-revision'}]);
+  assert.equal(db.productos[0].foto,'/api/photos/'+key+'?v=nueva-revision');
+});

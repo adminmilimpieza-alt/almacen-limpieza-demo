@@ -338,7 +338,7 @@ const Stock = (() => {
         if(typeof Fotos==='undefined'){
           if(p.foto!==cur?.foto)throw new Error('Esperá a que cargue la conexión de fotos online.');
         }else{
-          try{const draft=await Fotos.prepararEdicion(p,fotoBase,cur);p=draft.product;p=await Fotos.guardar(p,draft.base);}
+          try{const draft=await Fotos.prepararEdicion(p,fotoBase,cur);p=draft.conservarFoto?draft.product:await Fotos.guardar(draft.product,draft.base);}
           catch(error){throw new Error('La foto no se pudo guardar online. Reintentá sin cerrar este formulario. '+error.message);}
         }
         await Store.guardarProductoEdicion(p,fotoBase);render();Caja.refresh();$('modal').close();

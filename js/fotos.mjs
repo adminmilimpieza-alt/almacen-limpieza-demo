@@ -1,5 +1,5 @@
 import {photoKey,photoProduct,photoIdentity} from './foto-identidad.mjs';
-import {mergePhotos,localPhoto,backupPhotos,preparePhotoEdit} from './fotos-datos.mjs';
+import {mergePhotos,localPhoto,backupPhotos,preparePhotoEdit} from './fotos-datos.mjs?v=45';
 const $=id=>document.getElementById(id);
 let manifest=[],refreshing=null,working=false,notice='';
 const setStatus=text=>{if($('fotos-estado'))$('fotos-estado').textContent=text;};
@@ -51,8 +51,9 @@ async function guardar(product,previous){
   if(same&&product.foto===previous.foto&&!previous.fotoPendiente&&previous.fotoOnlineRevision)return product;
   if(!product.foto&&!previous?.foto&&!previous?.fotoOnlineRevision&&!previous?.fotoPendiente)return product;
   const photo=product.foto?await normalizarFoto(product.foto):'';
-  let expectedRevision=same?(previous?.fotoOnlineRevision||null):null;
-  if(previous?.fotoPendiente||(localPhoto(previous?.foto)&&!expectedRevision)){
+  const claveAnteriorDistinta=previous?.fotoOnlineKey&&previous.fotoOnlineKey!==key;
+  let expectedRevision=same&&!claveAnteriorDistinta?(previous?.fotoOnlineRevision||null):null;
+  if(claveAnteriorDistinta||previous?.fotoPendiente||(localPhoto(previous?.foto)&&!expectedRevision)){
     const remote=(await api('/api/photos')).photos.find(r=>r.key===key);
     if(remote&&remote.revision!==expectedRevision){
       if(!confirm('Ya hay otra foto online para este producto. ¿Querés reemplazarla por la foto de este equipo?'))throw new Error('No se reemplazó la foto online. La foto local se conserva para revisar.');
