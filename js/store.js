@@ -320,6 +320,39 @@ function crearStore(localStorage, catalogoInput){
   function incluyeEnvase(p,eleccion){if(eleccion===false&&p.envaseId&&tipoEnvase(p)!=='bidonId')throw new Error('Sólo se puede quitar el envase en productos de 5 L.');return eleccion===undefined?(tipoEnvase(p)==='bidonId'?p.incluirEnvaseDefecto!==false:true):eleccion!==false;}
   function precioLista(db,id,listaId,incluir){const promo=db.promociones?.find(p=>p.id===id);if(promo)return Number(promo.precio);const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+precioComplementos(db,p,listaId,incluir));}
   const factorIVA=p=>1+(Number(p.iva)||0)/100;
+  const factorFinanciero=tasa=>1+tasa/100;
+  const factorVenta=p=>factorIVA(p)*factorFinanciero(p.costoFinanciero??0);
+  function calcularPrecioFinanciero({costo, iva, margen, costoFinanciero, envasePrecio=0, precioFinal, modo}){
+    if(!Number.isFinite(costo)||costo<0||![0,10.5,21].includes(iva)||!Number.isFinite(envasePrecio)||envasePrecio<0){
+      throw new Error('Ingresá un costo válido y seleccioná el IVA.');
+    }
+    if(!Number.isFinite(costoFinanciero)||costoFinanciero<0||costoFinanciero>=100){
+      throw new Error('El costo financiero debe estar entre 0% y menos de 100%.');
+    }
+    const multiplicadorFinanciero=factorFinanciero(costoFinanciero);
+    const tasaIVA=iva/100;
+    const inverso=modo==='precioFinal';
+    let costoConGanancia, precioBase;
+    if(inverso){
+      if(!Number.isFinite(precioFinal)||precioFinal<envasePrecio){
+        throw new Error('Ingresá un precio válido que cubra los envases y adicionales.');
+      }
+      precioBase=precioFinal-envasePrecio;
+      costoConGanancia=precioBase/multiplicadorFinanciero/(1+tasaIVA);
+      margen=costo>0?(costoConGanancia-costo)/costo*100:null;
+    }else{
+      if(!Number.isFinite(margen)||margen< -100)throw new Error('Ingresá una ganancia de al menos -100%.');
+      costoConGanancia=costo*(1+margen/100);
+      precioBase=costoConGanancia*(1+tasaIVA)*multiplicadorFinanciero;
+      precioFinal=precioBase+envasePrecio;
+    }
+    if(!Number.isFinite(precioFinal)||(margen!==null&&!Number.isFinite(margen)))throw new Error('El resultado excede el rango de cálculo.');
+    const ivaImporte=costoConGanancia*tasaIVA;
+    const subtotalIVA=costoConGanancia+ivaImporte;
+    return {costo,iva,margen,costoFinanciero,envasePrecio,precioBase,precioFinal,
+      gananciaImporte:costoConGanancia-costo,costoConGanancia,ivaImporte,subtotalIVA,
+      financieroImporte:precioBase-subtotalIVA};
+  }
   function calcularPrecio(input){const costo=Number(input.costo),iva=Number(input.iva||0),envasePrecio=Number(input.envasePrecio||0);if(!Number.isFinite(costo)||costo<0||![0,10.5,21].includes(iva)||!Number.isFinite(envasePrecio)||envasePrecio<0)throw new Error('Costo, IVA o envase inválidos.');let neto;if(input.modo==='precioFinal'){const final=Number(input.precioFinal);if(!Number.isFinite(final)||final<envasePrecio)throw new Error('El precio final no puede ser menor al envase.');neto=(final-envasePrecio)/(1+iva/100);}else if(input.modo==='margenVenta'){const m=Number(input.margenVenta);if(!Number.isFinite(m)||m>=100)throw new Error('El margen sobre venta debe ser menor al 100%.');neto=costo/(1-m/100);}else{const m=Number(input.margen||0);if(!Number.isFinite(m)||m< -100)throw new Error('Ganancia inválida.');neto=costo*(1+m/100);}const precioBase=redondear2(neto*(1+iva/100)),precioFinal=redondear2(precioBase+envasePrecio);return {costo,iva,margen:costo>0?redondear2((neto/costo-1)*100):null,margenVenta:neto>0?redondear2((neto-costo)/neto*100):null,precioBase,precioFinal};}
   function tipoEnvase(p){if(!['Líquidos 1L','Líquidos 5L','Pileta'].includes(p.categoria))return null;const pres=String(p.presentacion||p.nombre).toUpperCase();if(/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres))return 'botellaId';if(/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres))return 'bidonId';return null;}
   function vincularEnvase(db,p){const tipo=tipoEnvase(p);if(db.catalogo?.envases&&tipo)p.envaseId=db.catalogo.envases[tipo];else delete p.envaseId;}
@@ -336,10 +369,10 @@ function crearStore(localStorage, catalogoInput){
   function cambiarCosto(db,p,costo){
     const anterior=Number(p.costo)||0,venta=Number(p.precio)||0;
     if(costo>anterior){
-      p.precio=redondear2(anterior>0?venta*costo/anterior:costo*(1+(Number(p.margen)||0)/100));
+      p.precio=redondear2(anterior>0?venta*costo/anterior:costo*(1+(Number(p.margen)||0)/100)*(p.costoFinanciero==null?1:factorVenta(p)));
       for(const list of db.listasPrecios||[])if(Object.hasOwn(list.precios||{},p.id))list.precios[p.id]=redondear2(anterior>0?list.precios[p.id]*costo/anterior:list.precios[p.id]);
     }
-    p.costo=costo;p.margen=margenReal(p.precio/factorIVA(p),costo);
+    p.costo=costo;p.margen=margenReal(p.precio/factorVenta(p),costo);
   }
   return {
     get(){ return load(); },
@@ -347,7 +380,7 @@ function crearStore(localStorage, catalogoInput){
       const db=load();for(const [key,re] of [['botellaId',/^BOTELLA\b/i],['bidonId',/^BID[OÓ]N\b/i]]){const e=db.productos.find(p=>p.id===input?.[key]);if(!e||e.activo===false||e.envaseId||!re.test(e.nombre)||!new RegExp('(?:^|\\s)'+(key==='botellaId'?1:5)+'\\s*(?:L|LT|LTS)\\b','i').test(e.presentacion||e.nombre))throw new Error('Elegí un envase '+(key==='botellaId'?'botella de 1 L':'bidón de 5 L')+' válido.');}
       db.catalogo.envases={botellaId:input.botellaId,bidonId:input.bidonId};let vinculados=0;for(const p of db.productos){vincularEnvase(db,p);if(p.envaseId)vinculados++;}save(db);return {vinculados};
     },
-    previsualizarPrecioProducto(input){return calcularPrecio(input);},
+    previsualizarPrecioProducto(input){return input.costoFinanciero===undefined?calcularPrecio(input):calcularPrecioFinanciero(input);},
     guardarPromocion(input){const db=load(),id=input.id||newId('promo-'),nombre=String(input.nombre||'').trim();if(db.productos.some(p=>p.id===id)||!/^[\w-]{1,100}$/.test(id)||!nombre||nombre.length>180||!Number.isFinite(input.precio)||input.precio<=0||!Array.isArray(input.items)||!input.items.length||input.items.length>100)throw new Error('Nombre, precio y componentes de la promoción requeridos.');const items=input.items.map(c=>{if(!db.productos.some(p=>p.id===c.id)||!Number.isInteger(c.cant)||c.cant<=0||c.cant>10000||c.incluirEnvase!==undefined&&typeof c.incluirEnvase!=='boolean')throw new Error('Componente de promoción inválido.');const p=db.productos.find(p=>p.id===c.id);return {id:c.id,cant:c.cant,incluirEnvase:incluyeEnvase(p,c.incluirEnvase)};});const promo={id,nombre,precio:redondear2(input.precio),items,activo:input.activo!==false};const i=db.promociones.findIndex(p=>p.id===id);if(i<0)db.promociones.push(promo);else db.promociones[i]=promo;save(db);return promo;},
     eliminarPromocion(id){const db=load(),p=db.promociones.find(p=>p.id===id);if(!p)throw new Error('Promoción no encontrada.');p.activo=false;save(db);},
     configurarRespaldoDrive(input){const email=String(input.email||'').trim().toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw new Error('Correo de respaldo inválido.');const db=load();db.catalogo.respaldoDrive={...(db.catalogo.respaldoDrive||{}),email,revision:db.catalogo.respaldoDrive?.email===email?db.catalogo.respaldoDrive.revision:newId('destino-')};save(db);return {email};},
@@ -367,8 +400,8 @@ function crearStore(localStorage, catalogoInput){
       const n=Number(value);if(!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Precio inválido.');
       const db=load(),p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');
       if(field==='costo')cambiarCosto(db,p,n);
-      if(field==='precio'){const base=redondear2(n-precioComplementos(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio/factorIVA(p),p.costo);}
-      if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100)*factorIVA(p));}
+      if(field==='precio'){const base=redondear2(n-precioComplementos(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');p.precio=base;p.margen=margenReal(p.precio/factorVenta(p),p.costo);}
+      if(field==='margen'){p.margen=n;p.precio=redondear2(p.costo*(1+n/100)*factorVenta(p));}
       save(db);return p;
     },
     guardarListaPrecios(input){
@@ -384,12 +417,12 @@ function crearStore(localStorage, catalogoInput){
       if(!['margen','precio'].includes(field))throw new Error('El costo es común. Modificalo en Mostrador.');
       const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),p=db.productos.find(p=>p.id===id),n=Number(value);
       if(!list||!p||!Number.isFinite(n)||n<(field==='margen'?-100:0))throw new Error('Lista, producto o precio inválido.');
-      const base=redondear2(field==='precio'?n-precioComplementos(db,p,listaId):p.costo*(1+n/100)*factorIVA(p));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
+      const base=redondear2(field==='precio'?n-precioComplementos(db,p,listaId):p.costo*(1+n/100)*factorVenta(p));if(base<0)throw new Error('La venta final no puede ser menor al precio del envase.');list.precios=list.precios||{};list.precios[id]=base;save(db);
     },
     aplicarMargenLista(listaId,margen,categoria){
       if(listaId===listaDefault)return this.aplicarMargen(margen,categoria);
       const db=load(),list=db.listasPrecios.find(l=>l.id===listaId),n=Number(margen);if(!list||!Number.isFinite(n)||n< -100)throw new Error('Lista o margen inválido.');let count=0;
-      for(const p of db.productos)if((!categoria||p.categoria===categoria)&&p.costo>0){list.precios[p.id]=redondear2(p.costo*(1+n/100)*factorIVA(p));count++;}save(db);return count;
+      for(const p of db.productos)if((!categoria||p.categoria===categoria)&&p.costo>0){list.precios[p.id]=redondear2(p.costo*(1+n/100)*factorVenta(p));count++;}save(db);return count;
     },
     restablecerPrecioLista(listaId,id){const db=load(),list=db.listasPrecios.find(l=>l.id===listaId);if(!list)throw new Error('Lista no encontrada.');delete list.precios[id];save(db);},
     aplicarComparacionCostos(rows){
@@ -433,7 +466,7 @@ function crearStore(localStorage, catalogoInput){
         const precioAnterior=Number(actual.precio)||0,id=provId(f.provNombre);
         actual.costo=Number(f.costo)>0?Number(f.costo):Number(actual.costo)||0;
         actual.precio=Number(f.precio);
-        actual.margen=actual.iva!=null?margenReal(actual.precio/factorIVA(actual),actual.costo):(f.margen==null?margenReal(actual.precio,actual.costo):Number(f.margen));
+        actual.margen=actual.iva!=null?margenReal(actual.precio/factorVenta(actual),actual.costo):(f.margen==null?margenReal(actual.precio,actual.costo):Number(f.margen));
         actual.provId=id;actual.categoria=f.categoria||actual.categoria||'Accesorios';actual.activo=true;
         if(!actual.codigo&&f.codigo)actual.codigo=String(f.codigo).slice(0,40);
         // Si el código es único en ambos lados, cambió la presentación escrita y no el producto.
@@ -461,10 +494,14 @@ function crearStore(localStorage, catalogoInput){
       if(i>=0)db.productos[i]=p; else db.productos.push(p); save(db); },
     guardarProductoEdicion(draft,base){
       const db=load(),index=db.productos.findIndex(p=>p.id===draft.id);
-      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};if(nuevo.iva!=null)nuevo.margen=nuevo.costo>0?redondear2(margenReal(nuevo.precio/factorIVA(nuevo),nuevo.costo)):null;vincularEnvase(db,nuevo);adicionales(db,nuevo);if(nuevo.adicionales?.some(c=>c.id===nuevo.envaseId))throw new Error('El envase ya está incluido automáticamente.');db.productos.push(nuevo);save(db);return;}
+      if(!base){if(index>=0)throw new Error('El producto ya existe. Actualizá la lista.');const nuevo={...draft};if(nuevo.iva!=null&&nuevo.costoFinanciero==null)nuevo.margen=nuevo.costo>0?redondear2(margenReal(nuevo.precio/factorVenta(nuevo),nuevo.costo)):null;vincularEnvase(db,nuevo);adicionales(db,nuevo);if(nuevo.adicionales?.some(c=>c.id===nuevo.envaseId))throw new Error('El envase ya está incluido automáticamente.');db.productos.push(nuevo);save(db);return;}
       if(index<0)throw new Error('El producto fue eliminado en otra pestaña.');
       const current=db.productos[index],next={...current};
-      const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','iva','incluirEnvaseDefecto','stock','activo','provId'];
+      const fields=['codigo','nombre','categoria','presentacion','costo','precio','margen','iva','costoFinanciero','incluirEnvaseDefecto','stock','activo','provId'];
+      const pricing=['costo','precio','margen','iva','costoFinanciero'];
+      if(draft.costoFinanciero!=null&&pricing.some(k=>draft[k]!==base[k])&&pricing.some(k=>current[k]!==base[k]&&current[k]!==draft[k])){
+        throw new Error('El precio o los datos de cálculo cambiaron en otro equipo. Reabrí la edición.');
+      }
       const identifiers=['codigo','categoria','presentacion',...(!base.codigo?['nombre']:[])];
       for(const field of identifiers)if(current[field]!==base[field]&&draft[field]!==current[field])throw new Error('La identidad del producto cambió en otra pestaña. Reabrí la edición.');
       for(const field of fields){
@@ -474,7 +511,7 @@ function crearStore(localStorage, catalogoInput){
       }
       if(JSON.stringify(draft.adicionales||[])!==JSON.stringify(base.adicionales||[])){if(JSON.stringify(current.adicionales||[])!==JSON.stringify(base.adicionales||[])&&JSON.stringify(current.adicionales||[])!==JSON.stringify(draft.adicionales||[]))throw new Error('Los adicionales cambiaron en otro equipo. Reabrí la edición.');next.adicionales=draft.adicionales||[];}
       for(const field of ['foto','fotoOnlineKey','fotoOnlineRevision','fotoPendiente'])next[field]=draft[field];
-      if(next.iva!=null&&['costo','precio','margen','iva'].some(k=>next[k]!==current[k]))next.margen=next.costo>0?redondear2(margenReal(next.precio/factorIVA(next),next.costo)):null;
+      if(next.iva!=null&&next.costoFinanciero==null&&pricing.some(k=>next[k]!==current[k]))next.margen=next.costo>0?redondear2(margenReal(next.precio/factorVenta(next),next.costo)):null;
       vincularEnvase(db,next);adicionales(db,next);if(next.adicionales?.some(c=>c.id===next.envaseId))throw new Error('El envase ya está incluido automáticamente.');db.productos[index]=next;save(db);
     },
     // Apply photo fields to fresh data, never a stale snapshot of sales/stock.
@@ -514,8 +551,8 @@ function crearStore(localStorage, catalogoInput){
         if(r.costo!=null && r.costo!=='') p.costo=Number(r.costo);
         if(r.margen!=null && r.margen!=='') p.margen=Number(r.margen);
         if(r.precio!=null && r.precio!==''){const base=redondear2(Number(r.precio)-precioComplementos(db,p,listaDefault));if(base<0)throw new Error('La venta final no puede ser menor al envase.');p.precio=base;}
-        else if(r.costo!=null && r.costo!=='' && p.margen!=null && p.iva!=null)p.precio=redondear2(p.costo*(1+p.margen/100)*factorIVA(p));
-        p.margen=margenReal(p.precio/factorIVA(p),p.costo);
+        else if(r.costo!=null && r.costo!=='' && p.margen!=null && p.iva!=null)p.precio=redondear2(p.costo*(1+p.margen/100)*factorVenta(p));
+        p.margen=margenReal(p.precio/factorVenta(p),p.costo);
         if(r.provId) p.provId=r.provId;
         tocados++;
       });
@@ -531,10 +568,10 @@ function crearStore(localStorage, catalogoInput){
         if(soloRubro && p.categoria!==soloRubro) return;
         if(propio){
           if(p.margen==null) return;
-          p.precio = redondear2(p.costo*(1+p.margen/100));
+          p.precio = redondear2(p.costo*(1+p.margen/100)*(p.costoFinanciero==null?1:factorVenta(p)));
         } else {
           p.margen=Number(pct);
-          p.precio = redondear2(p.costo*(1+p.margen/100));
+          p.precio = redondear2(p.costo*(1+p.margen/100)*(p.costoFinanciero==null?1:factorVenta(p)));
         }
         n++;
       });

@@ -346,21 +346,28 @@
     <select id="f-prov"></select>
     <label class="producto-campo" for="f-costo">Costo de compra sin IVA ($)</label>
     <input id="f-costo" type="number" min="0" step="0.01" placeholder="Costo de compra">
+    <label id="f-costo-litro-opcion" class="chk" hidden><input id="f-costo-litro" type="checkbox"> Ingresar costo por litro</label>
+    <label class="producto-campo" for="f-margen">Ganancia sobre costo (%)</label>
+    <input id="f-margen" type="number" min="-100" step="any" placeholder="Ej.: 50">
     <label class="producto-campo" for="f-iva">IVA</label>
-    <select id="f-iva"><option value="">Elegí IVA</option><option value="10.5">10,5%</option><option value="21">21%</option></select>
-    <label class="producto-campo" for="f-margen-venta">Margen sobre venta (%)</label>
-    <input id="f-margen-venta" type="number" step="0.01">
-    <label class="producto-campo" for="f-margen">Costo financiero (% sobre costo)</label>
-    <input id="f-margen" type="number" min="0" step="0.01" placeholder="Ej.: 50">
+    <select id="f-iva"><option value="" hidden>Sin definir (producto existente)</option><option value="0">Sin IVA (0%)</option><option value="10.5">10,5%</option><option value="21">21%</option></select>
+    <label class="chk"><input id="f-financiero" type="checkbox" checked> Costo financiero (10%)</label>
     <label class="producto-campo" for="f-adicional">Adicionales incluidos</label>
     <div class="row"><select id="f-adicional"><option value="">Elegí un adicional…</option></select><button type="button" id="f-adicional-agregar">Agregar</button></div>
     <div id="f-adicionales"></div><p class="hint">Creá el pulverizador, bolsas u otros productos con rubro Adicionales. Cada uno suma su precio de venta y se descuenta del stock al vender.</p>
-    <label class="producto-campo" for="f-precio">Precio final de venta ($)</label>
-    <input id="f-precio" type="number" min="0" step="0.01" placeholder="Precio final">
-    <label class="producto-campo" for="f-precio-redondeado">Precio redondeado sugerido ($)</label>
-    <div class="row"><input id="f-precio-redondeado" type="number" min="0" step="0.01" placeholder="Sugerencia editable"><button type="button" id="f-aplicar-redondeado">Usar este precio</button></div>
-    <p class="hint">Sugerencia al múltiplo de $10 más cercano. Podés cambiarla y elegir «Usar este precio» para cobrar ese importe.</p>
-    <label class="chk"><input id="f-incluir-envase" type="checkbox" checked> Incluir bidón por defecto (5 L)</label><p id="f-precio-detalle" class="hint"></p>
+    <div class="precios-resultado">
+      <label class="producto-campo" for="f-precio">Precio de venta calculado ($)</label>
+      <input id="f-precio" type="number" min="0" step="any">
+      <label class="producto-campo" for="f-precio-redondeado">Precio de venta redondeado ($)</label>
+      <input id="f-precio-redondeado" type="number" min="0" step="any" aria-describedby="f-precio-ayuda">
+      <p class="hint" id="f-precio-ayuda">Es el precio que se cobra. Podés editarlo para ver qué ganancia te queda.</p>
+      <p id="f-precio-detalle" class="hint" role="status"></p>
+      <details>
+        <summary>Ver desglose del precio</summary>
+        <dl id="f-precio-desglose"></dl>
+      </details>
+    </div>
+    <label class="chk"><input id="f-incluir-envase" type="checkbox" checked> Incluir bidón por defecto (5 L)</label>
     <label class="producto-campo" for="f-pres">Presentación</label>
     <input id="f-pres" placeholder="Ej.: 1 Lt, 5 Lts, x Unid">
     <label class="producto-campo" for="f-stock">Cantidad en stock (unidades)</label>

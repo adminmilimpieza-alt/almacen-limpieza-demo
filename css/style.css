@@ -370,3 +370,12 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 
 /* Navegación accesible también al abrir los módulos. */
 .main-nav{z-index:110}
+
+#form-prod .precios-resultado{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:0 12px 10px;margin-top:10px}
+#form-prod .precios-resultado summary{cursor:pointer;font-weight:600}
+#f-precio-desglose{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:8px 0 0}
+#f-precio-desglose dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+#f-precio-detalle:empty{display:none}
+#f-costo-litro-opcion[hidden]{display:none}
+
+#f-precio-detalle.precio-aviso{color:var(--pastel-red-tx)}

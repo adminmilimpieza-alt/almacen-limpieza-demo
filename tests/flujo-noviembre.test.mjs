@@ -7,3 +7,31 @@ test('promos usan precio propio, validan stock agregado y guardan componentes pa
 test('snapshot MP incluye promoción y componentes canónicos',()=>{const s=store(),p=s.guardarPromocion({nombre:'Promo',precio:200,items:[{id:'l',cant:2,incluirEnvase:false}],activo:true}),lines=s.prepararItemsVenta([{id:p.id,tipo:'promo',nombre:'Promo',precio:200,cant:1}]);s.registrarPagoMP({id:'mpx',payment_id:'1',status:'approved',items:lines,total:200});assert.equal(s.get().productos[0].stock,8);assert.equal(s.get().productos[1].stock,5);});
 test('CSV conserva IVA y precio actual si aún no se eligió tasa',()=>{const s=store(),p=s.get().productos[0];s.guardarProductoEdicion({...p,iva:21,precio:181.5,margen:50},p);s.actualizarPrecios([{nombre:p.nombre,costo:200,margen:50}]);assert.equal(s.get().productos[0].precio,363);const legacy=store();legacy.actualizarPrecios([{nombre:p.nombre,costo:200,margen:50}]);assert.equal(legacy.get().productos[0].precio,150);});
 test('editar precio de lista sin bidón no resta su valor',()=>{const s=store(),p=s.get().productos[0];s.guardarProductoEdicion({...p,incluirEnvaseDefecto:false},p);s.editarPrecioLista('revendedores','l','precio',500);assert.equal(s.precioEnLista('l','revendedores'),500);});
+
+test('la calculadora suma el costo financiero al subtotal con IVA y despeja ganancia desde el precio de venta',()=>{
+  const s=store();
+  const input={costo:1000,iva:21,margen:50,costoFinanciero:10};
+  const calculado=s.previsualizarPrecioProducto(input);
+  assert.equal(calculado.precioFinal.toFixed(2),'1996.50');
+  assert.equal(calculado.ivaImporte,315);
+  assert.equal(calculado.financieroImporte.toFixed(2),'181.50');
+  const manual=s.previsualizarPrecioProducto({...input,modo:'precioFinal',precioFinal:2240,envasePrecio:240});
+  assert.equal(manual.precioBase,2000);
+  assert.equal(manual.margen.toFixed(2),'50.26');
+  const perdida=s.previsualizarPrecioProducto({...input,iva:0,modo:'precioFinal',precioFinal:500});
+  assert.equal(perdida.margen.toFixed(2),'-54.55');
+  assert.throws(()=>s.previsualizarPrecioProducto({...input,costoFinanciero:100}),/financiero/i);
+});
+
+test('guardar la calculadora conserva el financiero y el precio comercial sin cobrar dos veces el bidón',()=>{
+  const s=store();
+  const base=s.get().productos[0];
+  s.guardarProductoEdicion({...base,costo:1000,precio:2000,iva:21,margen:50.2629601803,costoFinanciero:10},base);
+  assert.equal(s.get().productos[0].costoFinanciero,10);
+  assert.equal(s.precioParaCliente('l'),2100);
+  s.editarPrecio('l','margen',50);
+  assert.equal(s.precioParaCliente('l'),2096.5);
+  const sinCosto=s.previsualizarPrecioProducto({costo:0,iva:0,costoFinanciero:10,modo:'precioFinal',precioFinal:200});
+  assert.equal(sinCosto.margen,null);
+  assert.equal(sinCosto.precioFinal,200);
+});

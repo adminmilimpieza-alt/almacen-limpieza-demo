@@ -1,7 +1,7 @@
 // stock.js — módulo Stock (punto 2) + historial ventas en Reportes
 const Stock = (() => {
   const $ = id => document.getElementById(id);
-  let editId = null, fotoActual = '', fotoBase=null, precioEditado=false, ultimoModo='costo', envaseMostrado=0, adicionalesActuales=[];
+  let editId = null, fotoActual = '', fotoBase=null, precioEditado=false, ultimoCampo='f-costo', gananciaExacta=null, costoUnidadExacto=null, litrosPrevios=0, envaseMostrado=0, adicionalesActuales=[];
   function normalizarFoto(file){
     if(typeof Fotos!=='undefined')return Fotos.normalizarFoto(file);
     return new Promise((res, rej)=>{
@@ -75,21 +75,16 @@ const Stock = (() => {
       if(oculto) tr.classList.add('oculto');
       const local = drift.has(p.id);
       const pendiente = pend.has(p.id);
-      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${Store.precioEnLista(p.id)}${p.envaseId?'<small>'+(/5\s*l/i.test(p.presentacion||p.nombre)&&p.incluirEnvaseDefecto===false?'Sin bidón por defecto':'Envase incluido')+'</small>':''}</td><td>${p.margen==null?'-':p.margen+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
+      tr.insertAdjacentHTML('beforeend', `<td>${p.codigo||'-'}</td><td>${p.nombre}${pendiente?' <span class="tag info" title="Costo/venta editado en este equipo, todavia no publicado">pendiente</span>':''}</td><td>${p.presentacion||'-'}</td><td>${p.categoria||'-'}</td><td>${prov}</td><td>$${p.costo??p.precio}</td><td>$${Store.precioEnLista(p.id)}${p.envaseId?'<small>'+(/5\s*l/i.test(p.presentacion||p.nombre)&&p.incluirEnvaseDefecto===false?'Sin bidón por defecto':'Envase incluido')+'</small>':''}</td><td>${p.margen==null?'-':mostrado(p.margen)+'%'}</td><td>${p.stock}${local?' <span class="tag info" title="Stock modificado en este equipo, todavia no publicado">local</span>':''}</td><td>${oculto?'<span class="tag warn">oculto</span>':'<span class="tag ok">visible</span>'}</td>`);
       const td = document.createElement('td'); td.style.whiteSpace='nowrap';
       const bE = document.createElement('button'); bE.textContent='Editar';
       bE.onclick=()=>{ editId=p.id;fotoBase={...p}; $('modal-titulo').textContent='Editar producto';
         $('f-codigo').value=p.codigo||''; $('f-nombre').value=p.nombre; $('f-cat').value=p.categoria||'';
         $('f-pres').value=p.presentacion||'';
-        $('f-costo').value=(p.costo??p.precio); $('f-precio').value=Store.precioEnLista(p.id);
-        precioEditado=false; ultimoModo='costo';
-        $('f-iva').value=p.iva==null?'':String(p.iva);
-        $('f-margen-venta').value=p.margen==null?'':Math.round(p.margen/(100+p.margen)*10000)/100;
         $('f-incluir-envase').checked=p.incluirEnvaseDefecto!==false;
-        adicionalesActuales=(p.adicionales||[]).map(c=>({...c}));renderAdicionales();envaseMostrado=envaseEditor(); $('f-precio').value=Number(p.precio)+envaseMostrado;
-        detallePrecio();
-        $('f-margen').value=(p.margen==null?'':p.margen); $('f-stock').value=p.stock;
-        $('f-costo').disabled=false; $('f-precio').disabled=false; $('f-margen').disabled=false;
+        adicionalesActuales=(p.adicionales||[]).map(c=>({...c}));renderAdicionales();
+        iniciarPrecio(p);
+        $('f-stock').value=p.stock;
         $('f-activo').checked = !oculto;
         fotoActual = p.foto||p.img||''; pintarFoto();
         fillProv($('f-prov'), p.provId); $('modal').showModal(); };
@@ -122,19 +117,110 @@ const Stock = (() => {
     db.productos.filter(p=>p.id!==editId&&p.activo!==false&&(String(p.categoria||'').trim().toLowerCase()==='adicionales'||envases.includes(p.id))&&!p.envaseId&&!(p.adicionales||[]).length&&!adicionalesActuales.some(c=>c.id===p.id)).forEach(p=>{const option=document.createElement('option');option.value=p.id;option.textContent=p.nombre+' · $'+p.precio;select.appendChild(option);});
     box.innerHTML='';adicionalesActuales.forEach((c,i)=>{const p=db.productos.find(x=>x.id===c.id);const row=document.createElement('div'),label=document.createElement('span'),remove=document.createElement('button');label.textContent=(p?.nombre||'Adicional no encontrado')+' · '+c.cant+' unidad(es) · $'+(Number(p?.precio)||0)*c.cant+' ';remove.type='button';remove.textContent='Quitar';remove.onclick=()=>{adicionalesActuales.splice(i,1);renderAdicionales();cambiarEnvase();};row.appendChild(label);row.appendChild(remove);box.appendChild(row);});
   }
-  function cambiarEnvase(){
-    const base=Number($('f-precio').value)-envaseMostrado;
-    envaseMostrado=envaseEditor();
-    if($('f-precio').value!=='')$('f-precio').value=Math.round((base+envaseMostrado)*100)/100;
-    detallePrecio();
+  const camposPrecio=['f-costo','f-margen','f-iva','f-financiero','f-precio','f-precio-redondeado'];
+  const esPrecio=id=>id==='f-precio'||id==='f-precio-redondeado';
+  const monto=new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'});
+  const numero=id=>String($(id).value).trim()===''?NaN:Number($(id).value);
+  const mostrado=valor=>Number(valor.toFixed(2));
+  function litrosPresentacion(){
+    const match=$('f-pres').value.trim().match(/^(\d+(?:[.,]\d+)?)\s*(?:l|lt|lts|litro|litros)\.?$/i);
+    return match?Number(match[1].replace(',','.')):0;
   }
-  function detallePrecio(){
-    const p=Store.get().productos.find(p=>p.id===editId);
-    const envase=envaseEditor();
-    $('f-precio-detalle').textContent=$('f-iva').value===''?'IVA sin definir: se conserva el precio actual hasta elegir una tasa y editar.':`Costo sin IVA. Precio final con IVA${envase?' + envases y adicionales $'+envase:''}. La ganancia se calcula sobre el producto sin adicionales.`;
-    $('f-incluir-envase').parentElement.hidden=!(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&/5\s*l/i.test($('f-pres').value||p?.nombre||''));
-    const precio=$('f-precio').value;
-    $('f-precio-redondeado').value=precio!==''&&Number.isFinite(Number(precio))?Math.round(Number(precio)/10)*10:'';
+  function actualizarOpcionesPrecio(){
+    const litros=litrosPresentacion();
+    $('f-costo-litro-opcion').hidden=!(litros>0);
+    if(!litros)$('f-costo-litro').checked=false;
+    const pres=$('f-pres').value||$('f-nombre').value;
+    $('f-incluir-envase').parentElement.hidden=!(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&/5\s*l/i.test(pres));
+  }
+  function calcularEditor(campo, objetivo=numero(campo)){
+    return Store.previsualizarPrecioProducto({
+      costo:costoUnidadExacto*($('f-costo-litro').checked?litrosPresentacion():1),
+      iva:$('f-iva').value===''?0:numero('f-iva'),
+      margen:gananciaExacta??0,
+      costoFinanciero:$('f-financiero').checked?10:0,
+      envasePrecio:envaseEditor(),
+      precioFinal:objetivo,
+      modo:esPrecio(campo)?'precioFinal':'costo'
+    });
+  }
+  function renderDesglose(r,error=''){
+    const detalle=$('f-precio-detalle');
+    detalle.className=error||r?.margen<0?'hint precio-aviso':'hint';
+    detalle.textContent=error||[
+      $('f-iva').value===''?'IVA sin definir. Se usa 0% en el cálculo hasta elegir una tasa.':'',
+      r?.margen===null?'Con costo cero no se puede calcular el porcentaje de ganancia.':'',
+      r?.margen<0?'Ganancia negativa: el precio no cubre el costo.':''
+    ].filter(Boolean).join(' ');
+    const desglose=$('f-precio-desglose');
+    desglose.innerHTML='';
+    if(!r)return;
+    const lineas=[
+      ['Costo de compra',r.costo],['Importe de ganancia',r.gananciaImporte],
+      ['Costo más ganancia',r.costoConGanancia],['IVA aplicado',r.ivaImporte],
+      ['Subtotal con IVA',r.subtotalIVA],['Costo financiero aplicado',r.financieroImporte],
+      ...(r.envasePrecio?[['Envases y adicionales',r.envasePrecio]]:[]),
+      ['Precio calculado',r.precioFinal],['Precio redondeado',numero('f-precio-redondeado')]
+    ];
+    for(const [nombre,valor] of lineas){
+      const titulo=document.createElement('dt'), importe=document.createElement('dd');
+      titulo.textContent=nombre; importe.textContent=monto.format(valor);
+      desglose.appendChild(titulo);desglose.appendChild(importe);
+    }
+  }
+  function mostrarGanancia(ganancia){
+    gananciaExacta=ganancia;
+    $('f-margen').value=ganancia===null?'':Number(ganancia.toFixed(6));
+  }
+  function iniciarPrecio(p){
+    precioEditado=false;ultimoCampo='f-costo';
+    $('f-costo-litro').checked=false;
+    $('f-costo').value=p?(p.costo??p.precio):'';
+    costoUnidadExacto=numero('f-costo');
+    $('f-iva').value=p?(p.iva==null?'':String(p.iva)):'0';
+    $('f-financiero').checked=p?.costoFinanciero!==0;
+    mostrarGanancia(p?.margen??0);
+    actualizarOpcionesPrecio();
+    litrosPrevios=litrosPresentacion();
+    envaseMostrado=envaseEditor();
+    const precio=p?mostrado(Number(p.precio)+envaseMostrado):'';
+    $('f-precio').value=precio;
+    $('f-precio-redondeado').value=precio;
+    if(!p){renderDesglose();return;}
+    try{
+      const r=calcularEditor('f-precio');
+      mostrarGanancia(r.margen);
+      renderDesglose(r);
+    }catch(error){renderDesglose(null,error.message);}
+  }
+  function recalcularPrecio(campo){
+    precioEditado=true;
+    ultimoCampo=campo;
+    if(campo==='f-costo')costoUnidadExacto=numero('f-costo');
+    if(campo==='f-margen')gananciaExacta=numero('f-margen');
+    try{
+      const r=calcularEditor(campo);
+      if(esPrecio(campo))mostrarGanancia(r.margen);
+      for(const id of ['f-precio','f-precio-redondeado']){
+        if(id!==campo)$(id).value=mostrado(r.precioFinal);
+      }
+      renderDesglose(r);
+    }catch(error){
+      for(const id of ['f-precio','f-precio-redondeado'])if(id!==campo)$(id).value='';
+      renderDesglose(null,error.message);
+    }
+  }
+  function cambiarEnvase(){
+    actualizarOpcionesPrecio();
+    const nuevoEnvase=envaseEditor();
+    const cambio=nuevoEnvase-envaseMostrado;
+    envaseMostrado=nuevoEnvase;
+    if(precioEditado&&!esPrecio(ultimoCampo)){recalcularPrecio(ultimoCampo);return;}
+    for(const id of ['f-precio','f-precio-redondeado']){
+      if(Number.isFinite(numero(id)))$(id).value=mostrado(numero(id)+cambio);
+    }
+    try{renderDesglose(calcularEditor('f-precio'));}
+    catch(error){renderDesglose(null,precioEditado?error.message:'');}
   }
   function fillProv(sel, cur){
     const db = Store.get();
@@ -149,35 +235,35 @@ const Stock = (() => {
     $('cancelar-prod').onclick=()=>$('modal').close();
     $('nuevo').onclick=()=>{ editId=null;fotoBase=null; $('modal-titulo').textContent='Nuevo producto';
       $('f-codigo').value=''; $('f-nombre').value=''; $('f-cat').value=''; $('f-pres').value='';
-      $('f-costo').value=''; $('f-precio').value=''; $('f-margen').value=''; $('f-stock').value='10';
-      $('f-costo').disabled=false; $('f-margen').disabled=false; $('f-precio').disabled=false;
-      precioEditado=false; ultimoModo='costo'; $('f-iva').value=''; $('f-margen-venta').value='';
-      $('f-incluir-envase').checked=true; adicionalesActuales=[];renderAdicionales();envaseMostrado=0; fillProv($('f-prov'),''); detallePrecio();
+      $('f-stock').value='10';
+      $('f-incluir-envase').checked=true; adicionalesActuales=[];renderAdicionales();
+      fillProv($('f-prov'),''); iniciarPrecio();
       $('f-activo').checked = true;
       fotoActual=''; pintarFoto();
  $('modal').showModal(); };
-    const recalcula = modo=>{
-      precioEditado=true; ultimoModo=modo;
-      if($('f-iva').value===''){ detallePrecio(); return; }
-      try{
-        const cur=Store.get().productos.find(p=>p.id===editId);
-        const r=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo});
-        envaseMostrado=envaseEditor(); $('f-precio').value=r.precioFinal; $('f-margen').value=r.margen; $('f-margen-venta').value=r.margenVenta;
-        detallePrecio();
-      }catch(error){ $('f-precio-detalle').textContent=error.message; }
-    };
-    $('f-costo').addEventListener('input',()=>recalcula('costo'));
-    $('f-margen').addEventListener('input',()=>recalcula('costo'));
-    $('f-margen-venta').addEventListener('input',()=>recalcula('margenVenta'));
-    $('f-precio').addEventListener('input',()=>recalcula('precioFinal'));
-    $('f-aplicar-redondeado').onclick=()=>{
-      const valor=$('f-precio-redondeado').value;
-      if(valor===''||!Number.isFinite(Number(valor))||Number(valor)<0){alert('Ingresá un precio redondeado válido.');return;}
-      $('f-precio').value=valor;recalcula('precioFinal');
-    };
-    $('f-iva').addEventListener('change',()=>recalcula(ultimoModo));
-    $('f-pres').addEventListener('input',cambiarEnvase);
+    for(const campo of camposPrecio){
+      $(campo).addEventListener(['f-iva','f-financiero'].includes(campo)?'change':'input',()=>recalcularPrecio(campo));
+    }
+    $('f-costo-litro').addEventListener('change',()=>{
+      const litros=litrosPresentacion();
+      if(!litros)return;
+      costoUnidadExacto=$('f-costo-litro').checked?costoUnidadExacto/litros:costoUnidadExacto*litros;
+      $('f-costo').value=Number.isFinite(costoUnidadExacto)?Number(costoUnidadExacto.toFixed(8)):'';
+    });
+    $('f-pres').addEventListener('input',()=>{
+      const litros=litrosPresentacion();
+      const porLitro=$('f-costo-litro').checked;
+      if(porLitro&&!litros){
+        costoUnidadExacto*=litrosPrevios;
+        $('f-costo-litro').checked=false;
+        $('f-costo').value=Number.isFinite(costoUnidadExacto)?Number(costoUnidadExacto.toFixed(8)):'';
+      }
+      litrosPrevios=litros;
+      cambiarEnvase();
+      if(porLitro&&litros)recalcularPrecio('f-pres');
+    });
     $('f-cat').addEventListener('input',cambiarEnvase);
+    $('f-nombre').addEventListener('input',cambiarEnvase);
     $('f-incluir-envase').addEventListener('change',cambiarEnvase);
     $('f-adicional-agregar').onclick=()=>{const id=$('f-adicional').value;if(!id)return;const p=Store.get().productos.find(x=>x.id===id),actual=Store.get().productos.find(x=>x.id===editId),pres=String($('f-pres').value||$('f-nombre').value).toUpperCase(),tipo=/(?:^|\s)1\s*(?:L|LT|LTS)\b/.test(pres)?'botellaId':/(?:^|\s)5\s*(?:L|LT|LTS)\b/.test(pres)?'bidonId':null,auto=actual?.envaseId||(['Líquidos 1L','Líquidos 5L','Pileta'].includes($('f-cat').value)&&tipo?Store.get().catalogo?.envases?.[tipo]:null);if(id===auto){alert('Este envase ya está vinculado automáticamente al producto.');return;}if(!p)return;adicionalesActuales.push({id,cant:1});renderAdicionales();cambiarEnvase();};
     $('reset').onclick=async ()=>{ if(typeof OnlineBusiness!=='undefined' && OnlineBusiness.activo){ alert('El negocio online no se puede reemplazar. Guardá el respaldo antiguo por separado.'); return; } if(confirm('Volver al catálogo importado? Se pierden los cambios de precios, stock y ventas.')){ try{ await Store.reset(); render(); Caja.refresh(); Reportes.render(); Entidades.render(); }catch(err){ alert(err.message); } } };
@@ -210,19 +296,19 @@ const Stock = (() => {
       const button=$('guardar-prod');if(button.disabled)return;
       const db = Store.get();
       const cur = editId && db.productos.find(x=>x.id===editId);
-      const precioManualSinIVA=!!cur&&precioEditado&&ultimoModo==='precioFinal'&&$('f-iva').value===''&&Number($('f-costo').value)===Number(cur.costo)&&String($('f-margen').value)===String(cur.margen??'');
-      if((precioEditado||!cur)&&$('f-iva').value===''&&!precioManualSinIVA){alert('Elegí IVA 10,5% o 21% para guardar cambios de precio.');return;}
       let calculo=null;
-      if(precioManualSinIVA){const precio=Number($('f-precio').value),base=Math.round((precio-envaseEditor())*100)/100;if(!Number.isFinite(precio)||base<0){alert('El precio final no puede ser menor al valor de los adicionales.');return;}calculo={costo:cur.costo,precioBase:base,margen:cur.margen};}
-      else if(precioEditado||!cur){try{calculo=Store.previsualizarPrecioProducto({costo:Number($('f-costo').value),iva:Number($('f-iva').value),margen:Number($('f-margen').value),margenVenta:Number($('f-margen-venta').value),precioFinal:Number($('f-precio').value),envasePrecio:envaseEditor(),modo:ultimoModo});}catch(error){alert(error.message);return;}}
+      if(precioEditado||!cur){
+        try{calculo=calcularEditor(ultimoCampo);}
+        catch(error){renderDesglose(null,error.message);alert(error.message);return;}
+      }
       let p = Object.assign({}, cur||{}, {
         id: editId || crypto.randomUUID(), codigo:$('f-codigo').value.trim(),
         nombre:$('f-nombre').value.trim(), categoria:$('f-cat').value.trim(),
         presentacion:$('f-pres').value.trim(),
         costo: calculo?calculo.costo:cur.costo,
-        precio: calculo?calculo.precioBase:cur.precio,
+        precio: calculo?mostrado(calculo.precioBase):cur.precio,
         margen: calculo?calculo.margen:cur.margen,
-        ...(calculo&&!precioManualSinIVA?{iva:calculo.iva}:{}),
+        ...(calculo?{costoFinanciero:calculo.costoFinanciero,...($('f-iva').value===''?{}:{iva:calculo.iva})}:{}),
         incluirEnvaseDefecto:$('f-incluir-envase').checked,
         adicionales:adicionalesActuales.map(c=>({...c})),
         stock:Number($('f-stock').value),
@@ -230,8 +316,7 @@ const Stock = (() => {
         provId: $('f-prov').value || '',
         foto: fotoActual || ''
       });
-      // Nuevo producto: la venta sale de costo x margen, sino no se guarda.
-      const sinPrecio = editId ? !(p.precio>=0) : !(Number($('f-precio').value)>0);
+      const sinPrecio = editId ? !(p.precio>=0) : !(numero('f-precio-redondeado')>0);
       if(!p.nombre || !(p.costo>=0) || sinPrecio){ alert('Completá nombre, costo y un precio de venta válido'); return; }
       button.disabled=true;button.textContent='Guardando…';
       try{
