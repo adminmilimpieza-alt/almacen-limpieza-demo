@@ -379,3 +379,12 @@ td.td-foto img{width:40px;height:40px;object-fit:cover;border-radius:8px;display
 #f-costo-litro-opcion[hidden]{display:none}
 
 #f-precio-detalle.precio-aviso{color:var(--pastel-red-tx)}
+
+#promociones-editor .promo-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+#promociones-editor .promo-item-precio{text-align:right;font-variant-numeric:tabular-nums}
+#promociones-editor .promo-total{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+@media(max-width:560px){
+  #promociones-editor .promo-item{grid-template-columns:minmax(0,1fr) auto}
+  #promociones-editor .promo-item>span{grid-column:1/-1}
+  #promociones-editor .promo-item-precio{text-align:left}
+}
