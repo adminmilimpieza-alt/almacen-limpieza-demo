@@ -34,12 +34,26 @@ const Stock = (() => {
     }
     if(del) del.disabled = !fotoActual;
   }
+  function rubrosDelCatalogo(productos){
+    return [...new Set(productos.map(p=>p.categoria||'General'))].sort((a,b)=>a.localeCompare(b,'es'));
+  }
+  function cargarRubrosEditor(productos){
+    const lista=$('rubros-producto');
+    lista.innerHTML='';
+    const rubros=rubrosDelCatalogo(productos);
+    if(!rubros.includes('Adicionales'))rubros.push('Adicionales');
+    for(const nombre of rubros){
+      const option=document.createElement('option');
+      option.value=nombre;
+      lista.appendChild(option);
+    }
+  }
   function filtros(){
     const db = Store.get();
     const q = ($('stk-q').value||'').toLowerCase(), r = $('stk-rubro').value;
     const pv = $('stk-prov-filtro') ? $('stk-prov-filtro').value : '';
     const verOcultos = $('stk-ver-ocultos') && $('stk-ver-ocultos').checked;
-    const rubros = [...new Set(db.productos.map(p=>p.categoria||'General'))].sort();
+    const rubros = rubrosDelCatalogo(db.productos);
     $('stk-rubro').innerHTML = '<option value="">Todos los rubros</option>'+rubros.map(x=>`<option ${x===r?'selected':''}>${x}</option>`).join('');
     const assigned=$('stk-prov').value;
     $('stk-prov').innerHTML = '<option value="">Elegí proveedor…</option>'+
@@ -59,6 +73,7 @@ const Stock = (() => {
     if(typeof Promociones!=='undefined') Promociones.render();
     const tb = $('tabla-stock'); tb.innerHTML='';
     const list = filtros();
+    cargarRubrosEditor(db.productos);
     const drift = new Set(Store.driftStock().map(d=>d.p.id));
     const pend = new Set(Store.driftPrecio().map(d=>d.p.id));
     $('stk-count').textContent = `${list.length} de ${db.productos.length} productos`+

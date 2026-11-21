@@ -341,7 +341,9 @@
     <label class="producto-campo" for="f-nombre">Nombre del producto</label>
     <input id="f-nombre" placeholder="Ej.: Lavandina concentrada" required>
     <label class="producto-campo" for="f-cat">Rubro</label>
-    <input id="f-cat" list="rubros-producto" placeholder="Ej.: Adicionales"><datalist id="rubros-producto"><option value="Adicionales"></datalist>
+    <input id="f-cat" list="rubros-producto" placeholder="Elegí o escribí un rubro nuevo" aria-describedby="f-cat-ayuda">
+    <datalist id="rubros-producto"></datalist>
+    <p class="hint" id="f-cat-ayuda">Para crear un rubro, escribí el nombre y guardá el producto.</p>
     <label class="producto-campo" for="f-prov">Proveedor</label>
     <select id="f-prov"></select>
     <label class="producto-campo" for="f-costo">Costo de compra sin IVA ($)</label>
