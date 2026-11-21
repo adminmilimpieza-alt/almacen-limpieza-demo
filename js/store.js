@@ -320,8 +320,8 @@ function crearStore(localStorage, catalogoInput){
   function incluyeEnvase(p,eleccion){if(eleccion===false&&p.envaseId&&tipoEnvase(p)!=='bidonId')throw new Error('Sólo se puede quitar el envase en productos de 5 L.');return eleccion===undefined?(tipoEnvase(p)==='bidonId'?p.incluirEnvaseDefecto!==false:true):eleccion!==false;}
   function precioLista(db,id,listaId,incluir){const promo=db.promociones?.find(p=>p.id===id);if(promo)return Number(promo.precio);const p=db.productos.find(p=>p.id===id);if(!p)throw new Error('Producto no encontrado.');return redondear2(precioBase(db,p,listaId)+precioComplementos(db,p,listaId,incluir));}
   const factorIVA=p=>1+(Number(p.iva)||0)/100;
-  const factorFinanciero=tasa=>1+tasa/100;
-  const factorVenta=p=>factorIVA(p)*factorFinanciero(p.costoFinanciero??0);
+  const factorFinanciero=tasa=>1-tasa/100;
+  const factorVenta=p=>factorIVA(p)/factorFinanciero(p.costoFinanciero??0);
   function calcularPrecioFinanciero({costo, iva, margen, costoFinanciero, envasePrecio=0, precioFinal, modo}){
     if(!Number.isFinite(costo)||costo<0||![0,10.5,21].includes(iva)||!Number.isFinite(envasePrecio)||envasePrecio<0){
       throw new Error('Ingresá un costo válido y seleccioná el IVA.');
@@ -329,7 +329,7 @@ function crearStore(localStorage, catalogoInput){
     if(!Number.isFinite(costoFinanciero)||costoFinanciero<0||costoFinanciero>=100){
       throw new Error('El costo financiero debe estar entre 0% y menos de 100%.');
     }
-    const multiplicadorFinanciero=factorFinanciero(costoFinanciero);
+    const divisorFinanciero=factorFinanciero(costoFinanciero);
     const tasaIVA=iva/100;
     const inverso=modo==='precioFinal';
     let costoConGanancia, precioBase;
@@ -338,12 +338,12 @@ function crearStore(localStorage, catalogoInput){
         throw new Error('Ingresá un precio válido que cubra los envases y adicionales.');
       }
       precioBase=precioFinal-envasePrecio;
-      costoConGanancia=precioBase/multiplicadorFinanciero/(1+tasaIVA);
+      costoConGanancia=precioBase*divisorFinanciero/(1+tasaIVA);
       margen=costo>0?(costoConGanancia-costo)/costo*100:null;
     }else{
       if(!Number.isFinite(margen)||margen< -100)throw new Error('Ingresá una ganancia de al menos -100%.');
       costoConGanancia=costo*(1+margen/100);
-      precioBase=costoConGanancia*(1+tasaIVA)*multiplicadorFinanciero;
+      precioBase=costoConGanancia*(1+tasaIVA)/divisorFinanciero;
       precioFinal=precioBase+envasePrecio;
     }
     if(!Number.isFinite(precioFinal)||(margen!==null&&!Number.isFinite(margen)))throw new Error('El resultado excede el rango de cálculo.');

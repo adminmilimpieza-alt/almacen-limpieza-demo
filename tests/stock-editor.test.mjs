@@ -28,14 +28,14 @@ test('editar precio final de un producto anterior no exige inventar su IVA',asyn
 test('nuevo producto permite IVA cero y aplica costo financiero del 10%',async()=>{
  const f=fixture();f.get('nuevo').onclick();assert.match(f.get('f-prov').innerHTML,/Proveedor Uno/);
  f.get('f-nombre').value='Nuevo';f.get('f-costo').value=100;f.get('f-margen').value=50;f.get('f-margen').input();f.get('f-costo').input();
- await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved.length,1);assert.equal(f.saved[0].iva,0);assert.equal(f.saved[0].precio,165);
+ await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved.length,1);assert.equal(f.saved[0].iva,0);assert.equal(f.saved[0].precio,166.67);
  f.get('f-iva').value='21';f.get('f-iva').change();await f.get('guardar-prod').onclick({preventDefault(){}});
- assert.equal(f.saved.length,2);assert.equal(f.saved[1].iva,21);assert.equal(f.saved[1].precio,199.65);
+ assert.equal(f.saved.length,2);assert.equal(f.saved[1].iva,21);assert.equal(f.saved[1].precio,201.67);
 });
 test('precio final manual separa IVA y envase antes de guardar líquido',async()=>{
  const f=fixture({id:'p',nombre:'Líquido',presentacion:'5 L',envaseId:'e',costo:100,precio:181.5,margen:50,iva:21,stock:3});
  f.created.find(e=>e.textContent==='Editar').onclick();f.get('f-precio').value=1312;f.get('f-precio').input();
- assert.ok(Math.abs(Number(f.get('f-margen').value)-81.818182)<0.001);
+ assert.ok(Math.abs(Number(f.get('f-margen').value)-80)<0.001);
  await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved[0].precio,242);assert.equal(f.saved[0].incluirEnvaseDefecto,true);
 });
 
@@ -43,11 +43,11 @@ test('nuevo líquido usa el envase configurado y quitar bidón conserva el preci
  const f=fixture(null,{productos:[{id:'bidon',nombre:'Bidón',precio:1070}],catalogo:{envases:{bidonId:'bidon'}}});
  f.get('nuevo').onclick();f.get('f-nombre').value='Limpiador';f.get('f-cat').value='Líquidos 5L';f.get('f-pres').value='5 L';f.get('f-pres').input();
  f.get('f-costo').value=100;f.get('f-costo').input();f.get('f-margen').value=50;f.get('f-margen').input();f.get('f-iva').value='21';f.get('f-iva').change();
- assert.equal(Number(f.get('f-precio').value),1269.65);
- f.get('f-incluir-envase').checked=false;f.get('f-incluir-envase').change();assert.equal(Number(f.get('f-precio').value),199.65);
- f.get('f-incluir-envase').checked=true;f.get('f-incluir-envase').change();assert.equal(Number(f.get('f-precio').value),1269.65);
+ assert.equal(Number(f.get('f-precio').value),1271.67);
+ f.get('f-incluir-envase').checked=false;f.get('f-incluir-envase').change();assert.equal(Number(f.get('f-precio').value),201.67);
+ f.get('f-incluir-envase').checked=true;f.get('f-incluir-envase').change();assert.equal(Number(f.get('f-precio').value),1271.67);
  f.get('f-incluir-envase').checked=false;f.get('f-incluir-envase').change();
- await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved[0].precio,199.65);assert.equal(f.saved[0].incluirEnvaseDefecto,false);
+ await f.get('guardar-prod').onclick({preventDefault(){}});assert.equal(f.saved[0].precio,201.67);assert.equal(f.saved[0].incluirEnvaseDefecto,false);
 });
 test('cambiar sólo la opción de bidón conserva precio e IVA legado',async()=>{
  const f=fixture({id:'p',nombre:'Líquido',presentacion:'5 L',envaseId:'e',costo:100,precio:185,margen:50,stock:3});
@@ -80,13 +80,13 @@ test('el último campo editado dirige el cálculo y el desglose admite una pérd
  editar('f-costo',1000);
  editar('f-margen',50);
  editar('f-iva',21,'change');
- assert.equal(f.get('f-precio').value,1996.5);
+ assert.equal(f.get('f-precio').value,2016.67);
  editar('f-precio-redondeado',2000);
  assert.equal(f.get('f-precio').value,2000);
- assert.equal(Number(f.get('f-margen').value).toFixed(2),'50.26');
+ assert.equal(Number(f.get('f-margen').value).toFixed(2),'48.76');
  assert.equal(f.get('f-financiero').checked,true);
  f.get('f-financiero').checked=false;f.get('f-financiero').change();
- assert.equal(f.get('f-precio').value,1818.18);
+ assert.equal(f.get('f-precio').value,1800);
  editar('f-margen',50);
  assert.equal(f.get('f-precio-redondeado').value,1815);
  editar('f-costo',500);
@@ -100,7 +100,7 @@ test('el último campo editado dirige el cálculo y el desglose admite una pérd
  assert.equal(f.saved[0].costoFinanciero,0);
  assert.equal(f.saved[0].precio,400);
  f.get('f-financiero').checked=true;f.get('f-financiero').change();
- assert.equal(f.get('f-precio-redondeado').value,440);
+ assert.equal(f.get('f-precio-redondeado').value,444.44);
  await f.get('guardar-prod').onclick({preventDefault(){}});
  assert.equal(f.saved[1].costoFinanciero,10);
 });
@@ -113,10 +113,10 @@ test('ingresar costo por litro guarda el costo total de la presentación',async(
  f.get('f-costo-litro').checked=true;f.get('f-costo-litro').change();
  f.get('f-costo').value='100';f.get('f-costo').input();
  f.get('f-margen').value='50';f.get('f-margen').input();
- assert.equal(f.get('f-precio').value,825);
+ assert.equal(f.get('f-precio').value,833.33);
  await f.get('guardar-prod').onclick({preventDefault(){}});
  assert.equal(f.saved[0].costo,500);
- assert.equal(f.saved[0].precio,825);
+ assert.equal(f.saved[0].precio,833.33);
  assert.equal(f.saved[0].costoFinanciero,10);
 });
 
